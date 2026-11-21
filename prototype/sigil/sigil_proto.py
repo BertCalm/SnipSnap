@@ -228,9 +228,10 @@ def log_drum(p, v, rng):
     n = n_of(p["len"])
     t = t_axis(n)
     f = p["note"] * (1 + rng.normal(0, 0.002))
-    bend = 2 ** (p["bend"] * (0.6 + 0.4 * v) / 12)
-    fs = f * (1 + (bend - 1) * np.exp(-t / p.get("glide", 0.018)))
-    synth = np.sin(sweep_phase(fs)) * env_exp(n, p["decay"])
+    # each take lands the mallet a little differently: the bend, its glide and the ring move a few percent
+    bend = 2 ** (p["bend"] * (0.6 + 0.4 * v) * (1 + rng.normal(0, 0.08)) / 12)
+    fs = f * (1 + (bend - 1) * np.exp(-t / (p.get("glide", 0.018) * (1 + rng.normal(0, 0.1)))))
+    synth = np.sin(sweep_phase(fs)) * env_exp(n, p["decay"] * (1 + rng.normal(0, 0.05)))
     wood = modal(n, [f, f * 2.756, f * 5.404], [1, 0.45, 0.2], [p["decay"] * 3, p["decay"] * 1.2, 0.05],
                  bright=0.5 + 0.5 * v, rng=rng, phase_jitter=0.5)
     mallet = filt(rng.normal(0, 1, n), "band", (f * 4, min(f * 30, 12000))) * env_exp(n, 0.0025) * 0.4 * v * v
@@ -404,8 +405,12 @@ def metal_tick(p, v, rng):
     n = n_of(p["len"])
     t = t_axis(n)
     f = p["tune"] * (1 + rng.normal(0, 0.004))
-    i = (1 + 4 * v) * np.exp(-t / 0.01)
-    return np.sin(2 * math.pi * f * t + i * np.sin(2 * math.pi * f * 1.4 * t)) * env_exp(n, p["decay"]) * attack(n, 0.05)
+    # each take its own strike: the FM depth and the ring vary a little, and a tiny noise edge differs every time
+    i = (1 + 4 * v) * (1 + rng.normal(0, 0.08)) * np.exp(-t / 0.01)
+    decay = p["decay"] * (1 + rng.normal(0, 0.06))
+    edge = filt(rng.normal(0, 1, n), "high", 4000) * env_exp(n, 0.001) * 0.05 * v
+    tone = np.sin(2 * math.pi * f * t + i * np.sin(2 * math.pi * f * 1.4 * t)) * env_exp(n, decay)
+    return (tone + edge) * attack(n, 0.05)
 
 
 def zap(p, v, rng):

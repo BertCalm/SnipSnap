@@ -1,13 +1,14 @@
-# SIGIL: design brief and round-0 audition
+# SIGIL: design brief, round-0 audition and the Kotlin kits
 
-Status: **round 0b (2026-11-20): four kits rendered and measured in Python; round 0's three heard by the owner as
-"pretty good", KILN not yet heard.** A family of sixteen-pad drum kits written after the owner's 23 reference loops: "a drum collection that matches the vibe ... the
-same spirit ... mix together elements to create cohesive kit". The owner chose the shape on 2026-11-20: "three kits,
-one per tempo" (the recommendation), wear "mix it up", "the kick/snare sound is impactful", "the percs are a bit
-esoteric, organic/inorganic hybrid". On hearing round 0 the owner wrote "Pretty good. Not sure I understand the rods"
-(IRON's and ASH's A14 texture pads); told what they were, "I think they are fine as is", and asked for a fourth kit.
-KILN (round 0b) is that kit; the page now says what each pad is when it is tapped. Nothing is in Kotlin yet. The round-0 prototype is the thing to hear first,
-following the CALABASH path (prototype approved by ear, then the Kotlin port measured against it).
+Status: **round 1 (2026-11-21): eight kits built in Kotlin and on the shelf, proven in software, and heard: the owner
+listened to the drumless four on the round-1 page (the app's renders) and kept them as they are ("Sounds good", asked
+whether that was a listen: "Listened, keep as is").** A family of sixteen-pad drum kits written after the owner's 23 reference loops: "a drum collection that
+matches the vibe ... the same spirit ... mix together elements to create cohesive kit". The owner chose the shape on
+2026-11-20: "three kits, one per tempo" (the recommendation), wear "mix it up", "the kick/snare sound is impactful",
+"the percs are a bit esoteric, organic/inorganic hybrid". On hearing round 0 the owner wrote "Pretty good. Not sure I
+understand the rods" (IRON's and ASH's A14 texture pads); told what they were, "I think they are fine as is", and asked
+for a fourth kit. KILN (round 0b) is that kit, heard as "Sounds good". On 2026-11-21 the owner picked the next two
+steps: the kits in the app, and a drumless version of each ("1 and 4"). Round 1 is both.
 
 Listening page (private to the owner): <https://claude.ai/artifact/BnxtCiWjvFZsYXeohmaEzZ>. Four playable 4x4 pad
 grids in MPC order with a velocity switch (soft .40, medium .70, hard 1.0) and four takes per pad dealt in turn, each
@@ -148,6 +149,72 @@ sixteenths, 2 ms jitter, then the kit's bus (lighter speaker, slam, or tape with
   the kick, as asked, and its wires are where that energy is.
 - The groove loop on the page stops each pass at the bar line, so the tail of the last hit is cut on repeat.
 
+
+## Round 1: the Kotlin kits and the drumless four (2026-11-21)
+
+**What was built.** `Sigil.kt` (the twenty voices, the touch-tone floor, the four prints, tape and record motion, the
+house output stage), `SigilKits.kt` (eight kits as [FacsimileKits]-shaped kit data: sixteen pads, three zones of four
+takes, chokes, a roll on A15 and a groove on A16), `/sigil/kits.json` (written by `prototype/sigil/export_kits.py` from
+`kits.py`, so the prototype and the app read one table), eight shelf entries under SKINS (`StarterKits.ALL`,
+`StarterShelf.GROUPS`), `SigilKitsTest` and `SigilKitTest`, `:synth:generateSigilAudition` and `:shell:generateSigilKits`.
+A kit family, not a Patch engine, as FACSIMILE: no `Patches`, `Velocity` or preset rows. The filters are CALABASH's
+scipy-exact Butterworth designs (`CalabashDsp.butter`); the output stage is the house's (`Tide.bandLimit`, `Dsp.decimate`).
+
+**The drumless kits.** Each keeps its parent's percussion pads exactly (same voice, constants and print; `SigilKitsTest`
+checks it), drops the kicks, snares and claps (KILN's snap stays: it is hand percussion), and fills the freed pads with
+more A-minor notes on the same hybrid voices: IRON adds Log Mid (C3), Log Top (G3) and Glass Bell High (E5); NEON a Log
+Low (A2), Log High (E3), Bell Ping High (E5) and Voice Chop O; ASH a Log Top (G3) and Thumb Tine High (C5); KILN Low
+Tines on A2 and D3 and Bell E (E5). Each groove is percussion only: a hand drum, low log or conga takes the kick's place
+in the rhythm and a rim, wood chirp, tambourine or snap the backbeat's. IRON's snare drag has no snare to drag, so its
+roll is the logs, high and low in turn. Measured (Python harness): the drumless grooves keep 64 to 80 percent of their
+energy in 60 to 150 Hz (the log drums), as the owner's tuned percussion loops do (Pray Two: 65 percent).
+
+**Two take laws strengthened, in both languages.** The Kotlin tests found two pads whose takes were too alike, and the
+prototype shared both: NEON's Metal Tick (two takes 49.8 dB apart, effectively a copy: its only variation was a 0.4
+percent retune) now varies its FM depth and ring a few percent and carries a tiny noise edge; the log drums (two soft
+takes 36.1 dB apart, almost a pure sine) now vary their bend, glide and ring. The sound of each pad is unchanged; its
+takes now differ as struck instruments do.
+
+**The brightness probe, corrected.** Round 0 read a soft zone's brightness above the hard hit's centroid. On ASH's Rim
+that split sat on the fundamental (629 Hz against 610), so each take's hair of retuning moved the reading, and the rim
+read 0.9 dB brighter soft. The probe now reads above twice the centroid (the overtones a strike brightens), or above
+the centroid where a hat has nothing an octave up. With it, every pad of all eight kits is darker or level when soft,
+in Python and in Kotlin.
+
+**Measured against the approved prototype** (`prototype/sigil/compare_kotlin.py`, `compare.json`): Kotlin draws from
+its own generator, so a Kotlin hit is another take of the approved pad. Over all 360 pad zones (8 kits x 15 pads x 3
+zones, four takes a side), the third-octave distance between a Python and a Kotlin take minus the distance between two
+takes of one language: median 0.00 dB, largest 1.43 dB (NEON's Voice Chop at medium, whose own takes sit 2.1 dB apart).
+The grooves sit 0.5 to 1.1 dB apart, one render a side. Every render has the prototype's length to the sample.
+
+**Measured in Kotlin** (`SigilKitsTest`, 9 tests): every hit finite, within full scale and centred; the same arguments
+give the same bytes; every soft zone darker and quieter than the hard one; no two takes in a zone closer than 35 dB;
+every kick 100 to 190 Hz at the hit, 36 to 97 Hz at 80 ms and 20 dB down in 69 to 400 ms (KILN's Ghost Kick, short by
+design, excepted); every snare's centroid 1.1 to 2.9 kHz and its decay 51 to 220 ms (IRON's dark snare rings 199 ms,
+13 over the loops' longest, heard and kept in round 0); the drumless kits drumless; every tuned pad a note of A minor;
+rolls over 1.5 s and grooves to their written length. Render time (one machine, four threads): a hit's median 18 ms,
+a roll 0.2 s, a groove 0.7 to 1.3 s; a whole kit builds in 7 to 14 s.
+
+**Proven in software** (`SigilKitTest`, `:shell:generateSigilKits`): all eight kits, 16 pads and 192 slices each,
+through saving and reloading (equal), the saved PCM, the app's pad resolver (zone by velocity, four takes in order, then
+again), the MPC 3 track by read-back, SFZ and DecentSampler. MPC 2 is not written (the owner's format limit,
+2026-11-14). No phone or MPC has played these kits.
+
+The listening page (same link) now plays the app's own Kotlin renders, the drumless kits beside their parents. A
+drumless pad that is the same sound as its parent's plays the parent's render on the page; in the app it is its own.
+
+### Gates (round 1)
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic voices, keygroups, chord tools, STRUM | Not applicable | Drum kits |
+| Drums: multiple distinct genre kits on the shelf | Built and heard | Eight kits under SKINS at 74, 90, 115 and 100 BPM, each with its own print, layout and groove; the drumless four heard as the app renders them and kept (2026-11-21) |
+| Percussion: roll/riser | Built | A15 on every kit: snare drag, hat roll, shaker rush, bongo roll, log roll |
+| Velocity and round robin: rendering | Pass in software | `SigilKitsTest`: darker and quieter soft zones, four distinct strikes per zone, softer grooves |
+| Velocity and round robin: saving, playback, export | Pass in software | `SigilKitTest`, `:shell:generateSigilKits`: save, reload, pad resolver, MPC 3, SFZ, DecentSampler for all 128 pads; MPC 2 not applicable (format limit) |
+| Sound character | Heard: the four in Python ("Pretty good", "Sounds good"), the drumless four as the app renders them ("Listened, keep as is"); Kotlin within the prototype's take spread | The round-1 listening page |
+| Hardware | Open | No phone or MPC playback yet |
+
 ## Render budget
 
 Python round 0: 56 ms a hit, 2.1 s a roll, 1.9 s a groove (above). The Kotlin port's budget is the house's "tens of
@@ -158,9 +225,9 @@ port inside it. A kit's whole grid is 3 x 4 x 15 renders plus the groove, cached
 
 | Round | What | Gate |
 |---|---|---|
-| 0 and 0b (this) | Python prototype, four kits (KILN added in 0b), listening page | the owner's ear on the page |
-| 1 | Kotlin port of the approved round (`Sigil.kt`, `SigilKits.kt` in the CALABASH shape), measured pad by pad against the prototype | the A/B distance within the takes' own spread |
-| 2 | the kits on the shelf (`StarterKits.ALL`, `StarterShelf.GROUPS` under SKINS), velocity x round robin through saving, `PadHit.resolve` playback and MPC 3 export (`generateSigilKits`) | the owner's gates: velocity and round robin end to end; MPC 2 keeps each zone's first take (format limit, 2026-11-14) |
+| 0 and 0b | Python prototype, four kits (KILN added in 0b), listening page | heard: "Pretty good", "Sounds good" |
+| 1 (this) | Kotlin port and the drumless four (`Sigil.kt`, `SigilKits.kt` in the FACSIMILE shape), measured pad by pad against the prototype, on the shelf with the grid proven | the A/B within the takes' own spread (met); the drumless kits heard and kept (met) |
+| 2 | (folded into round 1) the kits on the shelf (`StarterKits.ALL`, `StarterShelf.GROUPS` under SKINS), velocity x round robin through saving, `PadHit.resolve` playback and MPC 3 export (`generateSigilKits`) | the owner's gates: velocity and round robin end to end; MPC 2 keeps each zone's first take (format limit, 2026-11-14) |
 | 3 | phone and MPC | the owner's report |
 
 ## Verified / measured / proposed / heard

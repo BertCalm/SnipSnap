@@ -4171,3 +4171,13 @@ tasks.register<JavaExec>("generateSunroomKits") {
     maxHeapSize = "1g"
     args(providers.gradleProperty("sunroomOutput").orNull ?: "${rootDir}/testkit/sunroom-native")
 }
+
+tasks.register<JavaExec>("generateSigilAudition") {
+    group = "distribution"
+    description = "Render every SIGIL pad in Kotlin at three zones and four takes under testkit/sigil-audition/kotlin/, for prototype/sigil/compare_kotlin.py and the listening page."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.SigilAuditionGenerator")
+    workingDir = projectDir
+    maxHeapSize = "3g"
+    args(providers.gradleProperty("sigilOutput").orNull ?: "${rootDir}/testkit/sigil-audition/kotlin")
+}

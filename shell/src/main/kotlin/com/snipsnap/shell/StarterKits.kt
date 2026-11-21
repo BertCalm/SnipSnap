@@ -920,6 +920,46 @@ object StarterKits {
             glue = com.snipsnap.synth.BoroughKits.glueOf(com.snipsnap.synth.BoroughKits.Kit.RIMS),
         ) { com.snipsnap.synth.BoroughKits.build(com.snipsnap.synth.BoroughKits.Kit.RIMS) },
         Starter(
+            com.snipsnap.synth.SigilKits.Kit.IRON.id, com.snipsnap.synth.SigilKits.Kit.IRON.title,
+            "Heavy and dark at 74 BPM through a blown speaker: sub-drop kicks, a dark snare as loud as the kick, hats at a whisper, log drums, glass and breath in A minor. Three touch zones, four takes; a snare drag and a two-bar groove.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SigilKits.Kit.IRON.bpm.toFloat(),
+        ) { com.snipsnap.synth.SigilKits.build(com.snipsnap.synth.SigilKits.Kit.IRON) },
+        Starter(
+            com.snipsnap.synth.SigilKits.Kit.NEON.id, com.snipsnap.synth.SigilKits.Kit.NEON.title,
+            "Clean and slammed at 90 BPM: an 808-style sub, a crack snare, a glitch clap, ratcheting hats, clock ticks, wood chirps and a zap. Three touch zones, four takes; a hat roll and a half-time groove.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SigilKits.Kit.NEON.bpm.toFloat(),
+        ) { com.snipsnap.synth.SigilKits.build(com.snipsnap.synth.SigilKits.Kit.NEON) },
+        Starter(
+            com.snipsnap.synth.SigilKits.Kit.ASH.id, com.snipsnap.synth.SigilKits.Kit.ASH.title,
+            "Percussion forward at 115 BPM on tape: a round kick on the floor, a soft backbeat, log drums walking A minor, swung shakers, a thumb tine and a glass bell. Three touch zones, four takes; a shaker rush and a two-bar groove.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SigilKits.Kit.ASH.bpm.toFloat(),
+        ) { com.snipsnap.synth.SigilKits.build(com.snipsnap.synth.SigilKits.Kit.ASH) },
+        Starter(
+            com.snipsnap.synth.SigilKits.Kit.KILN.id, com.snipsnap.synth.SigilKits.Kit.KILN.title,
+            "A heavy triplet shuffle at 100 BPM through an old sampler: bongos, a conga, low thumb-piano tones in A minor, a snap and a scraper, with record crackle on the groove. Three touch zones, four takes; a bongo roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SigilKits.Kit.KILN.bpm.toFloat(),
+        ) { com.snipsnap.synth.SigilKits.build(com.snipsnap.synth.SigilKits.Kit.KILN) },
+        Starter(
+            com.snipsnap.synth.SigilKits.Kit.IRON_DRUMLESS.id, com.snipsnap.synth.SigilKits.Kit.IRON_DRUMLESS.title,
+            "IRON with no kick, snare or clap: its hand drum, rim, logs, glass, breath and rod, with more log and bell notes in A minor. Three touch zones, four takes; a log roll and a percussion-only groove.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SigilKits.Kit.IRON_DRUMLESS.bpm.toFloat(),
+        ) { com.snipsnap.synth.SigilKits.build(com.snipsnap.synth.SigilKits.Kit.IRON_DRUMLESS) },
+        Starter(
+            com.snipsnap.synth.SigilKits.Kit.NEON_DRUMLESS.id, com.snipsnap.synth.SigilKits.Kit.NEON_DRUMLESS.title,
+            "NEON with no kick, snare or clap: hats, shaker, clock, wood, bells, voice chops and a low log in A minor taking the sub's place. Three touch zones, four takes; a hat roll and a percussion-only groove.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SigilKits.Kit.NEON_DRUMLESS.bpm.toFloat(),
+        ) { com.snipsnap.synth.SigilKits.build(com.snipsnap.synth.SigilKits.Kit.NEON_DRUMLESS) },
+        Starter(
+            com.snipsnap.synth.SigilKits.Kit.ASH_DRUMLESS.id, com.snipsnap.synth.SigilKits.Kit.ASH_DRUMLESS.title,
+            "ASH with no kick or snare: a hand drum on the beat, rim, tambourine, shakers, four log drums and two tines in A minor. Three touch zones, four takes; a shaker rush and a percussion-only groove.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SigilKits.Kit.ASH_DRUMLESS.bpm.toFloat(),
+        ) { com.snipsnap.synth.SigilKits.build(com.snipsnap.synth.SigilKits.Kit.ASH_DRUMLESS) },
+        Starter(
+            com.snipsnap.synth.SigilKits.Kit.KILN_DRUMLESS.id, com.snipsnap.synth.SigilKits.Kit.KILN_DRUMLESS.title,
+            "KILN with no kicks or snare: the conga and snap carry the shuffle, with bongos, scraper and four low tines and two bells in A minor. Three touch zones, four takes; a bongo roll and a percussion-only groove.",
+            seeded = false, tempoBpm = com.snipsnap.synth.SigilKits.Kit.KILN_DRUMLESS.bpm.toFloat(),
+        ) { com.snipsnap.synth.SigilKits.build(com.snipsnap.synth.SigilKits.Kit.KILN_DRUMLESS) },
+        Starter(
             com.snipsnap.synth.BreakerKits.ID, "BREAKER",
             "Surf rock by way of boom bap: dusty drums through a spring tank, a crush and a surf amp. Three touch zones, three takes; a snare riser and a surf tom fill.",
             seeded = false, tempoBpm = com.snipsnap.synth.BreakerKits.BPM,

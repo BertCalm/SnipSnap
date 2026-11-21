@@ -1408,3 +1408,20 @@ its confirm are verified only by CI (android-build, and `PercStackRowTest` on th
 Android SDK. Nothing has been heard on a phone.
 
 Open: phone and MPC hardware; the picker heard and used on a phone.
+
+## SIGIL kits (Kotlin built and heard, 2026-11-21: hardware open)
+
+Eight drum kits written after 23 of the owner's reference loops: IRON (74), NEON (90), ASH (115), KILN (100), and a
+drumless twin of each. See [SIGIL](SIGIL.md). The owner heard the Python prototype of the four ("Pretty good",
+2026-11-20; KILN "Sounds good") and picked the Kotlin kits and the drumless versions (2026-11-21). The Kotlin port sits
+within the prototype's own take-to-take spread (median 0.00 dB over 360 pad zones, largest 1.43). Evidence:
+`SigilKitsTest`, `SigilKitTest`, `:shell:generateSigilKits`, `prototype/sigil/compare_kotlin.py`.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic, keygroups, chord tools, STRUM | Not applicable | Drum kits |
+| Drums: multiple distinct genre kits on the shelf | Built and heard | Eight kits under SKINS, each with its own tempo, print, layout and groove; the four heard in Python, the drumless four heard as the app renders them and kept ("Listened, keep as is", 2026-11-21) |
+| Percussion: roll/riser | Built | An accelerating roll on A15 of every kit |
+| Velocity and round robin: rendering | Pass in software | Soft zones darker and quieter on every pad; four distinct strikes per zone (none closer than 35 dB); grooves softened per zone |
+| Velocity and round robin: saving, playback, export | Pass in software | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 128 pads; MPC 2 not applicable (format limit). No phone or MPC playback yet |
+| Overall | Incomplete | Phone and MPC playback |

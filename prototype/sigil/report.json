@@ -11,7 +11,7 @@
        "dc": 4.749674875625942e-09,
        "finite": true,
        "centroid_hz": 89.80906244391494,
-       "hf_share": 0.04678164693870078,
+       "hf_share": 0.02275505622164138,
        "closest_takes_db": 22.987390572263585
       },
       "0.7": {
@@ -19,7 +19,7 @@
        "dc": 3.4589164865650446e-09,
        "finite": true,
        "centroid_hz": 99.98303560616053,
-       "hf_share": 0.09836761370847423,
+       "hf_share": 0.03599009558541158,
        "closest_takes_db": 6.281371416355171
       },
       "1.0": {
@@ -27,13 +27,13 @@
        "dc": 1.4241139822956939e-08,
        "finite": true,
        "centroid_hz": 108.87357560285392,
-       "hf_share": 0.1746140039816415,
+       "hf_share": 0.047620528285333835,
        "closest_takes_db": 13.77557919297282
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.824893110625098,
-     "soft_over_hard_hf_db": -5.720035640365716,
+     "soft_over_hard_hf_db": -3.207162961363585,
      "worst_closest_takes_db": 22.987390572263585,
      "ok": true,
      "name": "Drop Kick",
@@ -53,7 +53,7 @@
        "dc": 5.262481863610446e-07,
        "finite": true,
        "centroid_hz": 127.20591764574017,
-       "hf_share": 0.16031537261399048,
+       "hf_share": 0.06270241941447433,
        "closest_takes_db": 20.455427391532094
       },
       "0.7": {
@@ -61,7 +61,7 @@
        "dc": 5.31851867435762e-07,
        "finite": true,
        "centroid_hz": 140.74579216456385,
-       "hf_share": 0.17126814321577463,
+       "hf_share": 0.07371518187178853,
        "closest_takes_db": 7.2558069021434415
       },
       "1.0": {
@@ -69,13 +69,13 @@
        "dc": 1.4206476635081344e-06,
        "finite": true,
        "centroid_hz": 159.18312790910545,
-       "hf_share": 0.17492063132389019,
+       "hf_share": 0.08560934649188107,
        "closest_takes_db": 2.3226282736516284
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.7991168367942584,
-     "soft_over_hard_hf_db": -0.37865867356759964,
+     "soft_over_hard_hf_db": -1.3523688313484676,
      "worst_closest_takes_db": 20.455427391532094,
      "ok": true,
      "name": "Blown Kick",
@@ -95,7 +95,7 @@
        "dc": 1.2488029499380104e-09,
        "finite": true,
        "centroid_hz": 740.4324359294845,
-       "hf_share": 0.15798837392635526,
+       "hf_share": 0.014273221814937074,
        "closest_takes_db": 1.2792774688359239
       },
       "0.7": {
@@ -103,7 +103,7 @@
        "dc": 1.037970598360971e-09,
        "finite": true,
        "centroid_hz": 1377.3843647732433,
-       "hf_share": 0.32714165191901934,
+       "hf_share": 0.1234161121736013,
        "closest_takes_db": -0.3205273191906532
       },
       "1.0": {
@@ -111,13 +111,13 @@
        "dc": 3.2995428611570787e-09,
        "finite": true,
        "centroid_hz": 1703.775927756964,
-       "hf_share": 0.3957164270013475,
+       "hf_share": 0.16855042540263104,
        "closest_takes_db": -1.0756988500203533
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.4345832241592182,
-     "soft_over_hard_hf_db": -3.987589498971489,
+     "soft_over_hard_hf_db": -10.722078379125442,
      "worst_closest_takes_db": 1.2792774688359239,
      "ok": true,
      "name": "Dark Snare",
@@ -134,7 +134,7 @@
        "dc": 7.099165005852726e-11,
        "finite": true,
        "centroid_hz": 510.299937513269,
-       "hf_share": 0.429219709425802,
+       "hf_share": 0.0025850941453641964,
        "closest_takes_db": 25.55594460994344
       },
       "0.7": {
@@ -142,7 +142,7 @@
        "dc": 4.689148375147667e-11,
        "finite": true,
        "centroid_hz": 514.9563537390826,
-       "hf_share": 0.4734079741809657,
+       "hf_share": 0.00552189005510707,
        "closest_takes_db": 21.66122939277464
       },
       "1.0": {
@@ -150,13 +150,13 @@
        "dc": 1.3051253133777863e-10,
        "finite": true,
        "centroid_hz": 524.4486955212094,
-       "hf_share": 0.45328021476512015,
+       "hf_share": 0.012109685758797529,
        "closest_takes_db": 12.626062794867847
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.9730216546846798,
-     "soft_over_hard_hf_db": -0.23687106738956598,
+     "soft_over_hard_hf_db": -6.706565094413547,
      "worst_closest_takes_db": 25.55594460994344,
      "ok": true,
      "name": "Rim Knock",
@@ -169,7 +169,7 @@
        "dc": 2.055245140741846e-10,
        "finite": true,
        "centroid_hz": 4350.918956446808,
-       "hf_share": 0.06009846305126233,
+       "hf_share": 0.0013898058068094361,
        "closest_takes_db": -1.7624760029820021
       },
       "0.7": {
@@ -177,7 +177,7 @@
        "dc": 6.327080526169482e-11,
        "finite": true,
        "centroid_hz": 5660.924239533782,
-       "hf_share": 0.21078693359764306,
+       "hf_share": 0.001533018295553858,
        "closest_takes_db": -1.9918129499176698
       },
       "1.0": {
@@ -185,13 +185,13 @@
        "dc": 5.252575041581053e-10,
        "finite": true,
        "centroid_hz": 6595.757520734575,
-       "hf_share": 0.45489447886760603,
+       "hf_share": 0.008384015755270008,
        "closest_takes_db": -2.020388045881903
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.6596541705435894,
-     "soft_over_hard_hf_db": -8.790473001899603,
+     "soft_over_hard_hf_db": -7.804979638757308,
      "worst_closest_takes_db": -1.7624760029820021,
      "ok": true,
      "name": "Closed Hat",
@@ -204,7 +204,7 @@
        "dc": 1.9085424796116968e-08,
        "finite": true,
        "centroid_hz": 3515.732207407233,
-       "hf_share": 0.04252608170310922,
+       "hf_share": 0.00030009298327956407,
        "closest_takes_db": -1.8181363517712044
       },
       "0.7": {
@@ -212,7 +212,7 @@
        "dc": 5.170550920752248e-08,
        "finite": true,
        "centroid_hz": 4625.247047625483,
-       "hf_share": 0.28990120781789935,
+       "hf_share": 0.0010812608724148382,
        "closest_takes_db": -2.5468683860924104
       },
       "1.0": {
@@ -220,13 +220,13 @@
        "dc": 3.6358891009058425e-08,
        "finite": true,
        "centroid_hz": 5199.64719133622,
-       "hf_share": 0.4753246167586493,
+       "hf_share": 0.0060291518760510684,
        "closest_takes_db": -2.415043608048574
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.6761482227611967,
-     "soft_over_hard_hf_db": -10.483349374727844,
+     "soft_over_hard_hf_db": -13.030003830569983,
      "worst_closest_takes_db": -1.8181363517712044,
      "ok": true,
      "name": "Grain Shaker",
@@ -236,33 +236,33 @@
      "zones": {
       "0.4": {
        "peak": 0.4880000352859497,
-       "dc": 1.0392505828349385e-05,
+       "dc": 6.856875643279636e-06,
        "finite": true,
-       "centroid_hz": 127.57204419383237,
-       "hf_share": 0.06428601774341093,
-       "closest_takes_db": 14.814152167651983
+       "centroid_hz": 125.7548399740535,
+       "hf_share": 0.0102271898806129,
+       "closest_takes_db": 12.642853022114256
       },
       "0.7": {
        "peak": 0.6439999938011169,
-       "dc": 1.8460923456586897e-05,
+       "dc": 1.3536607184505556e-05,
        "finite": true,
-       "centroid_hz": 149.0704827156649,
-       "hf_share": 0.11588143894405414,
-       "closest_takes_db": 13.263896028934086
+       "centroid_hz": 141.9171667691669,
+       "hf_share": 0.030209181424878526,
+       "closest_takes_db": 12.649098955184472
       },
       "1.0": {
        "peak": 0.800000011920929,
-       "dc": 3.9574781112605706e-05,
+       "dc": 3.896797716151923e-05,
        "finite": true,
-       "centroid_hz": 173.54207467794976,
-       "hf_share": 0.1491142790368105,
-       "closest_takes_db": 18.82148076963188
+       "centroid_hz": 172.7755643929289,
+       "hf_share": 0.06293507813683764,
+       "closest_takes_db": 6.774643511076205
       }
      },
      "soft_darker": true,
-     "soft_over_hard_centroid": 0.7351072898637051,
-     "soft_over_hard_hf_db": -3.6540270923411313,
-     "worst_closest_takes_db": 18.82148076963188,
+     "soft_over_hard_centroid": 0.7278508417316459,
+     "soft_over_hard_hf_db": -7.891364564847474,
+     "worst_closest_takes_db": 12.649098955184472,
      "ok": true,
      "name": "Log Low",
      "voice": "log_drum"
@@ -270,34 +270,34 @@
     {
      "zones": {
       "0.4": {
-       "peak": 0.45750001072883606,
-       "dc": 1.7549937183503062e-06,
+       "peak": 0.45750004053115845,
+       "dc": 2.2594811071030563e-06,
        "finite": true,
-       "centroid_hz": 177.43114094448129,
-       "hf_share": 0.035041879584965366,
-       "closest_takes_db": 17.932887680561414
+       "centroid_hz": 185.17006436762455,
+       "hf_share": 0.04628034901916561,
+       "closest_takes_db": 14.08822804772
       },
       "0.7": {
        "peak": 0.6037499904632568,
-       "dc": 2.652757075338741e-06,
+       "dc": 3.5938035125582246e-06,
        "finite": true,
-       "centroid_hz": 210.01289101789064,
-       "hf_share": 0.09877852674610274,
-       "closest_takes_db": 16.01650454498303
+       "centroid_hz": 212.22869299971245,
+       "hf_share": 0.09780722302980979,
+       "closest_takes_db": 8.54220272197637
       },
       "1.0": {
        "peak": 0.75,
-       "dc": 5.527242137759458e-06,
+       "dc": 9.588908142177388e-06,
        "finite": true,
-       "centroid_hz": 239.29970017509947,
-       "hf_share": 0.13273040476524728,
-       "closest_takes_db": 17.513969958401425
+       "centroid_hz": 236.31938893925673,
+       "hf_share": 0.12777168916497045,
+       "closest_takes_db": 8.609605030202337
       }
      },
      "soft_darker": true,
-     "soft_over_hard_centroid": 0.741459938372894,
-     "soft_over_hard_hf_db": -5.783830258743117,
-     "worst_closest_takes_db": 17.932887680561414,
+     "soft_over_hard_centroid": 0.7835584934388116,
+     "soft_over_hard_hf_db": -4.410380107978561,
+     "worst_closest_takes_db": 14.08822804772,
      "ok": true,
      "name": "Log High",
      "voice": "log_drum"
@@ -309,7 +309,7 @@
        "dc": 1.116159467073885e-07,
        "finite": true,
        "centroid_hz": 619.3093253610771,
-       "hf_share": 0.08084294896945145,
+       "hf_share": 0.012368706177518925,
        "closest_takes_db": 15.77506817969072
       },
       "0.7": {
@@ -317,7 +317,7 @@
        "dc": 1.8814489521901123e-07,
        "finite": true,
        "centroid_hz": 880.5016212215322,
-       "hf_share": 0.1893525152981008,
+       "hf_share": 0.0406456373145059,
        "closest_takes_db": 17.625871381107
       },
       "1.0": {
@@ -325,13 +325,13 @@
        "dc": 2.894626618399343e-07,
        "finite": true,
        "centroid_hz": 1138.839388803648,
-       "hf_share": 0.29228822114843,
+       "hf_share": 0.08198755886950485,
        "closest_takes_db": 7.657160747215604
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.5438074336466903,
-     "soft_over_hard_hf_db": -5.581691669621022,
+     "soft_over_hard_hf_db": -8.21423682904151,
      "worst_closest_takes_db": 17.625871381107,
      "ok": true,
      "name": "Glass Bell",
@@ -344,7 +344,7 @@
        "dc": 1.0245736481451218e-09,
        "finite": true,
        "centroid_hz": 2618.5703483801294,
-       "hf_share": 0.8726163236317896,
+       "hf_share": 0.0011304366093642024,
        "closest_takes_db": 6.085839537130367
       },
       "0.7": {
@@ -352,7 +352,7 @@
        "dc": 1.7175439959160599e-09,
        "finite": true,
        "centroid_hz": 2729.581396840365,
-       "hf_share": 0.8831078845748559,
+       "hf_share": 0.0016719837949851673,
        "closest_takes_db": 1.9727253020464774
       },
       "1.0": {
@@ -360,13 +360,13 @@
        "dc": 2.4840989265584312e-09,
        "finite": true,
        "centroid_hz": 2777.4201858037172,
-       "hf_share": 0.8715882792452587,
+       "hf_share": 0.0025315621244171955,
        "closest_takes_db": 3.9515490163995874
       }
      },
-     "soft_darker": false,
+     "soft_darker": true,
      "soft_over_hard_centroid": 0.9428066958555569,
-     "soft_over_hard_hf_db": 0.005119514708160889,
+     "soft_over_hard_hf_db": -3.5014237565795767,
      "worst_closest_takes_db": 6.085839537130367,
      "ok": true,
      "name": "Clock Tick",
@@ -379,7 +379,7 @@
        "dc": 7.583652177345357e-07,
        "finite": true,
        "centroid_hz": 554.3520982046473,
-       "hf_share": 0.15553306866646366,
+       "hf_share": 0.034248285116264966,
        "closest_takes_db": 0.6091912710256555
       },
       "0.7": {
@@ -387,7 +387,7 @@
        "dc": 2.517419034120394e-06,
        "finite": true,
        "centroid_hz": 647.6319841362856,
-       "hf_share": 0.17907029310651978,
+       "hf_share": 0.0752535350220441,
        "closest_takes_db": -1.9471505545021865
       },
       "1.0": {
@@ -395,13 +395,13 @@
        "dc": 2.1077084966236725e-06,
        "finite": true,
        "centroid_hz": 692.5083426985325,
-       "hf_share": 0.20383459247125552,
+       "hf_share": 0.09425097429783716,
        "closest_takes_db": -2.870976900252507
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.8004988012772167,
-     "soft_over_hard_hf_db": -1.1745514869771692,
+     "soft_over_hard_hf_db": -4.396470179867889,
      "worst_closest_takes_db": 0.6091912710256555,
      "ok": true,
      "name": "Breath",
@@ -414,7 +414,7 @@
        "dc": 4.064303357154131e-05,
        "finite": true,
        "centroid_hz": 82.77103283598937,
-       "hf_share": 0.45651539266923324,
+       "hf_share": 0.010235687307592932,
        "closest_takes_db": 15.14925655754833
       },
       "0.7": {
@@ -422,7 +422,7 @@
        "dc": 6.252524326555431e-05,
        "finite": true,
        "centroid_hz": 81.80990707142817,
-       "hf_share": 0.43568883006517456,
+       "hf_share": 0.011728364475346389,
        "closest_takes_db": 13.928315531679322
       },
       "1.0": {
@@ -430,13 +430,13 @@
        "dc": 7.689253106946126e-05,
        "finite": true,
        "centroid_hz": 83.12203384644602,
-       "hf_share": 0.4511034667455517,
+       "hf_share": 0.018515837941234327,
        "closest_takes_db": 13.136252133694972
       }
      },
-     "soft_darker": false,
+     "soft_darker": true,
      "soft_over_hard_centroid": 0.9957772807736507,
-     "soft_over_hard_hf_db": 0.05179260868978959,
+     "soft_over_hard_hf_db": -2.574263609368642,
      "worst_closest_takes_db": 15.14925655754833,
      "ok": true,
      "name": "Hand Drum",
@@ -449,7 +449,7 @@
        "dc": 1.7742856073255098e-08,
        "finite": true,
        "centroid_hz": 2366.1998743316926,
-       "hf_share": 0.351047619585089,
+       "hf_share": 0.0005355900282310946,
        "closest_takes_db": -2.24717287146667
       },
       "0.7": {
@@ -457,7 +457,7 @@
        "dc": 8.732283163226384e-08,
        "finite": true,
        "centroid_hz": 2768.463443754783,
-       "hf_share": 0.6166126898061195,
+       "hf_share": 0.0022944358016674226,
        "closest_takes_db": 0.11325864701760935
       },
       "1.0": {
@@ -465,13 +465,13 @@
        "dc": 1.9335287504418375e-07,
        "finite": true,
        "centroid_hz": 2798.952793077574,
-       "hf_share": 0.6451275163219314,
+       "hf_share": 0.0029762589282784713,
        "closest_takes_db": -0.7552655414966212
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.8453875607276499,
-     "soft_over_hard_hf_db": -2.6427953357027967,
+     "soft_over_hard_hf_db": -7.4483822862972335,
      "worst_closest_takes_db": 0.11325864701760935,
      "ok": true,
      "name": "Water Drop",
@@ -484,7 +484,7 @@
        "dc": 2.2463416371465428e-06,
        "finite": true,
        "centroid_hz": 1262.6636175425213,
-       "hf_share": 0.19216043306338085,
+       "hf_share": 0.008405253673423315,
        "closest_takes_db": -2.3225051518676896
       },
       "0.7": {
@@ -492,7 +492,7 @@
        "dc": 5.994439788992167e-07,
        "finite": true,
        "centroid_hz": 2010.0030889172153,
-       "hf_share": 0.38369275195188235,
+       "hf_share": 0.09498704456701984,
        "closest_takes_db": -1.646114852819527
       },
       "1.0": {
@@ -500,13 +500,13 @@
        "dc": 1.7356068156004767e-06,
        "finite": true,
        "centroid_hz": 2080.4951843932013,
-       "hf_share": 0.39750165403494736,
+       "hf_share": 0.10747001073944662,
        "closest_takes_db": -2.0982014792682095
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.6069053305262951,
-     "soft_over_hard_hf_db": -3.1567497131898206,
+     "soft_over_hard_hf_db": -11.067364671470141,
      "worst_closest_takes_db": -1.646114852819527,
      "ok": true,
      "name": "Iron Rod",
@@ -519,7 +519,7 @@
        "dc": 7.568843468641617e-11,
        "finite": true,
        "centroid_hz": 546.824571283572,
-       "hf_share": 0.1157228116640415,
+       "hf_share": 0.012986825905398472,
        "closest_takes_db": 2.0805481501486796
       },
       "0.7": {
@@ -527,7 +527,7 @@
        "dc": 7.208422747595478e-11,
        "finite": true,
        "centroid_hz": 1058.6698395038698,
-       "hf_share": 0.2941739606125304,
+       "hf_share": 0.10751737455890534,
        "closest_takes_db": 0.1982239351352597
       },
       "1.0": {
@@ -535,13 +535,13 @@
        "dc": 1.5858529767154295e-10,
        "finite": true,
        "centroid_hz": 1431.1496590090087,
-       "hf_share": 0.38817329826593405,
+       "hf_share": 0.18662610041698185,
        "closest_takes_db": -0.4229306023132678
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.382087622940998,
-     "soft_over_hard_hf_db": -5.256066807956941,
+     "soft_over_hard_hf_db": -11.57469362855647,
      "worst_closest_takes_db": 2.0805481501486796,
      "ok": true,
      "name": "Snare Drag",
@@ -556,26 +556,26 @@
     "dur_s": 7.686,
     "beats": 9.48,
     "peak_dbfs": -0.25999999046325684,
-    "rms_dbfs": -14.59000015258789,
-    "crest_db": 14.319999694824219,
+    "rms_dbfs": -14.600000381469727,
+    "crest_db": 14.34000015258789,
     "floor_db_under_rms": 211.1999969482422,
     "bands": {
      "20-60": 4.0,
-     "60-150": 47.4,
+     "60-150": 47.3,
      "150-400": 21.9,
      "400-1000": 7.3,
-     "1000-3000": 13.8,
-     "3000-6000": 5.3,
+     "1000-3000": 13.9,
+     "3000-6000": 5.4,
      "6000-12000": 0.3,
      "12000-20000": 0.0
     },
-    "centroid_hz": 622,
-    "roll95_hz": 3144,
+    "centroid_hz": 625,
+    "roll95_hz": 3165,
     "roll99_hz": 4780,
     "ceiling_60db_hz": 12812,
     "onsets_per_beat": {
      "all": 2.32,
-     "low": 1.58,
+     "low": 1.69,
      "mid": 2.0,
      "high": 1.9
     },
@@ -591,7 +591,7 @@
     },
     "attack_over_body_db": 5.4,
     "near_peak_share": 0.006,
-    "flatness": 0.16,
+    "flatness": 0.158,
     "side_over_mid_db": -225.4,
     "lr_corr": 1.0,
     "top_pitch_classes": [
@@ -603,23 +603,23 @@
     "hits": {
      "K": {
       "n": 9,
-      "peak_dbfs": -1.6325011079578955,
+      "peak_dbfs": -1.6358067648722427,
       "centroid_hz": 133.76810323650434,
-      "to_m20db_ms": 155.71428571428572,
-      "f0_attack_hz": 131.890869140625,
+      "to_m20db_ms": 154.85260770975057,
+      "f0_attack_hz": 130.5450439453125,
       "f0_body_hz": 61.907958984375,
-      "harmonics_over_fund_db": -9.124509295048476
+      "harmonics_over_fund_db": -9.462743786060802
      },
      "S": {
       "n": 10,
-      "peak_dbfs": -7.510441208784541,
-      "centroid_hz": 1337.9526835848014,
+      "peak_dbfs": -7.5308551742353895,
+      "centroid_hz": 1338.6176756638652,
       "to_m20db_ms": 218.0952380952381
      },
      "T": {
       "n": 3,
-      "peak_dbfs": -11.68745685426979,
-      "centroid_hz": 541.2890662836487,
+      "peak_dbfs": -11.687800825370477,
+      "centroid_hz": 541.2891153672844,
       "to_m20db_ms": 175.14739229024943
      }
     }
@@ -635,7 +635,7 @@
     "Rim Knock": -12.966514690852701,
     "Breath": -16.99942124496192,
     "Glass Bell": -18.159260460074172,
-    "Log High": -15.465289827171237,
+    "Log High": -15.465289018866189,
     "Water Drop": -16.99942124496192,
     "Blown Kick": -2.7992323524153235
    }
@@ -651,7 +651,7 @@
        "dc": 6.173293513711542e-06,
        "finite": true,
        "centroid_hz": 83.87822594334321,
-       "hf_share": 0.04722564454695856,
+       "hf_share": 0.01531877007066217,
        "closest_takes_db": 21.827319000076336
       },
       "0.7": {
@@ -659,7 +659,7 @@
        "dc": 6.28279030934209e-06,
        "finite": true,
        "centroid_hz": 91.52834507301976,
-       "hf_share": 0.12088812178171496,
+       "hf_share": 0.024616282833724745,
        "closest_takes_db": 19.827270402560174
       },
       "1.0": {
@@ -667,13 +667,13 @@
        "dc": 7.318394636968151e-06,
        "finite": true,
        "centroid_hz": 101.17895993038076,
-       "hf_share": 0.24426323699711117,
+       "hf_share": 0.036258883449176514,
        "closest_takes_db": 12.106560306008214
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.8290085804505024,
-     "soft_over_hard_hf_db": -7.136802141185525,
+     "soft_over_hard_hf_db": -3.7419052875437755,
      "worst_closest_takes_db": 21.827319000076336,
      "ok": true,
      "name": "Sub Kick",
@@ -693,7 +693,7 @@
        "dc": 1.4940040273359045e-05,
        "finite": true,
        "centroid_hz": 90.31447060379028,
-       "hf_share": 0.05633893205062154,
+       "hf_share": 0.01967290354360042,
        "closest_takes_db": 18.547176881302708
       },
       "0.7": {
@@ -701,7 +701,7 @@
        "dc": 2.251438309031073e-05,
        "finite": true,
        "centroid_hz": 100.31600284700274,
-       "hf_share": 0.12694021536970285,
+       "hf_share": 0.03246856147993851,
        "closest_takes_db": 5.463013311671973
       },
       "1.0": {
@@ -709,13 +709,13 @@
        "dc": 2.375328040216118e-05,
        "finite": true,
        "centroid_hz": 108.7552330583919,
-       "hf_share": 0.19431665557591504,
+       "hf_share": 0.04860607857717814,
        "closest_takes_db": 13.585685261385407
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.8304379298722981,
-     "soft_over_hard_hf_db": -5.3770141679979595,
+     "soft_over_hard_hf_db": -3.928221220330288,
      "worst_closest_takes_db": 18.547176881302708,
      "ok": true,
      "name": "Punch Kick",
@@ -735,7 +735,7 @@
        "dc": 1.4386552720679902e-05,
        "finite": true,
        "centroid_hz": 362.02770742385417,
-       "hf_share": 0.017101761122007897,
+       "hf_share": 0.0018259797754750576,
        "closest_takes_db": 6.713881087143495
       },
       "0.7": {
@@ -743,7 +743,7 @@
        "dc": 1.2051978956151288e-05,
        "finite": true,
        "centroid_hz": 1151.8861823872016,
-       "hf_share": 0.15095120088871894,
+       "hf_share": 0.07371018517024679,
        "closest_takes_db": 2.566912543684084
       },
       "1.0": {
@@ -751,13 +751,13 @@
        "dc": 3.219354402972385e-05,
        "finite": true,
        "centroid_hz": 2557.8831885268196,
-       "hf_share": 0.2911545540621501,
+       "hf_share": 0.20429874017233843,
        "closest_takes_db": 0.9264374345061535
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.14153410485971388,
-     "soft_over_hard_hf_db": -12.310827515666915,
+     "soft_over_hard_hf_db": -20.487697255367003,
      "worst_closest_takes_db": 6.713881087143495,
      "ok": true,
      "name": "Crack Snare",
@@ -774,7 +774,7 @@
        "dc": 1.1104357326985337e-05,
        "finite": true,
        "centroid_hz": 1588.293101513891,
-       "hf_share": 0.17469557171443584,
+       "hf_share": 0.0036980177060279744,
        "closest_takes_db": -2.175075742486309
       },
       "0.7": {
@@ -782,7 +782,7 @@
        "dc": 1.2893271559732966e-05,
        "finite": true,
        "centroid_hz": 1945.8274067018378,
-       "hf_share": 0.32102617802513456,
+       "hf_share": 0.02661323337259736,
        "closest_takes_db": -2.551249648129846
       },
       "1.0": {
@@ -790,13 +790,13 @@
        "dc": 2.9476000236172695e-06,
        "finite": true,
        "centroid_hz": 2071.861649596281,
-       "hf_share": 0.37618285349521374,
+       "hf_share": 0.044619499937310764,
        "closest_takes_db": -2.635089314735626
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.7666019117750371,
-     "soft_over_hard_hf_db": -3.3311710004689155,
+     "soft_over_hard_hf_db": -10.815557124998659,
      "worst_closest_takes_db": -2.175075742486309,
      "ok": true,
      "name": "Glitch Clap",
@@ -879,7 +879,7 @@
        "dc": 1.3966091501060873e-06,
        "finite": true,
        "centroid_hz": 4309.425050773434,
-       "hf_share": 0.049924431151445584,
+       "hf_share": 0.001430918541776014,
        "closest_takes_db": -1.9577332965557657
       },
       "0.7": {
@@ -887,7 +887,7 @@
        "dc": 1.5692892247898271e-06,
        "finite": true,
        "centroid_hz": 6379.064076541041,
-       "hf_share": 0.1456033692907699,
+       "hf_share": 0.0027819382004229776,
        "closest_takes_db": -1.745802367249948
       },
       "1.0": {
@@ -895,13 +895,13 @@
        "dc": 2.6294148938177386e-06,
        "finite": true,
        "centroid_hz": 8333.135299669188,
-       "hf_share": 0.4754519658290767,
+       "hf_share": 0.008824043950660047,
        "closest_takes_db": -2.0800656425079085
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.5171432955066158,
-     "soft_over_hard_hf_db": -9.787935222589503,
+     "soft_over_hard_hf_db": -7.900527512815767,
      "worst_closest_takes_db": -1.745802367249948,
      "ok": true,
      "name": "Grain Shaker",
@@ -914,7 +914,7 @@
        "dc": 3.6273941077524796e-05,
        "finite": true,
        "centroid_hz": 3260.6411272663636,
-       "hf_share": 0.053924852792783515,
+       "hf_share": 0.006249075819796467,
        "closest_takes_db": 6.846513824108074
       },
       "0.7": {
@@ -922,7 +922,7 @@
        "dc": 2.3510508981416933e-05,
        "finite": true,
        "centroid_hz": 3949.588637128913,
-       "hf_share": 0.41147300315238544,
+       "hf_share": 0.030919113672607607,
        "closest_takes_db": 5.550347198313235
       },
       "1.0": {
@@ -930,13 +930,13 @@
        "dc": 1.933294151967857e-05,
        "finite": true,
        "centroid_hz": 4455.14146678442,
-       "hf_share": 0.37511289354315425,
+       "hf_share": 0.0861679702734566,
        "closest_takes_db": 1.832796587170384
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.7318827362893576,
-     "soft_over_hard_hf_db": -8.42373023951943,
+     "soft_over_hard_hf_db": -11.39530069080302,
      "worst_closest_takes_db": 6.846513824108074,
      "ok": true,
      "name": "Clock Tick",
@@ -949,7 +949,7 @@
        "dc": 3.092332190135494e-05,
        "finite": true,
        "centroid_hz": 1537.9839833356743,
-       "hf_share": 0.5882547229742819,
+       "hf_share": 0.00016961885293133191,
        "closest_takes_db": 16.77203834882618
       },
       "0.7": {
@@ -957,7 +957,7 @@
        "dc": 4.1611663618823513e-05,
        "finite": true,
        "centroid_hz": 1549.8840352057298,
-       "hf_share": 0.6443481062449128,
+       "hf_share": 0.0005528181492429474,
        "closest_takes_db": 11.052124573369579
       },
       "1.0": {
@@ -965,13 +965,13 @@
        "dc": 5.1990049541927874e-05,
        "finite": true,
        "centroid_hz": 1549.708559292437,
-       "hf_share": 0.633212716981596,
+       "hf_share": 0.001141974858616014,
        "closest_takes_db": 7.532083885927366
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.9924343349035151,
-     "soft_over_hard_hf_db": -0.3198420560926536,
+     "soft_over_hard_hf_db": -8.281824208025318,
      "worst_closest_takes_db": 16.77203834882618,
      "ok": true,
      "name": "Wood Chirp",
@@ -984,7 +984,7 @@
        "dc": 5.659704243043961e-07,
        "finite": true,
        "centroid_hz": 762.999337215053,
-       "hf_share": 0.07993537743769288,
+       "hf_share": 0.003709696843610652,
        "closest_takes_db": 9.485928357911376
       },
       "0.7": {
@@ -992,7 +992,7 @@
        "dc": 1.486714609200135e-07,
        "finite": true,
        "centroid_hz": 1228.5680056990723,
-       "hf_share": 0.24991978356966246,
+       "hf_share": 0.03274571823915744,
        "closest_takes_db": 4.413244868770466
       },
       "1.0": {
@@ -1000,13 +1000,13 @@
        "dc": 2.1064137456505705e-07,
        "finite": true,
        "centroid_hz": 1677.8832881624228,
-       "hf_share": 0.3880376615032464,
+       "hf_share": 0.0837940707367609,
        "closest_takes_db": 9.638228594965568
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.45473921970500786,
-     "soft_over_hard_hf_db": -6.8613484871260955,
+     "soft_over_hard_hf_db": -13.538748685425716,
      "worst_closest_takes_db": 9.638228594965568,
      "ok": true,
      "name": "Bell Ping",
@@ -1016,33 +1016,33 @@
      "zones": {
       "0.4": {
        "peak": 0.45750001072883606,
-       "dc": 1.0889043551287614e-05,
+       "dc": 1.0345042028347962e-05,
        "finite": true,
-       "centroid_hz": 146.37015538772357,
-       "hf_share": 0.030147708556994578,
-       "closest_takes_db": 24.296561263614237
+       "centroid_hz": 145.2331842931552,
+       "hf_share": 0.02981129757716209,
+       "closest_takes_db": 4.693009135926941
       },
       "0.7": {
        "peak": 0.6037499904632568,
-       "dc": 1.721294756862335e-05,
+       "dc": 1.765202068781946e-05,
        "finite": true,
-       "centroid_hz": 164.88030263889064,
-       "hf_share": 0.08430122400645287,
-       "closest_takes_db": 27.60080412621177
+       "centroid_hz": 167.1121040643411,
+       "hf_share": 0.08342241245774701,
+       "closest_takes_db": 7.5519114589842316
       },
       "1.0": {
        "peak": 0.75,
-       "dc": 1.899415838124696e-05,
+       "dc": 1.9423239791649394e-05,
        "finite": true,
-       "centroid_hz": 178.47236448811012,
-       "hf_share": 0.10880779815596162,
-       "closest_takes_db": 21.328097508332654
+       "centroid_hz": 178.8809169189067,
+       "hf_share": 0.10200300390396452,
+       "closest_takes_db": 1.7799196804371724
       }
      },
      "soft_darker": true,
-     "soft_over_hard_centroid": 0.8201278433640901,
-     "soft_over_hard_hf_db": -5.5740571374650045,
-     "worst_closest_takes_db": 27.60080412621177,
+     "soft_over_hard_centroid": 0.8118987021907694,
+     "soft_over_hard_hf_db": -5.342320818625356,
+     "worst_closest_takes_db": 7.5519114589842316,
      "ok": true,
      "name": "Log Mid",
      "voice": "log_drum"
@@ -1054,7 +1054,7 @@
        "dc": 6.824124284321442e-06,
        "finite": true,
        "centroid_hz": 794.2854443298208,
-       "hf_share": 0.20632996445967128,
+       "hf_share": 0.01796563837767333,
        "closest_takes_db": 4.48015971870473
       },
       "0.7": {
@@ -1062,7 +1062,7 @@
        "dc": 1.6130694348248653e-05,
        "finite": true,
        "centroid_hz": 858.471832742051,
-       "hf_share": 0.24760186066100426,
+       "hf_share": 0.042075486289778655,
        "closest_takes_db": -1.3899031140812865
       },
       "1.0": {
@@ -1070,13 +1070,13 @@
        "dc": 3.336629379191436e-05,
        "finite": true,
        "centroid_hz": 857.3336992301738,
-       "hf_share": 0.23818705677639265,
+       "hf_share": 0.04238682892520981,
        "closest_takes_db": -1.0216784138628958
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.9264600762142373,
-     "soft_over_hard_hf_db": -0.6235585460182798,
+     "soft_over_hard_hf_db": -3.7278827331062923,
      "worst_closest_takes_db": 4.48015971870473,
      "ok": true,
      "name": "Voice Chop",
@@ -1086,33 +1086,33 @@
      "zones": {
       "0.4": {
        "peak": 0.2745000123977661,
-       "dc": 1.4018397450854536e-05,
+       "dc": 1.694728052825667e-05,
        "finite": true,
-       "centroid_hz": 2085.334845498251,
-       "hf_share": 0.0011219377611446535,
-       "closest_takes_db": 6.505177061550316
+       "centroid_hz": 2085.664896456874,
+       "hf_share": 0.0009434709821363014,
+       "closest_takes_db": 6.303899149711758
       },
       "0.7": {
        "peak": 0.36225003004074097,
-       "dc": 1.335900947196933e-06,
+       "dc": 7.994987754500471e-06,
        "finite": true,
-       "centroid_hz": 2118.8585377324894,
-       "hf_share": 0.007772363513753511,
-       "closest_takes_db": 13.053707837657315
+       "centroid_hz": 2117.465832994052,
+       "hf_share": 0.006577381348963365,
+       "closest_takes_db": 9.903124922416806
       },
       "1.0": {
        "peak": 0.44999998807907104,
-       "dc": 1.1725583135557827e-05,
+       "dc": 5.5932969189598225e-06,
        "finite": true,
-       "centroid_hz": 2140.542403916099,
-       "hf_share": 0.01386752210584081,
-       "closest_takes_db": -2.4786746287693227
+       "centroid_hz": 2147.7332874549006,
+       "hf_share": 0.014970620687381288,
+       "closest_takes_db": -2.210449165347123
       }
      },
      "soft_darker": true,
-     "soft_over_hard_centroid": 0.9742086125849008,
-     "soft_over_hard_hf_db": -10.92030101497996,
-     "worst_closest_takes_db": 13.053707837657315,
+     "soft_over_hard_centroid": 0.971100512637871,
+     "soft_over_hard_hf_db": -12.005112593947375,
+     "worst_closest_takes_db": 9.903124922416806,
      "ok": true,
      "name": "Metal Tick",
      "voice": "metal_tick"
@@ -1124,7 +1124,7 @@
        "dc": 0.00033893054933287203,
        "finite": true,
        "centroid_hz": 527.5719034357071,
-       "hf_share": 0.15660230516854587,
+       "hf_share": 0.03137758936577049,
        "closest_takes_db": -1.086074864882515
       },
       "0.7": {
@@ -1132,7 +1132,7 @@
        "dc": 0.0005039606476202607,
        "finite": true,
        "centroid_hz": 763.473746549809,
-       "hf_share": 0.294183342232758,
+       "hf_share": 0.07690682943733351,
        "closest_takes_db": -1.4705521387221965
       },
       "1.0": {
@@ -1140,13 +1140,13 @@
        "dc": 0.0006929865921847522,
        "finite": true,
        "centroid_hz": 753.6521228041571,
-       "hf_share": 0.269811922438148,
+       "hf_share": 0.08131312623185394,
        "closest_takes_db": -1.0762702588141657
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.7000204570150215,
-     "soft_over_hard_hf_db": -2.3626298581109193,
+     "soft_over_hard_hf_db": -4.135410834770642,
      "worst_closest_takes_db": -1.0762702588141657,
      "ok": true,
      "name": "Zap",
@@ -1196,26 +1196,26 @@
     "dur_s": 6.533,
     "beats": 9.8,
     "peak_dbfs": -0.25999999046325684,
-    "rms_dbfs": -10.899999618530273,
-    "crest_db": 10.640000343322754,
-    "floor_db_under_rms": 229.1,
+    "rms_dbfs": -10.989999771118164,
+    "crest_db": 10.720000267028809,
+    "floor_db_under_rms": 229.0,
     "bands": {
      "20-60": 14.1,
      "60-150": 54.9,
-     "150-400": 17.4,
+     "150-400": 17.5,
      "400-1000": 4.2,
-     "1000-3000": 5.5,
+     "1000-3000": 5.4,
      "3000-6000": 1.4,
      "6000-12000": 1.8,
      "12000-20000": 0.7
     },
-    "centroid_hz": 528,
+    "centroid_hz": 527,
     "roll95_hz": 2175,
-    "roll99_hz": 10314,
+    "roll99_hz": 10293,
     "ceiling_60db_hz": 20241,
     "onsets_per_beat": {
      "all": 2.35,
-     "low": 1.43,
+     "low": 1.53,
      "mid": 2.45,
      "high": 2.14
     },
@@ -1230,9 +1230,9 @@
      "odd16_share": 0.3333333333333333
     },
     "attack_over_body_db": 7.4,
-    "near_peak_share": 0.004,
-    "flatness": 0.281,
-    "side_over_mid_db": -229.1,
+    "near_peak_share": 0.002,
+    "flatness": 0.28,
+    "side_over_mid_db": -229.0,
     "lr_corr": 1.0,
     "top_pitch_classes": [
      "A",
@@ -1243,23 +1243,23 @@
     "hits": {
      "K": {
       "n": 10,
-      "peak_dbfs": -1.7311286341505887,
-      "centroid_hz": 141.99312468090588,
+      "peak_dbfs": -1.827906307869036,
+      "centroid_hz": 141.99312433346682,
       "to_m20db_ms": 152.46031746031747,
       "f0_attack_hz": 135.9283447265625,
       "f0_body_hz": 91.51611328125,
-      "harmonics_over_fund_db": -8.309583911937377
+      "harmonics_over_fund_db": -8.244266878049185
      },
      "S": {
       "n": 8,
-      "peak_dbfs": -6.538958372903004,
-      "centroid_hz": 1933.2789378466705,
+      "peak_dbfs": -6.643091122521184,
+      "centroid_hz": 1930.7126305237757,
       "to_m20db_ms": 147.22222222222223
      },
      "H": {
       "n": 5,
-      "peak_dbfs": -10.006335769931706,
-      "centroid_hz": 7616.188356762364,
+      "peak_dbfs": -10.103113879558656,
+      "centroid_hz": 7616.188362042785,
       "to_m20db_ms": 95.3061224489796
      }
     }
@@ -1292,7 +1292,7 @@
        "dc": 0.00013183611736167222,
        "finite": true,
        "centroid_hz": 88.72328123978482,
-       "hf_share": 0.0569073142876448,
+       "hf_share": 0.027314407097864465,
        "closest_takes_db": 21.548749924463266
       },
       "0.7": {
@@ -1300,7 +1300,7 @@
        "dc": 0.00019426635117270052,
        "finite": true,
        "centroid_hz": 97.78426839214218,
-       "hf_share": 0.12117169600766414,
+       "hf_share": 0.04251579538335966,
        "closest_takes_db": 20.964759739610336
       },
       "1.0": {
@@ -1308,13 +1308,13 @@
        "dc": 0.0002706154191400856,
        "finite": true,
        "centroid_hz": 107.84383182197101,
-       "hf_share": 0.21504286985666837,
+       "hf_share": 0.060627632786218306,
        "closest_takes_db": 15.270086645668261
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.8227014910435447,
-     "soft_over_hard_hf_db": -5.773569575133591,
+     "soft_over_hard_hf_db": -3.4627883357304423,
      "worst_closest_takes_db": 21.548749924463266,
      "ok": true,
      "name": "Round Kick",
@@ -1334,7 +1334,7 @@
        "dc": 7.13377448846586e-05,
        "finite": true,
        "centroid_hz": 489.9104195528169,
-       "hf_share": 0.06597635891861624,
+       "hf_share": 0.006047461237235464,
        "closest_takes_db": 5.082953846613281
       },
       "0.7": {
@@ -1342,7 +1342,7 @@
        "dc": 0.00013479439076036215,
        "finite": true,
        "centroid_hz": 1205.4112681276679,
-       "hf_share": 0.22807923251691237,
+       "hf_share": 0.10382577055326625,
        "closest_takes_db": 1.5978215655199568
       },
       "1.0": {
@@ -1350,13 +1350,13 @@
        "dc": 0.0002406739367870614,
        "finite": true,
        "centroid_hz": 1908.8146752182638,
-       "hf_share": 0.32835813915344503,
+       "hf_share": 0.21051784569001397,
        "closest_takes_db": 0.5428901493324313
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.2566568802687972,
-     "soft_over_hard_hf_db": -6.969594416288216,
+     "soft_over_hard_hf_db": -15.41715823745509,
      "worst_closest_takes_db": 5.082953846613281,
      "ok": true,
      "name": "Tape Snare",
@@ -1373,7 +1373,7 @@
        "dc": 2.9663626264664344e-05,
        "finite": true,
        "centroid_hz": 609.1351789698826,
-       "hf_share": 0.10393582934287088,
+       "hf_share": 0.0012896328784269186,
        "closest_takes_db": 13.41976065468598
       },
       "0.7": {
@@ -1381,7 +1381,7 @@
        "dc": 3.6644847568823025e-05,
        "finite": true,
        "centroid_hz": 611.1263127482391,
-       "hf_share": 0.06797901188007649,
+       "hf_share": 0.004787944132386675,
        "closest_takes_db": 10.238744389154796
       },
       "1.0": {
@@ -1389,13 +1389,13 @@
        "dc": 3.2773808925412595e-05,
        "finite": true,
        "centroid_hz": 625.6836832132026,
-       "hf_share": 0.08352811855301064,
+       "hf_share": 0.012763201007137091,
        "closest_takes_db": 12.215713101439022
       }
      },
-     "soft_darker": false,
+     "soft_darker": true,
      "soft_over_hard_centroid": 0.9735513252346057,
-     "soft_over_hard_hf_db": 0.9493258664409212,
+     "soft_over_hard_hf_db": -9.954935122941729,
      "worst_closest_takes_db": 13.41976065468598,
      "ok": true,
      "name": "Rim",
@@ -1408,7 +1408,7 @@
        "dc": 5.2616046559705865e-06,
        "finite": true,
        "centroid_hz": 5334.731764461707,
-       "hf_share": 0.08965257118178849,
+       "hf_share": 4.2143305634761795e-06,
        "closest_takes_db": 9.700431881791465
       },
       "0.7": {
@@ -1416,7 +1416,7 @@
        "dc": 1.5239012100209948e-05,
        "finite": true,
        "centroid_hz": 7671.008790482498,
-       "hf_share": 0.22340969445115,
+       "hf_share": 3.4459094039730426e-05,
        "closest_takes_db": -0.8153788143597493
       },
       "1.0": {
@@ -1424,13 +1424,13 @@
        "dc": 2.3159691409091465e-05,
        "finite": true,
        "centroid_hz": 8699.068115492604,
-       "hf_share": 0.40123813791488666,
+       "hf_share": 0.00046763544878356705,
        "closest_takes_db": -2.065130555363063
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.6132532466277413,
-     "soft_over_hard_hf_db": -6.508394568684746,
+     "soft_over_hard_hf_db": -20.451788273524564,
      "worst_closest_takes_db": 9.700431881791465,
      "ok": true,
      "name": "Tambourine",
@@ -1443,7 +1443,7 @@
        "dc": 3.455300611676648e-05,
        "finite": true,
        "centroid_hz": 4343.085439252896,
-       "hf_share": 0.03901287202074566,
+       "hf_share": 0.0005410989454748207,
        "closest_takes_db": -2.0538003602782196
       },
       "0.7": {
@@ -1451,7 +1451,7 @@
        "dc": 6.60193181829527e-05,
        "finite": true,
        "centroid_hz": 5892.742859953587,
-       "hf_share": 0.21289878596804707,
+       "hf_share": 0.0008245673535133779,
        "closest_takes_db": -2.2341186578884416
       },
       "1.0": {
@@ -1459,13 +1459,13 @@
        "dc": 6.593135913135484e-05,
        "finite": true,
        "centroid_hz": 7060.858909329855,
-       "hf_share": 0.46756805628176995,
+       "hf_share": 0.004218348648025741,
        "closest_takes_db": -2.5588163607352064
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.6150930779135336,
-     "soft_over_hard_hf_db": -10.786369099393408,
+     "soft_over_hard_hf_db": -8.918657839262933,
      "worst_closest_takes_db": -2.0538003602782196,
      "ok": true,
      "name": "Shaker Push",
@@ -1478,7 +1478,7 @@
        "dc": 2.8748563636327162e-05,
        "finite": true,
        "centroid_hz": 4383.427242434485,
-       "hf_share": 0.041142878191051786,
+       "hf_share": 0.0006593574682204342,
        "closest_takes_db": -1.2726803202943229
       },
       "0.7": {
@@ -1486,7 +1486,7 @@
        "dc": 4.2823208787012845e-05,
        "finite": true,
        "centroid_hz": 5791.0780214735405,
-       "hf_share": 0.19157347701663585,
+       "hf_share": 0.001064436315052554,
        "closest_takes_db": -2.1014959633882775
       },
       "1.0": {
@@ -1494,13 +1494,13 @@
        "dc": 4.893349978374317e-05,
        "finite": true,
        "centroid_hz": 7069.024771574723,
-       "hf_share": 0.4858494076470916,
+       "hf_share": 0.0040297209002855714,
        "closest_takes_db": -2.4541045070112286
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.6200893877272432,
-     "soft_over_hard_hf_db": -10.722070076448112,
+     "soft_over_hard_hf_db": -7.861540382189808,
      "worst_closest_takes_db": -1.2726803202943229,
      "ok": true,
      "name": "Shaker Pull",
@@ -1509,34 +1509,34 @@
     {
      "zones": {
       "0.4": {
-       "peak": 0.4880000352859497,
-       "dc": 0.00011196514969924465,
+       "peak": 0.4880000054836273,
+       "dc": 0.00012639109627343714,
        "finite": true,
-       "centroid_hz": 127.26500343947191,
-       "hf_share": 0.04805483440069965,
-       "closest_takes_db": 21.893334081776917
+       "centroid_hz": 129.7785785535163,
+       "hf_share": 0.060260713810678476,
+       "closest_takes_db": 10.479934268212796
       },
       "0.7": {
        "peak": 0.6439999938011169,
-       "dc": 0.0002383223472861573,
+       "dc": 0.00025224415003322065,
        "finite": true,
-       "centroid_hz": 138.90649102032467,
-       "hf_share": 0.0802817349405343,
-       "closest_takes_db": 16.201686112057768
+       "centroid_hz": 144.41982520103204,
+       "hf_share": 0.08991337147057143,
+       "closest_takes_db": 8.755735250356707
       },
       "1.0": {
        "peak": 0.8000000715255737,
-       "dc": 0.0003605797828640789,
+       "dc": 0.000375308096408844,
        "finite": true,
-       "centroid_hz": 161.85858227089807,
-       "hf_share": 0.13216995833364076,
-       "closest_takes_db": 15.817112913322458
+       "centroid_hz": 158.5089568917553,
+       "hf_share": 0.12196078313018585,
+       "closest_takes_db": 6.3091489141854264
       }
      },
      "soft_darker": true,
-     "soft_over_hard_centroid": 0.786272817010544,
-     "soft_over_hard_hf_db": -4.393956680981504,
-     "worst_closest_takes_db": 21.893334081776917,
+     "soft_over_hard_centroid": 0.818746026081928,
+     "soft_over_hard_hf_db": -3.061859326301044,
+     "worst_closest_takes_db": 10.479934268212796,
      "ok": true,
      "name": "Log Low",
      "voice": "log_drum"
@@ -1545,33 +1545,33 @@
      "zones": {
       "0.4": {
        "peak": 0.4758000075817108,
-       "dc": 0.00011723526404239237,
+       "dc": 0.0001343970070593059,
        "finite": true,
-       "centroid_hz": 146.81419847387696,
-       "hf_share": 0.03341751541950609,
-       "closest_takes_db": 14.601891473185361
+       "centroid_hz": 148.31146381343603,
+       "hf_share": 0.03651444697427478,
+       "closest_takes_db": 15.21030476333959
       },
       "0.7": {
-       "peak": 0.6279000043869019,
-       "dc": 0.0002502257702872157,
+       "peak": 0.6279000639915466,
+       "dc": 0.0002665297652129084,
        "finite": true,
-       "centroid_hz": 169.3561507440828,
-       "hf_share": 0.09634711884093286,
-       "closest_takes_db": 11.309870516522075
+       "centroid_hz": 167.4987340252919,
+       "hf_share": 0.08355453607083785,
+       "closest_takes_db": 8.968699907825542
       },
       "1.0": {
-       "peak": 0.7799999713897705,
-       "dc": 0.00039116613334044814,
+       "peak": 0.7800000309944153,
+       "dc": 0.00036901887506246567,
        "finite": true,
-       "centroid_hz": 182.7872995754355,
-       "hf_share": 0.1180193916362986,
-       "closest_takes_db": 19.808932374660717
+       "centroid_hz": 182.31487208014016,
+       "hf_share": 0.1091539080485037,
+       "closest_takes_db": 2.204269715326829
       }
      },
      "soft_darker": true,
-     "soft_over_hard_centroid": 0.8031969333475896,
-     "soft_over_hard_hf_db": -5.47979214501332,
-     "worst_closest_takes_db": 19.808932374660717,
+     "soft_over_hard_centroid": 0.8134907598116448,
+     "soft_over_hard_hf_db": -4.755745619473789,
+     "worst_closest_takes_db": 15.21030476333959,
      "ok": true,
      "name": "Log Mid",
      "voice": "log_drum"
@@ -1580,33 +1580,33 @@
      "zones": {
       "0.4": {
        "peak": 0.45750001072883606,
-       "dc": 0.00011014375922968611,
+       "dc": 0.00011222953617107123,
        "finite": true,
-       "centroid_hz": 182.62984644352167,
-       "hf_share": 0.04340014878169736,
-       "closest_takes_db": 19.021464463336255
+       "centroid_hz": 181.29225911128063,
+       "hf_share": 0.03710506589393948,
+       "closest_takes_db": 8.317933472190399
       },
       "0.7": {
        "peak": 0.6037499904632568,
-       "dc": 0.00020274732378311455,
+       "dc": 0.0002136763941962272,
        "finite": true,
-       "centroid_hz": 194.10225704461055,
-       "hf_share": 0.0658867026977911,
-       "closest_takes_db": 15.327118414367199
+       "centroid_hz": 191.1404240527885,
+       "hf_share": 0.05282183889253471,
+       "closest_takes_db": 9.830912774174184
       },
       "1.0": {
        "peak": 0.75,
-       "dc": 0.0003217356279492378,
+       "dc": 0.0003521599865052849,
        "finite": true,
-       "centroid_hz": 199.71759275404082,
-       "hf_share": 0.0717731342002567,
-       "closest_takes_db": 15.774385204950578
+       "centroid_hz": 198.70256614394754,
+       "hf_share": 0.06571134482724567,
+       "closest_takes_db": 5.123955388690079
       }
      },
      "soft_darker": true,
-     "soft_over_hard_centroid": 0.9144404552704413,
-     "soft_over_hard_hf_db": -2.1847069314813976,
-     "worst_closest_takes_db": 19.021464463336255,
+     "soft_over_hard_centroid": 0.912380059449991,
+     "soft_over_hard_hf_db": -2.482071482345238,
+     "worst_closest_takes_db": 9.830912774174184,
      "ok": true,
      "name": "Log High",
      "voice": "log_drum"
@@ -1618,7 +1618,7 @@
        "dc": 1.0132624083780684e-05,
        "finite": true,
        "centroid_hz": 449.76406682130096,
-       "hf_share": 0.01874358364722882,
+       "hf_share": 0.004390017741943971,
        "closest_takes_db": 15.79974933390579
       },
       "0.7": {
@@ -1626,7 +1626,7 @@
        "dc": 1.5201378118945286e-05,
        "finite": true,
        "centroid_hz": 472.11812781723006,
-       "hf_share": 0.056735351297503595,
+       "hf_share": 0.008064747675847243,
        "closest_takes_db": 12.817003264634955
       },
       "1.0": {
@@ -1634,13 +1634,13 @@
        "dc": 2.192789725086186e-05,
        "finite": true,
        "centroid_hz": 506.4912695363106,
-       "hf_share": 0.1004378271717194,
+       "hf_share": 0.013226439951315736,
        "closest_takes_db": 11.027062987247987
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.8879996435734361,
-     "soft_over_hard_hf_db": -7.29044680127665,
+     "soft_over_hard_hf_db": -4.789766891376987,
      "worst_closest_takes_db": 15.79974933390579,
      "ok": true,
      "name": "Thumb Tine",
@@ -1653,7 +1653,7 @@
        "dc": 2.0542829588521272e-05,
        "finite": true,
        "centroid_hz": 770.8007431340359,
-       "hf_share": 0.06696266518508748,
+       "hf_share": 0.002236998135841695,
        "closest_takes_db": 12.602710423986323
       },
       "0.7": {
@@ -1661,7 +1661,7 @@
        "dc": 3.069371450692415e-05,
        "finite": true,
        "centroid_hz": 1096.5336061770436,
-       "hf_share": 0.22196226848998035,
+       "hf_share": 0.022712919693029514,
        "closest_takes_db": 0.9568162637082624
       },
       "1.0": {
@@ -1669,13 +1669,13 @@
        "dc": 3.948019730160013e-05,
        "finite": true,
        "centroid_hz": 1545.6969024803916,
-       "hf_share": 0.38425614354932813,
+       "hf_share": 0.0840823033211393,
        "closest_takes_db": -0.9846606176375096
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.49867522015288124,
-     "soft_over_hard_hf_db": -7.587880890875152,
+     "soft_over_hard_hf_db": -15.750389779078855,
      "worst_closest_takes_db": 12.602710423986323,
      "ok": true,
      "name": "Glass Bell",
@@ -1688,7 +1688,7 @@
        "dc": 4.96818647661712e-05,
        "finite": true,
        "centroid_hz": 108.20864934440522,
-       "hf_share": 0.10716791006435641,
+       "hf_share": 0.004269476797202109,
        "closest_takes_db": 12.007563676551856
       },
       "0.7": {
@@ -1696,7 +1696,7 @@
        "dc": 5.7043824199354276e-05,
        "finite": true,
        "centroid_hz": 106.54845274789116,
-       "hf_share": 0.08867567369393517,
+       "hf_share": 0.006614850468326079,
        "closest_takes_db": 10.487046001684558
       },
       "1.0": {
@@ -1704,13 +1704,13 @@
        "dc": 7.618903327966109e-05,
        "finite": true,
        "centroid_hz": 112.03712050268068,
-       "hf_share": 0.12177172722717672,
+       "hf_share": 0.015846155818540802,
        "closest_takes_db": 10.316296515280081
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.9658285473502163,
-     "soft_over_hard_hf_db": -0.5548170477554395,
+     "soft_over_hard_hf_db": -5.695492644269324,
      "worst_closest_takes_db": 12.007563676551856,
      "ok": true,
      "name": "Hand Drum",
@@ -1723,7 +1723,7 @@
        "dc": 7.984561671037227e-05,
        "finite": true,
        "centroid_hz": 449.5433060128821,
-       "hf_share": 0.13134706333041832,
+       "hf_share": 0.04742966891246672,
        "closest_takes_db": 1.100640275352407
       },
       "0.7": {
@@ -1731,7 +1731,7 @@
        "dc": 0.00014603263116441667,
        "finite": true,
        "centroid_hz": 603.278261796152,
-       "hf_share": 0.19985026072358875,
+       "hf_share": 0.1035415716303067,
        "closest_takes_db": 1.4818278053899032
       },
       "1.0": {
@@ -1739,13 +1739,13 @@
        "dc": 0.0002578625862952322,
        "finite": true,
        "centroid_hz": 600.0435848223785,
-       "hf_share": 0.20264661566162612,
+       "hf_share": 0.10699582309678758,
        "closest_takes_db": -0.20060437446873308
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.7491844215715653,
-     "soft_over_hard_hf_db": -1.8831898788549233,
+     "soft_over_hard_hf_db": -3.533167310005277,
      "worst_closest_takes_db": 1.4818278053899032,
      "ok": true,
      "name": "Breath",
@@ -1758,7 +1758,7 @@
        "dc": 1.3735425454797223e-05,
        "finite": true,
        "centroid_hz": 1545.0226893319646,
-       "hf_share": 0.041729401928583605,
+       "hf_share": 0.005850754118412939,
        "closest_takes_db": -1.9985756166972435
       },
       "0.7": {
@@ -1766,7 +1766,7 @@
        "dc": 2.73877230938524e-05,
        "finite": true,
        "centroid_hz": 3123.6613733969502,
-       "hf_share": 0.3120963468603751,
+       "hf_share": 0.05447034025604669,
        "closest_takes_db": -2.2128422019711484
       },
       "1.0": {
@@ -1774,13 +1774,13 @@
        "dc": 4.0493145206710324e-05,
        "finite": true,
        "centroid_hz": 3598.415808349028,
-       "hf_share": 0.4207321915442701,
+       "hf_share": 0.13380653398715064,
        "closest_takes_db": -2.398135334418422
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.42936191135755075,
-     "soft_over_hard_hf_db": -10.035635821368665,
+     "soft_over_hard_hf_db": -13.592654742460155,
      "worst_closest_takes_db": -1.9985756166972435,
      "ok": true,
      "name": "Wind Rod",
@@ -1793,7 +1793,7 @@
        "dc": 1.3255588555693976e-06,
        "finite": true,
        "centroid_hz": 4123.15568013582,
-       "hf_share": 0.05574591481895774,
+       "hf_share": 0.001022151606334695,
        "closest_takes_db": -2.854303696958943
       },
       "0.7": {
@@ -1801,7 +1801,7 @@
        "dc": 1.964488546946086e-06,
        "finite": true,
        "centroid_hz": 5349.509441218681,
-       "hf_share": 0.19364081248242374,
+       "hf_share": 0.001175444677540492,
        "closest_takes_db": -2.799787826463068
       },
       "1.0": {
@@ -1809,13 +1809,13 @@
        "dc": 4.1798043639573734e-06,
        "finite": true,
        "centroid_hz": 6478.47071238448,
-       "hf_share": 0.45592877780033686,
+       "hf_share": 0.00404613715926959,
        "closest_takes_db": -2.3174871783105653
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.6364396573181763,
-     "soft_over_hard_hf_db": -9.126839584821965,
+     "soft_over_hard_hf_db": -5.975252852769324,
      "worst_closest_takes_db": -2.3174871783105653,
      "ok": true,
      "name": "Shaker Rush",
@@ -1830,42 +1830,42 @@
     "dur_s": 5.374,
     "beats": 10.3,
     "peak_dbfs": -0.25999999046325684,
-    "rms_dbfs": -10.609999656677246,
-    "crest_db": 10.350000381469727,
+    "rms_dbfs": -10.640000343322754,
+    "crest_db": 10.380000114440918,
     "floor_db_under_rms": 58.5,
     "bands": {
      "20-60": 1.9,
-     "60-150": 68.9,
-     "150-400": 22.1,
+     "60-150": 69.0,
+     "150-400": 22.0,
      "400-1000": 4.3,
      "1000-3000": 1.2,
      "3000-6000": 1.1,
      "6000-12000": 0.5,
      "12000-20000": 0.0
     },
-    "centroid_hz": 243,
+    "centroid_hz": 245,
     "roll95_hz": 581,
-    "roll99_hz": 4371,
+    "roll99_hz": 4436,
     "ceiling_60db_hz": 13458,
     "onsets_per_beat": {
-     "all": 2.52,
-     "low": 2.52,
+     "all": 2.43,
+     "low": 2.43,
      "mid": 2.04,
      "high": 2.04
     },
     "groove_all": {
-     "median_abs_dev_ms": 4.806763285023671,
-     "swing_pct_16th": 55.76719576719582,
-     "odd16_share": 0.38461538461538464
+     "median_abs_dev_ms": 4.451838706496641,
+     "swing_pct_16th": 55.3590325018896,
+     "odd16_share": 0.36
     },
     "groove_high": {
      "median_abs_dev_ms": 4.31874198954944,
      "swing_pct_16th": 55.35903250188978,
      "odd16_share": 0.19047619047619047
     },
-    "attack_over_body_db": 7.4,
-    "near_peak_share": 0.067,
-    "flatness": 0.363,
+    "attack_over_body_db": 6.8,
+    "near_peak_share": 0.04,
+    "flatness": 0.368,
     "side_over_mid_db": -229.4,
     "lr_corr": 1.0,
     "top_pitch_classes": [
@@ -1876,24 +1876,24 @@
     "low_peak_hz": 107.7,
     "hits": {
      "K": {
-      "n": 22,
-      "peak_dbfs": -2.9317657394533265,
-      "centroid_hz": 244.92629945216044,
-      "to_m20db_ms": 129.05895691609976,
-      "f0_attack_hz": 123.81591796875,
-      "f0_body_hz": 86.1328125,
-      "harmonics_over_fund_db": -9.710782004223265
+      "n": 21,
+      "peak_dbfs": -2.4819162129920853,
+      "centroid_hz": 249.67850334792277,
+      "to_m20db_ms": 127.98185941043083,
+      "f0_attack_hz": 126.507568359375,
+      "f0_body_hz": 109.0118408203125,
+      "harmonics_over_fund_db": -10.041985000560656
      },
      "H": {
       "n": 1,
-      "peak_dbfs": -32.184653576606074,
-      "centroid_hz": 5839.853818848474,
+      "peak_dbfs": -32.22011571396161,
+      "centroid_hz": 5839.853813826494,
       "to_m20db_ms": 270.95238095238096
      },
      "T": {
       "n": 3,
-      "peak_dbfs": -3.156299486208734,
-      "centroid_hz": 242.9134351506271,
+      "peak_dbfs": -3.4520083599918623,
+      "centroid_hz": 244.29171876568122,
       "to_m20db_ms": 106.78004535147393
      }
     }
@@ -1902,7 +1902,7 @@
    "groove_balance_db": {
     "Shaker Push": -14.006332430411723,
     "Round Kick": 0.0,
-    "Log Low": -8.745453887212442,
+    "Log Low": -8.48293918744674,
     "Wind Rod": -24.374453735859234,
     "Shaker Pull": -17.57549267247405,
     "Tambourine": -14.006333234323753,
@@ -1910,7 +1910,7 @@
     "Log High": -9.461458229527466,
     "Rim": -9.145572375442445,
     "Tape Snare": -2.8802825937130887,
-    "Log Mid": -10.143841329073911,
+    "Log Mid": -10.143840298417468,
     "Glass Bell": -17.57549267247405,
     "Breath": -17.57549267247405,
     "Thumb Tine": -14.832028862486881
@@ -1927,7 +1927,7 @@
        "dc": 1.5873221855144948e-05,
        "finite": true,
        "centroid_hz": 79.91013502864311,
-       "hf_share": 0.052708976237630344,
+       "hf_share": 0.01797062362683728,
        "closest_takes_db": 30.41931638906894
       },
       "0.7": {
@@ -1935,7 +1935,7 @@
        "dc": 2.1577516235993244e-05,
        "finite": true,
        "centroid_hz": 86.42143501054437,
-       "hf_share": 0.11209278315416901,
+       "hf_share": 0.028315733809430907,
        "closest_takes_db": 18.645838596346366
       },
       "1.0": {
@@ -1943,13 +1943,13 @@
        "dc": 4.186847581877373e-05,
        "finite": true,
        "centroid_hz": 96.21242980828899,
-       "hf_share": 0.2382107251744271,
+       "hf_share": 0.04306270057690339,
        "closest_takes_db": 12.617429668129002
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.8305593693857487,
-     "soft_over_hard_hf_db": -6.550767301869211,
+     "soft_over_hard_hf_db": -3.795381136023153,
      "worst_closest_takes_db": 30.41931638906894,
      "ok": true,
      "name": "Thump Kick",
@@ -1969,7 +1969,7 @@
        "dc": 6.755690992577001e-05,
        "finite": true,
        "centroid_hz": 71.078708680386,
-       "hf_share": 0.10325278263093153,
+       "hf_share": 0.019837957333941086,
        "closest_takes_db": 25.121111388327936
       },
       "0.7": {
@@ -1977,7 +1977,7 @@
        "dc": 8.728860120754689e-05,
        "finite": true,
        "centroid_hz": 73.98068982412747,
-       "hf_share": 0.1462619165673056,
+       "hf_share": 0.030693000583947014,
        "closest_takes_db": 20.234439371593385
       },
       "1.0": {
@@ -1985,13 +1985,13 @@
        "dc": 5.8588077081367373e-05,
        "finite": true,
        "centroid_hz": 76.16016516541885,
-       "hf_share": 0.1853609673743165,
+       "hf_share": 0.03303122486787252,
        "closest_takes_db": 25.690868196807486
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.9332793400067346,
-     "soft_over_hard_hf_db": -2.541165227234699,
+     "soft_over_hard_hf_db": -2.2142772667326973,
      "worst_closest_takes_db": 25.690868196807486,
      "ok": true,
      "name": "Ghost Kick",
@@ -2011,7 +2011,7 @@
        "dc": 1.5166760931606404e-05,
        "finite": true,
        "centroid_hz": 471.00668668007285,
-       "hf_share": 0.09438465148575255,
+       "hf_share": 0.01140565945256053,
        "closest_takes_db": 4.579586412079121
       },
       "0.7": {
@@ -2019,7 +2019,7 @@
        "dc": 1.953960418177303e-05,
        "finite": true,
        "centroid_hz": 1088.763893791268,
-       "hf_share": 0.2574937196297039,
+       "hf_share": 0.12918750757256534,
        "closest_takes_db": 1.8071069788489889
       },
       "1.0": {
@@ -2027,13 +2027,13 @@
        "dc": 4.3169231503270566e-05,
        "finite": true,
        "centroid_hz": 1509.2242854817355,
-       "hf_share": 0.3188604682202988,
+       "hf_share": 0.19388831446401322,
        "closest_takes_db": 0.7422542462277991
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.31208528196306506,
-     "soft_over_hard_hf_db": -5.286993029542863,
+     "soft_over_hard_hf_db": -12.30431234809138,
      "worst_closest_takes_db": 4.579586412079121,
      "ok": true,
      "name": "Crunch Snare",
@@ -2050,7 +2050,7 @@
        "dc": 1.0448407920193858e-05,
        "finite": true,
        "centroid_hz": 1212.5395618558232,
-       "hf_share": 0.04936006953737594,
+       "hf_share": 0.008351794209576359,
        "closest_takes_db": 8.79988939549017
       },
       "0.7": {
@@ -2058,7 +2058,7 @@
        "dc": 1.661433998378925e-05,
        "finite": true,
        "centroid_hz": 1321.5471976602687,
-       "hf_share": 0.10250834562364856,
+       "hf_share": 0.04720661657248844,
        "closest_takes_db": 6.27375186494459
       },
       "1.0": {
@@ -2066,13 +2066,13 @@
        "dc": 1.9492184947011992e-05,
        "finite": true,
        "centroid_hz": 1386.3610180470887,
-       "hf_share": 0.10786005156038095,
+       "hf_share": 0.07200548860813036,
        "closest_takes_db": 3.6752589439127115
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.8746203521820595,
-     "soft_over_hard_hf_db": -3.394848607080557,
+     "soft_over_hard_hf_db": -9.355858170692912,
      "worst_closest_takes_db": 8.79988939549017,
      "ok": true,
      "name": "Snap",
@@ -2085,7 +2085,7 @@
        "dc": 4.973550403519766e-06,
        "finite": true,
        "centroid_hz": 5369.170544491266,
-       "hf_share": 0.12634593642910866,
+       "hf_share": 0.004143754823039983,
        "closest_takes_db": -2.1418338810049318
       },
       "0.7": {
@@ -2093,7 +2093,7 @@
        "dc": 4.280636858311482e-06,
        "finite": true,
        "centroid_hz": 6507.281129683899,
-       "hf_share": 0.17510020252510397,
+       "hf_share": 0.0034062990121662418,
        "closest_takes_db": -1.8664654730031685
       },
       "1.0": {
@@ -2101,13 +2101,13 @@
        "dc": 1.6822898032842204e-05,
        "finite": true,
        "centroid_hz": 7981.981867656632,
-       "hf_share": 0.41680314766790716,
+       "hf_share": 0.013563333538728854,
        "closest_takes_db": -2.5422279956447524
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.6726613306711957,
-     "soft_over_hard_hf_db": -5.183697114766913,
+     "soft_over_hard_hf_db": -5.1497239047287575,
      "worst_closest_takes_db": -1.8664654730031685,
      "ok": true,
      "name": "Closed Hat",
@@ -2120,7 +2120,7 @@
        "dc": 1.7309350369032472e-05,
        "finite": true,
        "centroid_hz": 5063.850376570858,
-       "hf_share": 0.18314356045334101,
+       "hf_share": 0.002297159347889292,
        "closest_takes_db": 9.606944628688801
       },
       "0.7": {
@@ -2128,7 +2128,7 @@
        "dc": 1.7320182450930588e-05,
        "finite": true,
        "centroid_hz": 7449.005286306601,
-       "hf_share": 0.3093725862746626,
+       "hf_share": 0.0018125461711985778,
        "closest_takes_db": -0.7247954648561489
       },
       "1.0": {
@@ -2136,13 +2136,13 @@
        "dc": 1.811471884138882e-05,
        "finite": true,
        "centroid_hz": 8116.118068687507,
-       "hf_share": 0.3436351652670335,
+       "hf_share": 0.0027044786071155355,
        "closest_takes_db": -2.211041243533855
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.6239251737979898,
-     "soft_over_hard_hf_db": -2.7330594719778882,
+     "soft_over_hard_hf_db": -0.7089242834518074,
      "worst_closest_takes_db": 9.606944628688801,
      "ok": true,
      "name": "Tambourine",
@@ -2155,7 +2155,7 @@
        "dc": 1.9895100194844417e-05,
        "finite": true,
        "centroid_hz": 402.8113508908439,
-       "hf_share": 0.16711976739363357,
+       "hf_share": 0.0001361373724416322,
        "closest_takes_db": 9.154475404482236
       },
       "0.7": {
@@ -2163,7 +2163,7 @@
        "dc": 2.105717248923611e-05,
        "finite": true,
        "centroid_hz": 474.6530232544877,
-       "hf_share": 0.33842298142229693,
+       "hf_share": 0.0014559572373759044,
        "closest_takes_db": 6.902379226910829
       },
       "1.0": {
@@ -2171,13 +2171,13 @@
        "dc": 2.1012248907936737e-05,
        "finite": true,
        "centroid_hz": 545.2117992442452,
-       "hf_share": 0.49401039035174915,
+       "hf_share": 0.004249233240549078,
        "closest_takes_db": 5.2174408476171505
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.7388162755266997,
-     "soft_over_hard_hf_db": -4.707082608891266,
+     "soft_over_hard_hf_db": -14.943332060574752,
      "worst_closest_takes_db": 9.154475404482236,
      "ok": true,
      "name": "Bongo High",
@@ -2190,7 +2190,7 @@
        "dc": 2.1190317056607455e-05,
        "finite": true,
        "centroid_hz": 258.22064847971313,
-       "hf_share": 0.12104731251883602,
+       "hf_share": 0.0002365725550563095,
        "closest_takes_db": 12.189429533625628
       },
       "0.7": {
@@ -2198,7 +2198,7 @@
        "dc": 2.752555883489549e-05,
        "finite": true,
        "centroid_hz": 289.2589031216693,
-       "hf_share": 0.2425656864114436,
+       "hf_share": 0.0010311799803821979,
        "closest_takes_db": 7.0684792728493395
       },
       "1.0": {
@@ -2206,13 +2206,13 @@
        "dc": 3.149994518025778e-05,
        "finite": true,
        "centroid_hz": 326.5913256473706,
-       "hf_share": 0.37379183237068647,
+       "hf_share": 0.003153542561485919,
        "closest_takes_db": 4.2197304990646165
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.7906537259306173,
-     "soft_over_hard_hf_db": -4.896746557701931,
+     "soft_over_hard_hf_db": -11.248343363681899,
      "worst_closest_takes_db": 12.189429533625628,
      "ok": true,
      "name": "Bongo Low",
@@ -2225,7 +2225,7 @@
        "dc": 3.86028150387574e-05,
        "finite": true,
        "centroid_hz": 92.05561909943127,
-       "hf_share": 0.0973271142160104,
+       "hf_share": 0.003708829000830127,
        "closest_takes_db": 8.192906604357791
       },
       "0.7": {
@@ -2233,7 +2233,7 @@
        "dc": 4.473011722438969e-05,
        "finite": true,
        "centroid_hz": 92.26873382993878,
-       "hf_share": 0.09667421484123856,
+       "hf_share": 0.006975835790653114,
        "closest_takes_db": 10.068346491662963
       },
       "1.0": {
@@ -2241,13 +2241,13 @@
        "dc": 5.843015605933033e-05,
        "finite": true,
        "centroid_hz": 96.30089644356539,
-       "hf_share": 0.1288604342493436,
+       "hf_share": 0.017604079573888196,
        "closest_takes_db": 15.325649848170277
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.9559165334808492,
-     "soft_over_hard_hf_db": -1.2188574397194147,
+     "soft_over_hard_hf_db": -6.763765127709471,
      "worst_closest_takes_db": 15.325649848170277,
      "ok": true,
      "name": "Conga Low",
@@ -2260,7 +2260,7 @@
        "dc": 5.111034624860622e-06,
        "finite": true,
        "centroid_hz": 136.09875105941234,
-       "hf_share": 0.036680927869555444,
+       "hf_share": 0.0011693721600249114,
        "closest_takes_db": 23.927854020385432
       },
       "0.7": {
@@ -2268,7 +2268,7 @@
        "dc": 1.2411273928591982e-05,
        "finite": true,
        "centroid_hz": 150.77263706339133,
-       "hf_share": 0.10333407254588438,
+       "hf_share": 0.003506003770232931,
        "closest_takes_db": 20.489508265709556
       },
       "1.0": {
@@ -2276,13 +2276,13 @@
        "dc": 1.825503568397835e-05,
        "finite": true,
        "centroid_hz": 172.05681164445872,
-       "hf_share": 0.19274461509037039,
+       "hf_share": 0.007253891310105093,
        "closest_takes_db": 16.665470079315575
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.7910105374999581,
-     "soft_over_hard_hf_db": -7.205419406318344,
+     "soft_over_hard_hf_db": -7.926182938653607,
      "worst_closest_takes_db": 23.927854020385432,
      "ok": true,
      "name": "Low Tine C",
@@ -2295,7 +2295,7 @@
        "dc": 7.118761914171046e-06,
        "finite": true,
        "centroid_hz": 172.10465606151138,
-       "hf_share": 0.041169861145894576,
+       "hf_share": 0.0011574232882982831,
        "closest_takes_db": 20.10273679723912
       },
       "0.7": {
@@ -2303,7 +2303,7 @@
        "dc": 7.229845323308837e-06,
        "finite": true,
        "centroid_hz": 189.85775566642874,
-       "hf_share": 0.1166554609412417,
+       "hf_share": 0.003125511671202609,
        "closest_takes_db": 13.660738995529705
       },
       "1.0": {
@@ -2311,13 +2311,13 @@
        "dc": 1.7347883840557188e-05,
        "finite": true,
        "centroid_hz": 217.1111127168559,
-       "hf_share": 0.2160555748588296,
+       "hf_share": 0.006684454566164932,
        "closest_takes_db": 13.321362862465229
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.792703118269034,
-     "soft_over_hard_hf_db": -7.1998607459624395,
+     "soft_over_hard_hf_db": -7.615737592874449,
      "worst_closest_takes_db": 20.10273679723912,
      "ok": true,
      "name": "Low Tine E",
@@ -2330,7 +2330,7 @@
        "dc": 6.147481599327875e-07,
        "finite": true,
        "centroid_hz": 570.2307889108838,
-       "hf_share": 0.1138298214559987,
+       "hf_share": 0.0038353405202189213,
        "closest_takes_db": 9.950926899139192
       },
       "0.7": {
@@ -2338,7 +2338,7 @@
        "dc": 6.346725172079459e-07,
        "finite": true,
        "centroid_hz": 780.9318515423477,
-       "hf_share": 0.2576076771168656,
+       "hf_share": 0.02780620821164221,
        "closest_takes_db": 5.492467927625104
       },
       "1.0": {
@@ -2346,13 +2346,13 @@
        "dc": 2.979265332214709e-07,
        "finite": true,
        "centroid_hz": 1071.6180694215168,
-       "hf_share": 0.4177804388948694,
+       "hf_share": 0.08537861347549316,
        "closest_takes_db": 10.068271997748067
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.5321212894615589,
-     "soft_over_hard_hf_db": -5.646920471505591,
+     "soft_over_hard_hf_db": -13.475451689287805,
      "worst_closest_takes_db": 10.068271997748067,
      "ok": true,
      "name": "Bell A",
@@ -2365,7 +2365,7 @@
        "dc": 2.6633890684024664e-06,
        "finite": true,
        "centroid_hz": 636.2914979116952,
-       "hf_share": 0.11112192404416951,
+       "hf_share": 0.07301860953182583,
        "closest_takes_db": -1.8767309658887308
       },
       "0.7": {
@@ -2373,7 +2373,7 @@
        "dc": 7.4109025263169315e-06,
        "finite": true,
        "centroid_hz": 705.476844726712,
-       "hf_share": 0.1544170874303466,
+       "hf_share": 0.1162278717848945,
        "closest_takes_db": 1.8878823952451342
       },
       "1.0": {
@@ -2381,13 +2381,13 @@
        "dc": 1.3625793144456111e-05,
        "finite": true,
        "centroid_hz": 716.0572674656523,
-       "hf_share": 0.1533098626111089,
+       "hf_share": 0.1161353041351026,
        "closest_takes_db": -0.8438139508685638
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.8886042036326608,
-     "soft_over_hard_hf_db": -1.397703419699008,
+     "soft_over_hard_hf_db": -2.015307030296664,
      "worst_closest_takes_db": 1.8878823952451342,
      "ok": true,
      "name": "Breath",
@@ -2400,7 +2400,7 @@
        "dc": 4.528775389189832e-05,
        "finite": true,
        "centroid_hz": 2320.9474259074696,
-       "hf_share": 0.09337545123244219,
+       "hf_share": 0.0016870907336105053,
        "closest_takes_db": -2.0614725503913434
       },
       "0.7": {
@@ -2408,7 +2408,7 @@
        "dc": 3.961994661949575e-05,
        "finite": true,
        "centroid_hz": 2753.8886969961673,
-       "hf_share": 0.2611180722861101,
+       "hf_share": 0.007396816892109408,
        "closest_takes_db": -1.5452846427310707
       },
       "1.0": {
@@ -2416,13 +2416,13 @@
        "dc": 4.690673085860908e-05,
        "finite": true,
        "centroid_hz": 2799.505457988582,
-       "hf_share": 0.20023181701692244,
+       "hf_share": 0.01703286986418543,
        "closest_takes_db": -2.02989694644856
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.8290562246572822,
-     "soft_over_hard_hf_db": -3.3130037487690087,
+     "soft_over_hard_hf_db": -10.041493882455692,
      "worst_closest_takes_db": -1.5452846427310707,
      "ok": true,
      "name": "Scrape",
@@ -2435,7 +2435,7 @@
        "dc": 3.785233730013715e-06,
        "finite": true,
        "centroid_hz": 295.95387704758264,
-       "hf_share": 0.08620814597241636,
+       "hf_share": 0.0059411707306822,
        "closest_takes_db": 5.644655498088128
       },
       "0.7": {
@@ -2443,7 +2443,7 @@
        "dc": 4.2746701183205005e-06,
        "finite": true,
        "centroid_hz": 348.21441415987783,
-       "hf_share": 0.18060043665403677,
+       "hf_share": 0.017982550279029712,
        "closest_takes_db": 3.148518810470504
       },
       "1.0": {
@@ -2451,13 +2451,13 @@
        "dc": 4.856475243286695e-06,
        "finite": true,
        "centroid_hz": 440.3233148159266,
-       "hf_share": 0.28731991803851176,
+       "hf_share": 0.040743599982568726,
        "closest_takes_db": 4.46211675795079
       }
      },
      "soft_darker": true,
      "soft_over_hard_centroid": 0.67212856346547,
-     "soft_over_hard_hf_db": -5.228174287945048,
+     "soft_over_hard_hf_db": -8.361873664979285,
      "worst_closest_takes_db": 5.644655498088128,
      "ok": true,
      "name": "Bongo Roll",
@@ -2562,6 +2562,2502 @@
     "Scrape": -14.59010063734002,
     "Bell A": -20.326049487401463,
     "Breath": -18.987113997903563
+   }
+  },
+  "iron-drumless": {
+   "title": "IRON DRUMLESS",
+   "bpm": 74,
+   "pads": [
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.4269999861717224,
+       "dc": 4.3579025804652005e-11,
+       "finite": true,
+       "centroid_hz": 511.1324431317782,
+       "hf_share": 0.0028811750289178192,
+       "closest_takes_db": 11.36368933971629
+      },
+      "0.7": {
+       "peak": 0.5634999871253967,
+       "dc": 1.344127587010746e-10,
+       "finite": true,
+       "centroid_hz": 514.8726891213275,
+       "hf_share": 0.005500359080427342,
+       "closest_takes_db": 15.845453101554082
+      },
+      "1.0": {
+       "peak": 0.699999988079071,
+       "dc": 6.068127944569568e-11,
+       "finite": true,
+       "centroid_hz": 522.4188445974864,
+       "hf_share": 0.011905118948118083,
+       "closest_takes_db": 12.331521105607678
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.9783958760630004,
+     "soft_over_hard_hf_db": -6.161640968473838,
+     "worst_closest_takes_db": 15.845453101554082,
+     "ok": true,
+     "name": "Rim Knock",
+     "voice": "rim"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.2745000123977661,
+       "dc": 2.1625268242786433e-10,
+       "finite": true,
+       "centroid_hz": 4407.2523805883575,
+       "hf_share": 0.0012883894446071502,
+       "closest_takes_db": -2.1425577822984163
+      },
+      "0.7": {
+       "peak": 0.3622500002384186,
+       "dc": 3.034928974798845e-10,
+       "finite": true,
+       "centroid_hz": 5679.467081262792,
+       "hf_share": 0.0013717119045171993,
+       "closest_takes_db": -1.7129736299568
+      },
+      "1.0": {
+       "peak": 0.45000001788139343,
+       "dc": 8.118767325093756e-10,
+       "finite": true,
+       "centroid_hz": 6597.211486356034,
+       "hf_share": 0.009269360989757211,
+       "closest_takes_db": -2.2719842855174717
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.6680477637715843,
+     "soft_over_hard_hf_db": -8.570026377123924,
+     "worst_closest_takes_db": -1.7129736299568,
+     "ok": true,
+     "name": "Closed Hat",
+     "voice": "hat"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.3050000071525574,
+       "dc": 1.5997629887465337e-08,
+       "finite": true,
+       "centroid_hz": 3558.1163931282185,
+       "hf_share": 0.00032662361019261796,
+       "closest_takes_db": -1.8011652512928769
+      },
+      "0.7": {
+       "peak": 0.4025000035762787,
+       "dc": 4.05431528349709e-08,
+       "finite": true,
+       "centroid_hz": 4674.979906169281,
+       "hf_share": 0.0010750737775100635,
+       "closest_takes_db": -2.382284231032727
+      },
+      "1.0": {
+       "peak": 0.5,
+       "dc": 5.80784877968199e-08,
+       "finite": true,
+       "centroid_hz": 5205.614000894228,
+       "hf_share": 0.00581788573290843,
+       "closest_takes_db": -1.8160433144275965
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.683515218861214,
+     "soft_over_hard_hf_db": -12.507176123818526,
+     "worst_closest_takes_db": -1.8011652512928769,
+     "ok": true,
+     "name": "Grain Shaker",
+     "voice": "shaker"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.4880000352859497,
+       "dc": 9.3319058578345e-06,
+       "finite": true,
+       "centroid_hz": 126.0369596094032,
+       "hf_share": 0.0106504501597177,
+       "closest_takes_db": 11.57847722357733
+      },
+      "0.7": {
+       "peak": 0.6439999938011169,
+       "dc": 2.6307510779588483e-05,
+       "finite": true,
+       "centroid_hz": 148.05247126042184,
+       "hf_share": 0.03758806546494772,
+       "closest_takes_db": 8.756283454168411
+      },
+      "1.0": {
+       "peak": 0.800000011920929,
+       "dc": 4.769652878167108e-05,
+       "finite": true,
+       "centroid_hz": 172.16983598227486,
+       "hf_share": 0.06489462430594212,
+       "closest_takes_db": 8.210166808005397
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.7320501810919939,
+     "soft_over_hard_hf_db": -7.848407581464931,
+     "worst_closest_takes_db": 11.57847722357733,
+     "ok": true,
+     "name": "Log Low",
+     "voice": "log_drum"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.45750001072883606,
+       "dc": 2.4163814487110358e-06,
+       "finite": true,
+       "centroid_hz": 181.95837144505686,
+       "hf_share": 0.038093954241849165,
+       "closest_takes_db": 14.640995169353495
+      },
+      "0.7": {
+       "peak": 0.6037499904632568,
+       "dc": 3.977756932727061e-06,
+       "finite": true,
+       "centroid_hz": 200.59897087881075,
+       "hf_share": 0.07949307235902324,
+       "closest_takes_db": 12.510404782336359
+      },
+      "1.0": {
+       "peak": 0.75,
+       "dc": 8.114603588182945e-06,
+       "finite": true,
+       "centroid_hz": 234.42417118101665,
+       "hf_share": 0.12604894777977654,
+       "closest_takes_db": 3.911189438630024
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.776192875198663,
+     "soft_over_hard_hf_db": -5.196831688753727,
+     "worst_closest_takes_db": 14.640995169353495,
+     "ok": true,
+     "name": "Log High",
+     "voice": "log_drum"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.335500031709671,
+       "dc": 1.10422760712936e-07,
+       "finite": true,
+       "centroid_hz": 612.6977212316359,
+       "hf_share": 0.011526352826100908,
+       "closest_takes_db": 10.905314812015936
+      },
+      "0.7": {
+       "peak": 0.4427500367164612,
+       "dc": 1.8774703391954972e-07,
+       "finite": true,
+       "centroid_hz": 843.4973818831909,
+       "hf_share": 0.03493090328584583,
+       "closest_takes_db": -1.0782040993069095
+      },
+      "1.0": {
+       "peak": 0.550000011920929,
+       "dc": 3.072156573580287e-07,
+       "finite": true,
+       "centroid_hz": 1113.9778186206358,
+       "hf_share": 0.07708508167011663,
+       "closest_takes_db": -0.6750006192726626
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.5500089059136729,
+     "soft_over_hard_hf_db": -8.252784274972717,
+     "worst_closest_takes_db": 10.905314812015936,
+     "ok": true,
+     "name": "Glass Bell",
+     "voice": "glass_bell"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.3050000071525574,
+       "dc": 1.102711810752055e-09,
+       "finite": true,
+       "centroid_hz": 2579.3436039791823,
+       "hf_share": 0.0011428472996746072,
+       "closest_takes_db": 2.6577044062518924
+      },
+      "0.7": {
+       "peak": 0.4025000035762787,
+       "dc": 1.9039141374577184e-09,
+       "finite": true,
+       "centroid_hz": 2743.3117826314806,
+       "hf_share": 0.0018375513375145775,
+       "closest_takes_db": 1.2891281919312703
+      },
+      "1.0": {
+       "peak": 0.5,
+       "dc": 2.403848897714056e-09,
+       "finite": true,
+       "centroid_hz": 2735.5556550769224,
+       "hf_share": 0.0028614459276249523,
+       "closest_takes_db": 2.7637376703255097
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.9428956779556555,
+     "soft_over_hard_hf_db": -3.9859733703837352,
+     "worst_closest_takes_db": 2.7637376703255097,
+     "ok": true,
+     "name": "Clock Tick",
+     "voice": "clock_tick"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.33550000190734863,
+       "dc": 9.955217592505505e-07,
+       "finite": true,
+       "centroid_hz": 549.0869857462746,
+       "hf_share": 0.030784864128928422,
+       "closest_takes_db": -1.3362614922866745
+      },
+      "0.7": {
+       "peak": 0.4427500367164612,
+       "dc": 1.7183945146825863e-06,
+       "finite": true,
+       "centroid_hz": 643.7241395050203,
+       "hf_share": 0.07373654154030358,
+       "closest_takes_db": -1.6980390874228775
+      },
+      "1.0": {
+       "peak": 0.550000011920929,
+       "dc": 3.929098511434859e-06,
+       "finite": true,
+       "centroid_hz": 710.8959429507115,
+       "hf_share": 0.0959010676594876,
+       "closest_takes_db": 1.5600294903273721
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.7723872828239567,
+     "soft_over_hard_hf_db": -4.934862010221184,
+     "worst_closest_takes_db": 1.5600294903273721,
+     "ok": true,
+     "name": "Breath",
+     "voice": "breath"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.45750004053115845,
+       "dc": 5.004433114663698e-05,
+       "finite": true,
+       "centroid_hz": 81.57603591848925,
+       "hf_share": 0.009763176547736755,
+       "closest_takes_db": 7.866947657115372
+      },
+      "0.7": {
+       "peak": 0.6037499904632568,
+       "dc": 7.134096813388169e-05,
+       "finite": true,
+       "centroid_hz": 83.16766328164815,
+       "hf_share": 0.012884112423831178,
+       "closest_takes_db": 17.09172598214993
+      },
+      "1.0": {
+       "peak": 0.75,
+       "dc": 8.253946725744754e-05,
+       "finite": true,
+       "centroid_hz": 84.29740934740538,
+       "hf_share": 0.023386665911688878,
+       "closest_takes_db": 17.552205077625295
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.9677169980669176,
+     "soft_over_hard_hf_db": -3.793771688795491,
+     "worst_closest_takes_db": 17.552205077625295,
+     "ok": true,
+     "name": "Hand Drum",
+     "voice": "hand_drum"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.33550000190734863,
+       "dc": 9.652978860685835e-09,
+       "finite": true,
+       "centroid_hz": 2394.711943547659,
+       "hf_share": 0.0006706480787789738,
+       "closest_takes_db": -1.8718485377133764
+      },
+      "0.7": {
+       "peak": 0.4427500367164612,
+       "dc": 6.006148112192022e-08,
+       "finite": true,
+       "centroid_hz": 2708.3204457915954,
+       "hf_share": 0.0025611978537734502,
+       "closest_takes_db": 12.547749523042091
+      },
+      "1.0": {
+       "peak": 0.550000011920929,
+       "dc": 1.7026114562668226e-07,
+       "finite": true,
+       "centroid_hz": 2704.701881145355,
+       "hf_share": 0.0033079721183139977,
+       "closest_takes_db": -1.1336381092855081
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.8853885007591206,
+     "soft_over_hard_hf_db": -6.930671555946625,
+     "worst_closest_takes_db": 12.547749523042091,
+     "ok": true,
+     "name": "Water Drop",
+     "voice": "water_drop"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.2745000123977661,
+       "dc": 3.0299991067295196e-06,
+       "finite": true,
+       "centroid_hz": 1387.1159305717472,
+       "hf_share": 0.008800424993502566,
+       "closest_takes_db": -2.1794313175770403
+      },
+      "0.7": {
+       "peak": 0.3622500002384186,
+       "dc": 1.598079393261287e-06,
+       "finite": true,
+       "centroid_hz": 2011.3395859182547,
+       "hf_share": 0.09666159311668455,
+       "closest_takes_db": -2.058751579826337
+      },
+      "1.0": {
+       "peak": 0.44999998807907104,
+       "dc": 2.946113227153546e-06,
+       "finite": true,
+       "centroid_hz": 2093.90044877339,
+       "hf_share": 0.1246870284192318,
+       "closest_takes_db": -1.6999495469180959
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.6624555295283124,
+     "soft_over_hard_hf_db": -11.513176290455023,
+     "worst_closest_takes_db": -1.6999495469180959,
+     "ok": true,
+     "name": "Iron Rod",
+     "voice": "rod"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.4758000075817108,
+       "dc": 5.983531536912778e-06,
+       "finite": true,
+       "centroid_hz": 145.74008711724252,
+       "hf_share": 0.0361568604958552,
+       "closest_takes_db": 8.752744140765014
+      },
+      "0.7": {
+       "peak": 0.6279000043869019,
+       "dc": 1.1299014659016393e-05,
+       "finite": true,
+       "centroid_hz": 154.89224632832386,
+       "hf_share": 0.060153723974382636,
+       "closest_takes_db": 8.773368540191388
+      },
+      "1.0": {
+       "peak": 0.7799999713897705,
+       "dc": 3.011678927578032e-05,
+       "finite": true,
+       "centroid_hz": 194.33320536885054,
+       "hf_share": 0.13112578919206963,
+       "closest_takes_db": 3.90538136413946
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.7499494841379436,
+     "soft_over_hard_hf_db": -5.594974014458108,
+     "worst_closest_takes_db": 8.773368540191388,
+     "ok": true,
+     "name": "Log Mid",
+     "voice": "log_drum"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.4392000138759613,
+       "dc": 1.0878410421355511e-06,
+       "finite": true,
+       "centroid_hz": 210.93785434142012,
+       "hf_share": 0.028839946714046407,
+       "closest_takes_db": 8.886747970084986
+      },
+      "0.7": {
+       "peak": 0.5795999765396118,
+       "dc": 2.266373030579416e-06,
+       "finite": true,
+       "centroid_hz": 242.081689600463,
+       "hf_share": 0.08333332293876822,
+       "closest_takes_db": 2.0046206312620547
+      },
+      "1.0": {
+       "peak": 0.7200000286102295,
+       "dc": 5.276385309116449e-06,
+       "finite": true,
+       "centroid_hz": 263.6533682194451,
+       "hf_share": 0.10918212309589817,
+       "closest_takes_db": 5.081084748359542
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.8000574988514898,
+     "soft_over_hard_hf_db": -5.781570814786548,
+     "worst_closest_takes_db": 8.886747970084986,
+     "ok": true,
+     "name": "Log Top",
+     "voice": "log_drum"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.3050000071525574,
+       "dc": 6.842094535386423e-08,
+       "finite": true,
+       "centroid_hz": 813.3573235075391,
+       "hf_share": 0.004282878243098132,
+       "closest_takes_db": 2.527211870144284
+      },
+      "0.7": {
+       "peak": 0.4025000035762787,
+       "dc": 1.0729106492135543e-07,
+       "finite": true,
+       "centroid_hz": 1199.3865620681297,
+       "hf_share": 0.024173565003153662,
+       "closest_takes_db": 11.961882511672403
+      },
+      "1.0": {
+       "peak": 0.5,
+       "dc": 1.5261313990322378e-07,
+       "finite": true,
+       "centroid_hz": 1551.9829871082375,
+       "hf_share": 0.05284988869071179,
+       "closest_takes_db": 13.487399258103622
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.5240761852828316,
+     "soft_over_hard_hf_db": -10.913083488391626,
+     "worst_closest_takes_db": 13.487399258103622,
+     "ok": true,
+     "name": "Glass Bell High",
+     "voice": "glass_bell"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.45750004053115845,
+       "dc": 2.2072117644711398e-06,
+       "finite": true,
+       "centroid_hz": 143.94614075151543,
+       "hf_share": 0.024754916704202597,
+       "closest_takes_db": 4.467018574473327
+      },
+      "0.7": {
+       "peak": 0.6037499904632568,
+       "dc": 3.1103190849535167e-06,
+       "finite": true,
+       "centroid_hz": 149.30063257190972,
+       "hf_share": 0.043319686114024245,
+       "closest_takes_db": 5.1053710749289145
+      },
+      "1.0": {
+       "peak": 0.75,
+       "dc": 5.4540078053832985e-06,
+       "finite": true,
+       "centroid_hz": 152.67003737929372,
+       "hf_share": 0.05161194666559975,
+       "closest_takes_db": 3.5537129905231932
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.942857833943509,
+     "soft_over_hard_hf_db": -3.1908877046575936,
+     "worst_closest_takes_db": 5.1053710749289145,
+     "ok": true,
+     "name": "Log Roll",
+     "voice": "roll",
+     "seconds": 3.0
+    }
+   ],
+   "groove": {
+    "name": "iron-drumless_groove",
+    "pack": "",
+    "bpm": 74,
+    "dur_s": 7.686,
+    "beats": 9.48,
+    "peak_dbfs": -0.25999999046325684,
+    "rms_dbfs": -13.5600004196167,
+    "crest_db": 13.300000190734863,
+    "floor_db_under_rms": 226.4,
+    "bands": {
+     "20-60": 0.9,
+     "60-150": 78.1,
+     "150-400": 12.0,
+     "400-1000": 6.1,
+     "1000-3000": 2.1,
+     "3000-6000": 0.8,
+     "6000-12000": 0.0,
+     "12000-20000": 0.0
+    },
+    "centroid_hz": 208,
+    "roll95_hz": 538,
+    "roll99_hz": 2972,
+    "ceiling_60db_hz": 10056,
+    "onsets_per_beat": {
+     "all": 2.22,
+     "low": 1.48,
+     "mid": 2.11,
+     "high": 2.22
+    },
+    "groove_all": {
+     "median_abs_dev_ms": 4.59061101918257,
+     "swing_pct_16th": 52.363114134542684,
+     "odd16_share": 0.3333333333333333
+    },
+    "groove_high": {
+     "median_abs_dev_ms": 4.453484096340969,
+     "swing_pct_16th": 52.82872260015105,
+     "odd16_share": 0.2857142857142857
+    },
+    "attack_over_body_db": 6.8,
+    "near_peak_share": 0.003,
+    "flatness": 0.136,
+    "side_over_mid_db": -226.4,
+    "lr_corr": 1.0,
+    "top_pitch_classes": [
+     "A",
+     "C",
+     "D"
+    ],
+    "low_peak_hz": 86.1,
+    "hits": {
+     "K": {
+      "n": 11,
+      "peak_dbfs": -1.2481854075555825,
+      "centroid_hz": 128.52953194949725,
+      "to_m20db_ms": 195.87301587301587,
+      "f0_attack_hz": 102.28271484375,
+      "f0_body_hz": 110.357666015625,
+      "harmonics_over_fund_db": -10.707871139111047
+     },
+     "S": {
+      "n": 5,
+      "peak_dbfs": -8.250139722059874,
+      "centroid_hz": 1994.280486094554,
+      "to_m20db_ms": 109.65986394557824
+     },
+     "T": {
+      "n": 5,
+      "peak_dbfs": -8.211347249617964,
+      "centroid_hz": 327.6782982162563,
+      "to_m20db_ms": 163.40136054421768
+     }
+    }
+   },
+   "groove_seconds": 7.686485260770975,
+   "groove_balance_db": {
+    "Log Low": -3.261707862449717,
+    "Closed Hat": -16.68917819113299,
+    "Iron Rod": -13.555614171063757,
+    "Hand Drum": 0.0,
+    "Clock Tick": -15.774028556736205,
+    "Rim Knock": -5.581386520859701,
+    "Log Mid": -4.641455099064775,
+    "Grain Shaker": -16.93386726895416,
+    "Glass Bell High": -15.774028556736205,
+    "Breath": -13.00797464163332,
+    "Log Top": -9.084952571048824,
+    "Glass Bell": -13.923124281388183,
+    "Log High": -8.035136354951733,
+    "Water Drop": -13.00797464163332
+   }
+  },
+  "neon-drumless": {
+   "title": "NEON DRUMLESS",
+   "bpm": 90,
+   "pads": [
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.2745000422000885,
+       "dc": 7.293249950635072e-07,
+       "finite": true,
+       "centroid_hz": 9805.866269166947,
+       "hf_share": 0.3316686673749638,
+       "closest_takes_db": -2.5727224136902906
+      },
+      "0.7": {
+       "peak": 0.3622500002384186,
+       "dc": 9.960563147615176e-07,
+       "finite": true,
+       "centroid_hz": 9236.087771197632,
+       "hf_share": 0.2201814801859439,
+       "closest_takes_db": -2.656688647660629
+      },
+      "1.0": {
+       "peak": 0.45000001788139343,
+       "dc": 2.6092902771779336e-06,
+       "finite": true,
+       "centroid_hz": 11439.339752854916,
+       "hf_share": 0.46716360883324515,
+       "closest_takes_db": -2.522892874219755
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.8572056150985198,
+     "soft_over_hard_hf_db": -1.4876455889155638,
+     "worst_closest_takes_db": -2.522892874219755,
+     "ok": true,
+     "name": "Closed Hat",
+     "voice": "hat"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.25619998574256897,
+       "dc": 2.5836271788648446e-07,
+       "finite": true,
+       "centroid_hz": 8816.30785528187,
+       "hf_share": 0.29342291784433583,
+       "closest_takes_db": -2.0253669863088106
+      },
+      "0.7": {
+       "peak": 0.33809998631477356,
+       "dc": 2.74006566769458e-07,
+       "finite": true,
+       "centroid_hz": 8630.95056790582,
+       "hf_share": 0.19997645799587627,
+       "closest_takes_db": -2.6761411991378905
+      },
+      "1.0": {
+       "peak": 0.41999998688697815,
+       "dc": 3.847400762424513e-07,
+       "finite": true,
+       "centroid_hz": 10860.97718714116,
+       "hf_share": 0.46457292112445625,
+       "closest_takes_db": -2.7957808427088198
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.8117416787984719,
+     "soft_over_hard_hf_db": -1.9955986071362868,
+     "worst_closest_takes_db": -2.0253669863088106,
+     "ok": true,
+     "name": "Open Hat",
+     "voice": "hat"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.3050000071525574,
+       "dc": 7.028576760603755e-07,
+       "finite": true,
+       "centroid_hz": 4574.232459280757,
+       "hf_share": 0.0015133297776642296,
+       "closest_takes_db": -1.8670473408782817
+      },
+      "0.7": {
+       "peak": 0.4025000333786011,
+       "dc": 7.001339099588222e-07,
+       "finite": true,
+       "centroid_hz": 6327.365875396186,
+       "hf_share": 0.003095815702099691,
+       "closest_takes_db": -1.1765609581066403
+      },
+      "1.0": {
+       "peak": 0.5,
+       "dc": 1.7846975879365345e-06,
+       "finite": true,
+       "centroid_hz": 8318.085702709188,
+       "hf_share": 0.008132366081638889,
+       "closest_takes_db": -2.301755539265704
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.5499140815285104,
+     "soft_over_hard_hf_db": -7.302833426071185,
+     "worst_closest_takes_db": -1.1765609581066403,
+     "ok": true,
+     "name": "Grain Shaker",
+     "voice": "shaker"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.3050000071525574,
+       "dc": 3.861870936816558e-05,
+       "finite": true,
+       "centroid_hz": 3061.276661845948,
+       "hf_share": 0.011632598475370792,
+       "closest_takes_db": 3.266171162550462
+      },
+      "0.7": {
+       "peak": 0.4025000035762787,
+       "dc": 1.7860929801827297e-05,
+       "finite": true,
+       "centroid_hz": 3705.6421121648,
+       "hf_share": 0.01690771919281013,
+       "closest_takes_db": 2.604854205046754
+      },
+      "1.0": {
+       "peak": 0.5,
+       "dc": 2.243690141767729e-05,
+       "finite": true,
+       "centroid_hz": 4471.589743339252,
+       "hf_share": 0.09369993863095025,
+       "closest_takes_db": 3.2306749440006444
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.6846058868450389,
+     "soft_over_hard_hf_db": -9.06062568719243,
+     "worst_closest_takes_db": 3.266171162550462,
+     "ok": true,
+     "name": "Clock Tick",
+     "voice": "clock_tick"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.3659999966621399,
+       "dc": 3.128789830952883e-05,
+       "finite": true,
+       "centroid_hz": 1528.0970355900424,
+       "hf_share": 0.00016967901377437514,
+       "closest_takes_db": 8.482490388749909
+      },
+      "0.7": {
+       "peak": 0.4830000102519989,
+       "dc": 4.1944553231587633e-05,
+       "finite": true,
+       "centroid_hz": 1527.1794360097265,
+       "hf_share": 0.0005497556941665868,
+       "closest_takes_db": 15.9624496521346
+      },
+      "1.0": {
+       "peak": 0.6000000238418579,
+       "dc": 5.164982212590985e-05,
+       "finite": true,
+       "centroid_hz": 1545.226261274357,
+       "hf_share": 0.0011409322550980047,
+       "closest_takes_db": 4.242129733924408
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.9889147459413562,
+     "soft_over_hard_hf_db": -8.276317269035404,
+     "worst_closest_takes_db": 15.9624496521346,
+     "ok": true,
+     "name": "Wood Chirp",
+     "voice": "wood_chirp"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.33550000190734863,
+       "dc": 5.741418362958939e-07,
+       "finite": true,
+       "centroid_hz": 756.2715268223928,
+       "hf_share": 0.0030542864921683354,
+       "closest_takes_db": 19.303614922816635
+      },
+      "0.7": {
+       "peak": 0.4427500069141388,
+       "dc": 1.0174237985438594e-07,
+       "finite": true,
+       "centroid_hz": 1222.5096393364388,
+       "hf_share": 0.03234964561583965,
+       "closest_takes_db": 16.184612912422732
+      },
+      "1.0": {
+       "peak": 0.550000011920929,
+       "dc": 2.2330567617245833e-07,
+       "finite": true,
+       "centroid_hz": 1706.583300608775,
+       "hf_share": 0.08613817892302308,
+       "closest_takes_db": 8.89010433391203
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.4431494944035925,
+     "soft_over_hard_hf_db": -14.502859144870243,
+     "worst_closest_takes_db": 19.303614922816635,
+     "ok": true,
+     "name": "Bell Ping",
+     "voice": "glass_bell"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.45750001072883606,
+       "dc": 1.7675683920970187e-05,
+       "finite": true,
+       "centroid_hz": 147.99190718629495,
+       "hf_share": 0.03578800535387908,
+       "closest_takes_db": 4.632622483095919
+      },
+      "0.7": {
+       "peak": 0.6037500500679016,
+       "dc": 2.2639456801698543e-05,
+       "finite": true,
+       "centroid_hz": 157.8604089441964,
+       "hf_share": 0.0657684154661044,
+       "closest_takes_db": 2.647278605069477
+      },
+      "1.0": {
+       "peak": 0.7500000596046448,
+       "dc": 2.304395820829086e-05,
+       "finite": true,
+       "centroid_hz": 177.84324176481107,
+       "hf_share": 0.10745625867508243,
+       "closest_takes_db": 10.333934365396134
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.8321480519456959,
+     "soft_over_hard_hf_db": -4.7749422194099935,
+     "worst_closest_takes_db": 10.333934365396134,
+     "ok": true,
+     "name": "Log Mid",
+     "voice": "log_drum"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.3659999966621399,
+       "dc": 7.807949259586167e-06,
+       "finite": true,
+       "centroid_hz": 791.4678071388898,
+       "hf_share": 0.01869767654177861,
+       "closest_takes_db": 2.2359712565547833
+      },
+      "0.7": {
+       "peak": 0.4830000102519989,
+       "dc": 1.891812280518934e-05,
+       "finite": true,
+       "centroid_hz": 843.6936823531141,
+       "hf_share": 0.03794601259138093,
+       "closest_takes_db": -1.9190528053990927
+      },
+      "1.0": {
+       "peak": 0.6000000238418579,
+       "dc": 2.0489793314482085e-05,
+       "finite": true,
+       "centroid_hz": 840.7434778384453,
+       "hf_share": 0.04340910169512312,
+       "closest_takes_db": -1.3524677802677707
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.9413903622229179,
+     "soft_over_hard_hf_db": -3.6579315618819925,
+     "worst_closest_takes_db": 2.2359712565547833,
+     "ok": true,
+     "name": "Voice Chop",
+     "voice": "breath"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.2745000123977661,
+       "dc": 1.694491584203206e-05,
+       "finite": true,
+       "centroid_hz": 2094.0726674208317,
+       "hf_share": 0.0010641285390369298,
+       "closest_takes_db": 13.65178779947434
+      },
+      "0.7": {
+       "peak": 0.3622500002384186,
+       "dc": 4.668057499657152e-06,
+       "finite": true,
+       "centroid_hz": 2113.5035471655287,
+       "hf_share": 0.007767420832850251,
+       "closest_takes_db": 10.739628931035977
+      },
+      "1.0": {
+       "peak": 0.44999998807907104,
+       "dc": 1.2990442883165088e-05,
+       "finite": true,
+       "centroid_hz": 2136.601784735064,
+       "hf_share": 0.013222613286384723,
+       "closest_takes_db": 14.119697955888705
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.9800949724847741,
+     "soft_over_hard_hf_db": -10.943232058166059,
+     "worst_closest_takes_db": 14.119697955888705,
+     "ok": true,
+     "name": "Metal Tick",
+     "voice": "metal_tick"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.3659999966621399,
+       "dc": 0.0003187490510754287,
+       "finite": true,
+       "centroid_hz": 582.8467066192143,
+       "hf_share": 0.039349344454876596,
+       "closest_takes_db": -1.0893245487853223
+      },
+      "0.7": {
+       "peak": 0.4830000102519989,
+       "dc": 0.0005384847172535956,
+       "finite": true,
+       "centroid_hz": 720.6669729498232,
+       "hf_share": 0.07283021330776891,
+       "closest_takes_db": -1.9353134615604919
+      },
+      "1.0": {
+       "peak": 0.6000000238418579,
+       "dc": 0.0006603709189221263,
+       "finite": true,
+       "centroid_hz": 734.4909853088553,
+       "hf_share": 0.08182277298774361,
+       "closest_takes_db": -1.562670015132751
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.7935382710982161,
+     "soft_over_hard_hf_db": -3.17936692151548,
+     "worst_closest_takes_db": -1.0893245487853223,
+     "ok": true,
+     "name": "Zap",
+     "voice": "zap"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.4880000054836273,
+       "dc": 4.717106094176415e-06,
+       "finite": true,
+       "centroid_hz": 128.06189220804285,
+       "hf_share": 0.038469604403930706,
+       "closest_takes_db": 3.408407427889598
+      },
+      "0.7": {
+       "peak": 0.6439999938011169,
+       "dc": 2.4310626031365246e-05,
+       "finite": true,
+       "centroid_hz": 134.99377513683925,
+       "hf_share": 0.07139027133719038,
+       "closest_takes_db": 10.617867627347177
+      },
+      "1.0": {
+       "peak": 0.800000011920929,
+       "dc": 1.6025513104978018e-05,
+       "finite": true,
+       "centroid_hz": 157.43866502599175,
+       "hf_share": 0.12097353720573885,
+       "closest_takes_db": 13.831562533501359
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.813408143335698,
+     "soft_over_hard_hf_db": -4.975726590558373,
+     "worst_closest_takes_db": 13.831562533501359,
+     "ok": true,
+     "name": "Log Low",
+     "voice": "log_drum"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.4392000138759613,
+       "dc": 1.349933063465869e-05,
+       "finite": true,
+       "centroid_hz": 182.77958374915443,
+       "hf_share": 0.03845989368483683,
+       "closest_takes_db": 14.752656960181586
+      },
+      "0.7": {
+       "peak": 0.5795999765396118,
+       "dc": 2.5213630578946322e-05,
+       "finite": true,
+       "centroid_hz": 198.0481609259507,
+       "hf_share": 0.07044393954616493,
+       "closest_takes_db": 11.664249833008565
+      },
+      "1.0": {
+       "peak": 0.7200000286102295,
+       "dc": 2.4977616703836247e-05,
+       "finite": true,
+       "centroid_hz": 208.24240612736895,
+       "hf_share": 0.08881755962473131,
+       "closest_takes_db": 11.730536268977454
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.8777250856262173,
+     "soft_over_hard_hf_db": -3.634907568305734,
+     "worst_closest_takes_db": 14.752656960181586,
+     "ok": true,
+     "name": "Log High",
+     "voice": "log_drum"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.3050000071525574,
+       "dc": 4.360784373602655e-07,
+       "finite": true,
+       "centroid_hz": 873.7198494797819,
+       "hf_share": 0.0009763542240934112,
+       "closest_takes_db": 9.51850494871638
+      },
+      "0.7": {
+       "peak": 0.4025000035762787,
+       "dc": 1.422770594672329e-07,
+       "finite": true,
+       "centroid_hz": 1556.1839246012837,
+       "hf_share": 0.030944118049168308,
+       "closest_takes_db": 9.153325797923115
+      },
+      "1.0": {
+       "peak": 0.5,
+       "dc": 2.859523817733134e-07,
+       "finite": true,
+       "centroid_hz": 2177.031571954777,
+       "hf_share": 0.08829588677577448,
+       "closest_takes_db": 6.835524112338654
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.4013354058504814,
+     "soft_over_hard_hf_db": -19.563330631045954,
+     "worst_closest_takes_db": 9.51850494871638,
+     "ok": true,
+     "name": "Bell Ping High",
+     "voice": "glass_bell"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.3660000264644623,
+       "dc": 7.655800436623394e-05,
+       "finite": true,
+       "centroid_hz": 486.37787070918046,
+       "hf_share": 0.011821642404216485,
+       "closest_takes_db": 6.083376263810151
+      },
+      "0.7": {
+       "peak": 0.4830000102519989,
+       "dc": 0.00014414025645237416,
+       "finite": true,
+       "centroid_hz": 502.8478172901673,
+       "hf_share": 0.02889437493034041,
+       "closest_takes_db": 4.69282174447319
+      },
+      "1.0": {
+       "peak": 0.6000000238418579,
+       "dc": 0.00021349974849727005,
+       "finite": true,
+       "centroid_hz": 527.0068998980049,
+       "hf_share": 0.02901625474210239,
+       "closest_takes_db": -0.578154693367481
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.9229060773270945,
+     "soft_over_hard_hf_db": -3.899635372557138,
+     "worst_closest_takes_db": 6.083376263810151,
+     "ok": true,
+     "name": "Voice Chop O",
+     "voice": "breath"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.2745000123977661,
+       "dc": 4.226695793363433e-08,
+       "finite": true,
+       "centroid_hz": 9855.49077030386,
+       "hf_share": 0.4182374788320927,
+       "closest_takes_db": -2.6575883742395146
+      },
+      "0.7": {
+       "peak": 0.36225003004074097,
+       "dc": 2.6755985871318444e-08,
+       "finite": true,
+       "centroid_hz": 9054.797503357502,
+       "hf_share": 0.2864724938563924,
+       "closest_takes_db": -2.9923780203217447
+      },
+      "1.0": {
+       "peak": 0.44999998807907104,
+       "dc": 3.645988400080569e-08,
+       "finite": true,
+       "centroid_hz": 10464.383330324303,
+       "hf_share": 0.44146140084170515,
+       "closest_takes_db": -2.9083909814757796
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.9418128578818441,
+     "soft_over_hard_hf_db": -0.23469789106927025,
+     "worst_closest_takes_db": -2.6575883742395146,
+     "ok": true,
+     "name": "Hat Roll",
+     "voice": "roll",
+     "seconds": 3.47
+    }
+   ],
+   "groove": {
+    "name": "neon-drumless_groove",
+    "pack": "",
+    "bpm": 90,
+    "dur_s": 6.533,
+    "beats": 9.8,
+    "peak_dbfs": -0.25999999046325684,
+    "rms_dbfs": -7.400000095367432,
+    "crest_db": 7.130000114440918,
+    "floor_db_under_rms": 232.6,
+    "bands": {
+     "20-60": 0.0,
+     "60-150": 80.5,
+     "150-400": 12.0,
+     "400-1000": 4.5,
+     "1000-3000": 2.3,
+     "3000-6000": 0.2,
+     "6000-12000": 0.3,
+     "12000-20000": 0.1
+    },
+    "centroid_hz": 230,
+    "roll95_hz": 560,
+    "roll99_hz": 2024,
+    "ceiling_60db_hz": 18863,
+    "onsets_per_beat": {
+     "all": 2.55,
+     "low": 0.92,
+     "mid": 2.24,
+     "high": 2.55
+    },
+    "groove_all": {
+     "median_abs_dev_ms": 3.395691609977325,
+     "swing_pct_16th": 51.428571428571466,
+     "odd16_share": 0.36
+    },
+    "groove_high": {
+     "median_abs_dev_ms": 4.71088435374097,
+     "swing_pct_16th": 52.897959183673436,
+     "odd16_share": 0.36
+    },
+    "attack_over_body_db": 3.5,
+    "near_peak_share": 0.047,
+    "flatness": 0.188,
+    "side_over_mid_db": -232.6,
+    "lr_corr": 1.0,
+    "top_pitch_classes": [
+     "A",
+     "C",
+     "D"
+    ],
+    "low_peak_hz": 107.7,
+    "hits": {
+     "K": {
+      "n": 16,
+      "peak_dbfs": -1.3785674595909785,
+      "centroid_hz": 171.67683904112062,
+      "to_m20db_ms": 158.2766439909297,
+      "f0_attack_hz": 110.357666015625,
+      "f0_body_hz": 110.357666015625,
+      "harmonics_over_fund_db": -12.662267137968428
+     },
+     "S": {
+      "n": 7,
+      "peak_dbfs": -3.884939190232312,
+      "centroid_hz": 1091.7584688564755,
+      "to_m20db_ms": 150.92970521541952
+     },
+     "T": {
+      "n": 2,
+      "peak_dbfs": -3.3523793775828143,
+      "centroid_hz": 798.9766988538912,
+      "to_m20db_ms": 233.96825396825398
+     }
+    }
+   },
+   "groove_seconds": 6.533333333333333,
+   "groove_balance_db": {
+    "Grain Shaker": -19.61145510963788,
+    "Closed Hat": -15.198690277898505,
+    "Log Low": 0.0,
+    "Clock Tick": -17.23018861580025,
+    "Bell Ping": -16.402334575076566,
+    "Metal Tick": -18.14533825019704,
+    "Log High": -9.845871789494513,
+    "Wood Chirp": -7.2166426536797665,
+    "Voice Chop": -12.880510036932835,
+    "Open Hat": -19.904442415085605,
+    "Bell Ping High": -18.390027328018206,
+    "Log Mid": -6.438282156125204,
+    "Voice Chop O": -9.71541716253687,
+    "Zap": -13.708363611503353
+   }
+  },
+  "ash-drumless": {
+   "title": "ASH DRUMLESS",
+   "bpm": 115,
+   "pads": [
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.4269999861717224,
+       "dc": 3.229638605262153e-05,
+       "finite": true,
+       "centroid_hz": 604.0741283158543,
+       "hf_share": 0.0012994138357176775,
+       "closest_takes_db": 21.259356578620398
+      },
+      "0.7": {
+       "peak": 0.5634999871253967,
+       "dc": 4.274960156180896e-05,
+       "finite": true,
+       "centroid_hz": 613.8100730169465,
+       "hf_share": 0.004859976041561112,
+       "closest_takes_db": 10.751701055995401
+      },
+      "1.0": {
+       "peak": 0.699999988079071,
+       "dc": 2.8133308660471812e-05,
+       "finite": true,
+       "centroid_hz": 624.1467517540539,
+       "hf_share": 0.012607689674911963,
+       "closest_takes_db": 11.26854722197908
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.9678398976173648,
+     "soft_over_hard_hf_db": -9.8688802389856,
+     "worst_closest_takes_db": 21.259356578620398,
+     "ok": true,
+     "name": "Rim",
+     "voice": "rim"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.3050000071525574,
+       "dc": 5.661812338075833e-06,
+       "finite": true,
+       "centroid_hz": 5841.97799967565,
+       "hf_share": 4.953142200385723e-06,
+       "closest_takes_db": 9.238754498152728
+      },
+      "0.7": {
+       "peak": 0.4025000035762787,
+       "dc": 1.322564457950648e-05,
+       "finite": true,
+       "centroid_hz": 7054.808706412904,
+       "hf_share": 8.559181702655038e-05,
+       "closest_takes_db": -1.003013465283229
+      },
+      "1.0": {
+       "peak": 0.5,
+       "dc": 2.045797555183526e-05,
+       "finite": true,
+       "centroid_hz": 8658.789364386646,
+       "hf_share": 0.0002883057865613677,
+       "closest_takes_db": -1.9260048457533814
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.6746876213092258,
+     "soft_over_hard_hf_db": -17.649725627873366,
+     "worst_closest_takes_db": 9.238754498152728,
+     "ok": true,
+     "name": "Tambourine",
+     "voice": "tambourine"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.30500003695487976,
+       "dc": 3.508456939016469e-05,
+       "finite": true,
+       "centroid_hz": 4394.443478517856,
+       "hf_share": 0.0004634737855099884,
+       "closest_takes_db": -2.294037530398066
+      },
+      "0.7": {
+       "peak": 0.4025000035762787,
+       "dc": 5.722968853660859e-05,
+       "finite": true,
+       "centroid_hz": 5906.083530226189,
+       "hf_share": 0.0007605634341260675,
+       "closest_takes_db": -2.3794045012532523
+      },
+      "1.0": {
+       "peak": 0.5,
+       "dc": 7.545640983153135e-05,
+       "finite": true,
+       "centroid_hz": 7080.096582403432,
+       "hf_share": 0.004255852778181473,
+       "closest_takes_db": -2.4198708080481994
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.6206756401373984,
+     "soft_over_hard_hf_db": -9.629614209967666,
+     "worst_closest_takes_db": -2.294037530398066,
+     "ok": true,
+     "name": "Shaker Push",
+     "voice": "shaker"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.3050000071525574,
+       "dc": 2.647678047651425e-05,
+       "finite": true,
+       "centroid_hz": 4349.022476749834,
+       "hf_share": 0.0007064757072669529,
+       "closest_takes_db": -2.4402393813351413
+      },
+      "0.7": {
+       "peak": 0.4025000035762787,
+       "dc": 4.450331471161917e-05,
+       "finite": true,
+       "centroid_hz": 5850.644738744184,
+       "hf_share": 0.0011195370267048652,
+       "closest_takes_db": -2.382133047572692
+      },
+      "1.0": {
+       "peak": 0.5,
+       "dc": 5.805107139167376e-05,
+       "finite": true,
+       "centroid_hz": 7031.590879531636,
+       "hf_share": 0.003909952203692347,
+       "closest_takes_db": -2.2692015509473444
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.6184976559727713,
+     "soft_over_hard_hf_db": -7.430742156180143,
+     "worst_closest_takes_db": -2.2692015509473444,
+     "ok": true,
+     "name": "Shaker Pull",
+     "voice": "shaker"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.4880000054836273,
+       "dc": 0.00013994192704558372,
+       "finite": true,
+       "centroid_hz": 127.81981332019416,
+       "hf_share": 0.036773233837975636,
+       "closest_takes_db": -0.14267824591136136
+      },
+      "0.7": {
+       "peak": 0.6439999938011169,
+       "dc": 0.00025686141452752054,
+       "finite": true,
+       "centroid_hz": 141.38896216497076,
+       "hf_share": 0.08687441378338709,
+       "closest_takes_db": 5.2341084379261185
+      },
+      "1.0": {
+       "peak": 0.8000000715255737,
+       "dc": 0.0003478506114333868,
+       "finite": true,
+       "centroid_hz": 161.7796449387002,
+       "hf_share": 0.12570885340475352,
+       "closest_takes_db": 4.22007143040671
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.7900858811293984,
+     "soft_over_hard_hf_db": -5.338340417888322,
+     "worst_closest_takes_db": 5.2341084379261185,
+     "ok": true,
+     "name": "Log Low",
+     "voice": "log_drum"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.4758000075817108,
+       "dc": 0.00013279230915941298,
+       "finite": true,
+       "centroid_hz": 148.0952146813203,
+       "hf_share": 0.037389688126727265,
+       "closest_takes_db": 9.766695100089777
+      },
+      "0.7": {
+       "peak": 0.6279000043869019,
+       "dc": 0.0002637035504449159,
+       "finite": true,
+       "centroid_hz": 169.77676014914962,
+       "hf_share": 0.0846188791855919,
+       "closest_takes_db": 0.8087670791400117
+      },
+      "1.0": {
+       "peak": 0.7800000309944153,
+       "dc": 0.00040263772825710475,
+       "finite": true,
+       "centroid_hz": 181.3584495728731,
+       "hf_share": 0.111926704512369,
+       "closest_takes_db": 1.0004030205278607
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.8165884469684604,
+     "soft_over_hard_hf_db": -4.761818742504702,
+     "worst_closest_takes_db": 9.766695100089777,
+     "ok": true,
+     "name": "Log Mid",
+     "voice": "log_drum"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.45750001072883606,
+       "dc": 0.00010986225242959335,
+       "finite": true,
+       "centroid_hz": 182.53926726216883,
+       "hf_share": 0.03599559277188368,
+       "closest_takes_db": 11.605081024590213
+      },
+      "0.7": {
+       "peak": 0.6037499904632568,
+       "dc": 0.0002088266337523237,
+       "finite": true,
+       "centroid_hz": 194.95838268483584,
+       "hf_share": 0.07053407914785875,
+       "closest_takes_db": 13.992938017329795
+      },
+      "1.0": {
+       "peak": 0.7500000596046448,
+       "dc": 0.0003385228046681732,
+       "finite": true,
+       "centroid_hz": 199.11644186484256,
+       "hf_share": 0.06804671438838988,
+       "closest_takes_db": 3.8191511746991513
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.9167463296982472,
+     "soft_over_hard_hf_db": -2.7655783041188533,
+     "worst_closest_takes_db": 13.992938017329795,
+     "ok": true,
+     "name": "Log High",
+     "voice": "log_drum"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.3660000264644623,
+       "dc": 8.485281796311028e-06,
+       "finite": true,
+       "centroid_hz": 453.7834884264676,
+       "hf_share": 0.0044730610281888605,
+       "closest_takes_db": 24.243405676542142
+      },
+      "0.7": {
+       "peak": 0.4830000102519989,
+       "dc": 1.7324724467471242e-05,
+       "finite": true,
+       "centroid_hz": 470.61200486850254,
+       "hf_share": 0.008428053660487765,
+       "closest_takes_db": 6.2328185373759295
+      },
+      "1.0": {
+       "peak": 0.6000000238418579,
+       "dc": 2.744549601629842e-05,
+       "finite": true,
+       "centroid_hz": 505.1173017764967,
+       "hf_share": 0.013444115457837483,
+       "closest_takes_db": 10.055460697472387
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.8983724905690458,
+     "soft_over_hard_hf_db": -4.779274100191926,
+     "worst_closest_takes_db": 24.243405676542142,
+     "ok": true,
+     "name": "Thumb Tine",
+     "voice": "tine"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.3050000071525574,
+       "dc": 2.052292438747827e-05,
+       "finite": true,
+       "centroid_hz": 774.1079625185358,
+       "hf_share": 0.002071661346443856,
+       "closest_takes_db": 2.908672767946236
+      },
+      "0.7": {
+       "peak": 0.4025000035762787,
+       "dc": 2.9287280995049514e-05,
+       "finite": true,
+       "centroid_hz": 1114.5714482645465,
+       "hf_share": 0.02626038951149356,
+       "closest_takes_db": 3.1672628394743327
+      },
+      "1.0": {
+       "peak": 0.5,
+       "dc": 3.8406466046581045e-05,
+       "finite": true,
+       "centroid_hz": 1547.9602852209696,
+       "hf_share": 0.08223427064334751,
+       "closest_takes_db": 5.809040219541935
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.500082573118491,
+     "soft_over_hard_hf_db": -15.987340819568281,
+     "worst_closest_takes_db": 5.809040219541935,
+     "ok": true,
+     "name": "Glass Bell",
+     "voice": "glass_bell"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.4269999861717224,
+       "dc": 5.556348696700297e-05,
+       "finite": true,
+       "centroid_hz": 107.44021842965586,
+       "hf_share": 0.0036904313934103877,
+       "closest_takes_db": 10.428942866195488
+      },
+      "0.7": {
+       "peak": 0.5634999871253967,
+       "dc": 8.038103260332718e-05,
+       "finite": true,
+       "centroid_hz": 107.93647544034431,
+       "hf_share": 0.008763728157967561,
+       "closest_takes_db": 10.936768494286419
+      },
+      "1.0": {
+       "peak": 0.699999988079071,
+       "dc": 7.326962804654613e-05,
+       "finite": true,
+       "centroid_hz": 108.074704554274,
+       "hf_share": 0.012346114658537674,
+       "closest_takes_db": 11.597478965450108
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.9941291893673462,
+     "soft_over_hard_hf_db": -5.244531699178118,
+     "worst_closest_takes_db": 11.597478965450108,
+     "ok": true,
+     "name": "Hand Drum",
+     "voice": "hand_drum"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.3050000071525574,
+       "dc": 6.5917796746362e-05,
+       "finite": true,
+       "centroid_hz": 488.3291894623465,
+       "hf_share": 0.05843379147631873,
+       "closest_takes_db": 0.22388953470876552
+      },
+      "0.7": {
+       "peak": 0.4025000035762787,
+       "dc": 0.000151399290189147,
+       "finite": true,
+       "centroid_hz": 600.1788426370633,
+       "hf_share": 0.11058173397709561,
+       "closest_takes_db": 0.04910573426359821
+      },
+      "1.0": {
+       "peak": 0.5,
+       "dc": 0.00021865272719878703,
+       "finite": true,
+       "centroid_hz": 568.6731844498345,
+       "hf_share": 0.10212626764678018,
+       "closest_takes_db": -1.3816883929332293
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.8587167512299404,
+     "soft_over_hard_hf_db": -2.424733938530729,
+     "worst_closest_takes_db": 0.22388953470876552,
+     "ok": true,
+     "name": "Breath",
+     "voice": "breath"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.24400000274181366,
+       "dc": 1.689340570010245e-05,
+       "finite": true,
+       "centroid_hz": 1616.1859890996925,
+       "hf_share": 0.006302857061638153,
+       "closest_takes_db": -2.157146740865507
+      },
+      "0.7": {
+       "peak": 0.32199999690055847,
+       "dc": 2.4155173377948813e-05,
+       "finite": true,
+       "centroid_hz": 3088.625318403805,
+       "hf_share": 0.06457601679746422,
+       "closest_takes_db": -2.464306576546146
+      },
+      "1.0": {
+       "peak": 0.40000003576278687,
+       "dc": 3.804377047345042e-05,
+       "finite": true,
+       "centroid_hz": 3552.547986189706,
+       "hf_share": 0.13131565874785278,
+       "closest_takes_db": -2.00473380064873
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.45493713114713946,
+     "soft_over_hard_hf_db": -13.187790585054714,
+     "worst_closest_takes_db": -2.00473380064873,
+     "ok": true,
+     "name": "Wind Rod",
+     "voice": "rod"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.4392000138759613,
+       "dc": 9.421759750694036e-05,
+       "finite": true,
+       "centroid_hz": 204.90513373894575,
+       "hf_share": 0.01727504257178261,
+       "closest_takes_db": 7.699154775011568
+      },
+      "0.7": {
+       "peak": 0.5795999765396118,
+       "dc": 0.0002139088319381699,
+       "finite": true,
+       "centroid_hz": 228.62113757775694,
+       "hf_share": 0.060864446581963626,
+       "closest_takes_db": 11.400885791937746
+      },
+      "1.0": {
+       "peak": 0.7200000882148743,
+       "dc": 0.00034709557075984776,
+       "finite": true,
+       "centroid_hz": 245.1462273793623,
+       "hf_share": 0.08733851609794091,
+       "closest_takes_db": 13.447715269951232
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.8358486113753498,
+     "soft_over_hard_hf_db": -7.037866825800193,
+     "worst_closest_takes_db": 13.447715269951232,
+     "ok": true,
+     "name": "Log Top",
+     "voice": "log_drum"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.3537999987602234,
+       "dc": 1.047199111781083e-05,
+       "finite": true,
+       "centroid_hz": 538.3234374767524,
+       "hf_share": 0.0035309687102439715,
+       "closest_takes_db": 17.675650935295806
+      },
+      "0.7": {
+       "peak": 0.4668999910354614,
+       "dc": 2.00401645997772e-05,
+       "finite": true,
+       "centroid_hz": 562.5278790150835,
+       "hf_share": 0.006858870796810718,
+       "closest_takes_db": 12.177425998247344
+      },
+      "1.0": {
+       "peak": 0.5799999833106995,
+       "dc": 2.7423731808084995e-05,
+       "finite": true,
+       "centroid_hz": 609.989145402529,
+       "hf_share": 0.01065027407594471,
+       "closest_takes_db": 22.027074695022016
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.8825131422978277,
+     "soft_over_hard_hf_db": -4.794669150556695,
+     "worst_closest_takes_db": 22.027074695022016,
+     "ok": true,
+     "name": "Thumb Tine High",
+     "voice": "tine"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.3050000071525574,
+       "dc": 1.2841085208492586e-06,
+       "finite": true,
+       "centroid_hz": 4153.408819886961,
+       "hf_share": 0.0010168441785859922,
+       "closest_takes_db": -1.8707773268895456
+      },
+      "0.7": {
+       "peak": 0.4025000035762787,
+       "dc": 2.4027276595006697e-06,
+       "finite": true,
+       "centroid_hz": 5329.654954435661,
+       "hf_share": 0.0012375537754613839,
+       "closest_takes_db": -2.243824201548377
+      },
+      "1.0": {
+       "peak": 0.5,
+       "dc": 3.6848171021119924e-06,
+       "finite": true,
+       "centroid_hz": 6471.20406250515,
+       "hf_share": 0.00417896384852081,
+       "closest_takes_db": -2.7607962839491904
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.6418293689658555,
+     "soft_over_hard_hf_db": -6.1381420751050175,
+     "worst_closest_takes_db": -1.8707773268895456,
+     "ok": true,
+     "name": "Shaker Rush",
+     "voice": "roll",
+     "seconds": 2.89
+    }
+   ],
+   "groove": {
+    "name": "ash-drumless_groove",
+    "pack": "",
+    "bpm": 115,
+    "dur_s": 5.374,
+    "beats": 10.3,
+    "peak_dbfs": -0.25999999046325684,
+    "rms_dbfs": -8.59000015258789,
+    "crest_db": 8.319999694824219,
+    "floor_db_under_rms": 60.0,
+    "bands": {
+     "20-60": 0.1,
+     "60-150": 68.7,
+     "150-400": 26.6,
+     "400-1000": 3.5,
+     "1000-3000": 0.4,
+     "3000-6000": 0.4,
+     "6000-12000": 0.3,
+     "12000-20000": 0.0
+    },
+    "centroid_hz": 191,
+    "roll95_hz": 388,
+    "roll99_hz": 1184,
+    "ceiling_60db_hz": 11283,
+    "onsets_per_beat": {
+     "all": 2.82,
+     "low": 2.91,
+     "mid": 1.84,
+     "high": 2.04
+    },
+    "groove_all": {
+     "median_abs_dev_ms": 5.102040816326529,
+     "swing_pct_16th": 54.814814814815,
+     "odd16_share": 0.41379310344827586
+    },
+    "groove_high": {
+     "median_abs_dev_ms": 4.31874198954944,
+     "swing_pct_16th": 56.131519274376586,
+     "odd16_share": 0.19047619047619047
+    },
+    "attack_over_body_db": 4.8,
+    "near_peak_share": 0.031,
+    "flatness": 0.249,
+    "side_over_mid_db": -231.4,
+    "lr_corr": 1.0,
+    "top_pitch_classes": [
+     "A",
+     "C",
+     "D"
+    ],
+    "low_peak_hz": 107.7,
+    "hits": {
+     "K": {
+      "n": 20,
+      "peak_dbfs": -1.8006070216958414,
+      "centroid_hz": 166.7180698906354,
+      "to_m20db_ms": 100.63492063492063,
+      "f0_attack_hz": 114.3951416015625,
+      "f0_body_hz": 121.124267578125,
+      "harmonics_over_fund_db": -11.85533548175502
+     },
+     "H": {
+      "n": 1,
+      "peak_dbfs": -33.97159512403974,
+      "centroid_hz": 5619.911313773188,
+      "to_m20db_ms": 410.8390022675737
+     },
+     "T": {
+      "n": 8,
+      "peak_dbfs": -1.9808722883733147,
+      "centroid_hz": 220.73517991744848,
+      "to_m20db_ms": 106.11111111111111
+     }
+    }
+   },
+   "groove_seconds": 5.373900226757369,
+   "groove_balance_db": {
+    "Log Low": 0.0,
+    "Wind Rod": -20.550639981617582,
+    "Hand Drum": -3.7381333771433307,
+    "Shaker Push": -12.681293901903643,
+    "Shaker Pull": -16.113665166107175,
+    "Rim": -7.25995804783661,
+    "Log High": -5.321758706432124,
+    "Tambourine": -10.93829025760046,
+    "Log Mid": -4.981091708435745,
+    "Thumb Tine High": -14.824504960866962,
+    "Glass Bell": -17.27350387832513,
+    "Breath": -16.113665166107175,
+    "Log Top": -9.424589180419794,
+    "Thumb Tine": -13.506989815853355
+   }
+  },
+  "kiln-drumless": {
+   "title": "KILN DRUMLESS",
+   "bpm": 100,
+   "pads": [
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.4269999861717224,
+       "dc": 8.580651410738938e-06,
+       "finite": true,
+       "centroid_hz": 1197.5125140100442,
+       "hf_share": 0.006766218558478536,
+       "closest_takes_db": 8.926118103274812
+      },
+      "0.7": {
+       "peak": 0.5634999871253967,
+       "dc": 2.15016734728124e-05,
+       "finite": true,
+       "centroid_hz": 1294.2990274682197,
+       "hf_share": 0.05099294810236124,
+       "closest_takes_db": 5.512258631639353
+      },
+      "1.0": {
+       "peak": 0.699999988079071,
+       "dc": 2.2450534743256867e-05,
+       "finite": true,
+       "centroid_hz": 1373.3271097848212,
+       "hf_share": 0.06639990900170466,
+       "closest_takes_db": 3.453783631718423
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.8719790831171138,
+     "soft_over_hard_hf_db": -9.918214621783122,
+     "worst_closest_takes_db": 8.926118103274812,
+     "ok": true,
+     "name": "Snap",
+     "voice": "snap"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.25619998574256897,
+       "dc": 3.108569444520981e-06,
+       "finite": true,
+       "centroid_hz": 5275.366952154384,
+       "hf_share": 0.0035895624414104734,
+       "closest_takes_db": -2.2669320558224086
+      },
+      "0.7": {
+       "peak": 0.33809998631477356,
+       "dc": 4.041863576276228e-06,
+       "finite": true,
+       "centroid_hz": 6525.960932572338,
+       "hf_share": 0.003063586924633445,
+       "closest_takes_db": -1.8498421748871077
+      },
+      "1.0": {
+       "peak": 0.41999998688697815,
+       "dc": 6.73098975312314e-06,
+       "finite": true,
+       "centroid_hz": 8096.2193975803675,
+       "hf_share": 0.01239978446248059,
+       "closest_takes_db": -2.253545588096288
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.6515839916258912,
+     "soft_over_hard_hf_db": -5.383726237598287,
+     "worst_closest_takes_db": -1.8498421748871077,
+     "ok": true,
+     "name": "Closed Hat",
+     "voice": "hat"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.3050000071525574,
+       "dc": 1.6629030142212287e-05,
+       "finite": true,
+       "centroid_hz": 4810.976319624067,
+       "hf_share": 0.001417130823907003,
+       "closest_takes_db": 9.423485098639262
+      },
+      "0.7": {
+       "peak": 0.4025000035762787,
+       "dc": 1.747956957842689e-05,
+       "finite": true,
+       "centroid_hz": 7483.953148878654,
+       "hf_share": 0.0008244430670557923,
+       "closest_takes_db": -0.09775279002468967
+      },
+      "1.0": {
+       "peak": 0.5,
+       "dc": 1.7377180483890697e-05,
+       "finite": true,
+       "centroid_hz": 8565.585348566088,
+       "hf_share": 0.004523852789088076,
+       "closest_takes_db": -1.6316750644455005
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.5616634618472914,
+     "soft_over_hard_hf_db": -5.040985196403785,
+     "worst_closest_takes_db": 9.423485098639262,
+     "ok": true,
+     "name": "Tambourine",
+     "voice": "tambourine"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.4269999861717224,
+       "dc": 2.1616471713059582e-05,
+       "finite": true,
+       "centroid_hz": 399.3524099597766,
+       "hf_share": 0.00014036519714032142,
+       "closest_takes_db": 9.958580866818366
+      },
+      "0.7": {
+       "peak": 0.5634999871253967,
+       "dc": 2.3542263079434633e-05,
+       "finite": true,
+       "centroid_hz": 472.3913057807705,
+       "hf_share": 0.001129326115476972,
+       "closest_takes_db": 9.107179814552014
+      },
+      "1.0": {
+       "peak": 0.699999988079071,
+       "dc": 2.244021015940234e-05,
+       "finite": true,
+       "centroid_hz": 542.1453341339167,
+       "hf_share": 0.0029413112294396524,
+       "closest_takes_db": 4.169989424185091
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.7366150454799111,
+     "soft_over_hard_hf_db": -13.21281541048463,
+     "worst_closest_takes_db": 9.958580866818366,
+     "ok": true,
+     "name": "Bongo High",
+     "voice": "hand_drum"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.4392000138759613,
+       "dc": 2.1862084395252168e-05,
+       "finite": true,
+       "centroid_hz": 255.6701137740422,
+       "hf_share": 0.0002844812403895666,
+       "closest_takes_db": 9.119272991720852
+      },
+      "0.7": {
+       "peak": 0.5795999765396118,
+       "dc": 2.482864510966465e-05,
+       "finite": true,
+       "centroid_hz": 288.85258385036127,
+       "hf_share": 0.0011070382824959115,
+       "closest_takes_db": 8.192243584191665
+      },
+      "1.0": {
+       "peak": 0.7200000286102295,
+       "dc": 2.666513501026202e-05,
+       "finite": true,
+       "centroid_hz": 327.07403289289596,
+       "hf_share": 0.002843648912319666,
+       "closest_takes_db": 6.905446014584723
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.78168881678774,
+     "soft_over_hard_hf_db": -9.998223428269421,
+     "worst_closest_takes_db": 9.119272991720852,
+     "ok": true,
+     "name": "Bongo Low",
+     "voice": "hand_drum"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.4758000075817108,
+       "dc": 4.2606163333402947e-05,
+       "finite": true,
+       "centroid_hz": 96.57079387426393,
+       "hf_share": 0.006869495592813989,
+       "closest_takes_db": 12.43747611034613
+      },
+      "0.7": {
+       "peak": 0.6279000043869019,
+       "dc": 2.9010483558522537e-05,
+       "finite": true,
+       "centroid_hz": 94.21673965545261,
+       "hf_share": 0.00812419686670499,
+       "closest_takes_db": 13.510053412915234
+      },
+      "1.0": {
+       "peak": 0.7799999713897705,
+       "dc": 1.82894327735994e-05,
+       "finite": true,
+       "centroid_hz": 97.66324171267198,
+       "hf_share": 0.01793039235077592,
+       "closest_takes_db": 9.205332211334131
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.9888141349882481,
+     "soft_over_hard_hf_db": -4.1666494360490525,
+     "worst_closest_takes_db": 13.510053412915234,
+     "ok": true,
+     "name": "Conga Low",
+     "voice": "hand_drum"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.45750001072883606,
+       "dc": 5.892382887395797e-06,
+       "finite": true,
+       "centroid_hz": 136.24803255614677,
+       "hf_share": 0.0011716053782806584,
+       "closest_takes_db": 15.923933935786929
+      },
+      "0.7": {
+       "peak": 0.6037499904632568,
+       "dc": 1.2114565834053792e-05,
+       "finite": true,
+       "centroid_hz": 149.76276363979218,
+       "hf_share": 0.003596279538015495,
+       "closest_takes_db": 19.184821073975737
+      },
+      "1.0": {
+       "peak": 0.75,
+       "dc": 7.525052751589101e-06,
+       "finite": true,
+       "centroid_hz": 172.5134325490081,
+       "hf_share": 0.0073424576305484105,
+       "closest_takes_db": 10.937598431927135
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.7897821667738311,
+     "soft_over_hard_hf_db": -7.970600924649435,
+     "worst_closest_takes_db": 19.184821073975737,
+     "ok": true,
+     "name": "Low Tine C",
+     "voice": "tine"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.4392000138759613,
+       "dc": 6.406972261174815e-06,
+       "finite": true,
+       "centroid_hz": 172.20122441769087,
+       "hf_share": 0.0011722558642852624,
+       "closest_takes_db": 24.025531114057387
+      },
+      "0.7": {
+       "peak": 0.5795999765396118,
+       "dc": 1.248035732714925e-05,
+       "finite": true,
+       "centroid_hz": 189.8287299109479,
+       "hf_share": 0.003237318961688648,
+       "closest_takes_db": 14.603131006216731
+      },
+      "1.0": {
+       "peak": 0.7200000882148743,
+       "dc": 2.105818930431269e-05,
+       "finite": true,
+       "centroid_hz": 216.4938519225273,
+       "hf_share": 0.006189842060483758,
+       "closest_takes_db": 10.533709473314765
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.795409305569164,
+     "soft_over_hard_hf_db": -7.226571537357716,
+     "worst_closest_takes_db": 24.025531114057387,
+     "ok": true,
+     "name": "Low Tine E",
+     "voice": "tine"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.3050000071525574,
+       "dc": 6.099620009081264e-07,
+       "finite": true,
+       "centroid_hz": 571.2076112935081,
+       "hf_share": 0.003783916110551424,
+       "closest_takes_db": 8.542228222471469
+      },
+      "0.7": {
+       "peak": 0.4025000035762787,
+       "dc": 4.98175495522446e-07,
+       "finite": true,
+       "centroid_hz": 808.0193988027347,
+       "hf_share": 0.031581075542405,
+       "closest_takes_db": 6.346630803632859
+      },
+      "1.0": {
+       "peak": 0.5,
+       "dc": 2.661758458089025e-07,
+       "finite": true,
+       "centroid_hz": 1083.9380604894375,
+       "hf_share": 0.08779013199414436,
+       "closest_takes_db": 2.7622099825649067
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.5269744020572421,
+     "soft_over_hard_hf_db": -13.655042024710307,
+     "worst_closest_takes_db": 8.542228222471469,
+     "ok": true,
+     "name": "Bell A",
+     "voice": "glass_bell"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.3050000071525574,
+       "dc": 2.6916429760603933e-06,
+       "finite": true,
+       "centroid_hz": 632.6911618601202,
+       "hf_share": 0.07526078613284305,
+       "closest_takes_db": 5.059695453716701
+      },
+      "0.7": {
+       "peak": 0.4025000035762787,
+       "dc": 5.054495431977557e-06,
+       "finite": true,
+       "centroid_hz": 692.4757684279618,
+       "hf_share": 0.10335069923784834,
+       "closest_takes_db": 3.2801222985703204
+      },
+      "1.0": {
+       "peak": 0.5,
+       "dc": 8.767090548644774e-06,
+       "finite": true,
+       "centroid_hz": 711.2314324920804,
+       "hf_share": 0.12331072657310968,
+       "closest_takes_db": 1.2635790891943333
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.8895714291524444,
+     "soft_over_hard_hf_db": -2.144321063072761,
+     "worst_closest_takes_db": 5.059695453716701,
+     "ok": true,
+     "name": "Breath",
+     "voice": "breath"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.33550000190734863,
+       "dc": 4.761601667269133e-05,
+       "finite": true,
+       "centroid_hz": 2344.7134035580884,
+       "hf_share": 0.0026656008077246916,
+       "closest_takes_db": -2.3690898309736177
+      },
+      "0.7": {
+       "peak": 0.4427500069141388,
+       "dc": 3.785794979194179e-05,
+       "finite": true,
+       "centroid_hz": 2645.308040782796,
+       "hf_share": 0.006137059282915406,
+       "closest_takes_db": -1.8809487208857991
+      },
+      "1.0": {
+       "peak": 0.550000011920929,
+       "dc": 4.008111864095554e-05,
+       "finite": true,
+       "centroid_hz": 2850.5564185782814,
+       "hf_share": 0.020092624008028304,
+       "closest_takes_db": -2.3405584423777688
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.8225458679844397,
+     "soft_over_hard_hf_db": -8.772415460691882,
+     "worst_closest_takes_db": -1.8809487208857991,
+     "ok": true,
+     "name": "Scrape",
+     "voice": "scrape"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.45750004053115845,
+       "dc": 7.168919637479121e-06,
+       "finite": true,
+       "centroid_hz": 114.44184575306144,
+       "hf_share": 0.0011289108221692122,
+       "closest_takes_db": 22.711980618560506
+      },
+      "0.7": {
+       "peak": 0.6037499904632568,
+       "dc": 1.222897662955802e-05,
+       "finite": true,
+       "centroid_hz": 127.65674078115488,
+       "hf_share": 0.0035778370130998627,
+       "closest_takes_db": 22.665545432442894
+      },
+      "1.0": {
+       "peak": 0.75,
+       "dc": 2.1572308469330892e-05,
+       "finite": true,
+       "centroid_hz": 146.52650375991726,
+       "hf_share": 0.0072093735741001735,
+       "closest_takes_db": 10.213910787172999
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.7810317097347362,
+     "soft_over_hard_hf_db": -8.052378939327959,
+     "worst_closest_takes_db": 22.711980618560506,
+     "ok": true,
+     "name": "Low Tine A",
+     "voice": "tine"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.4392000436782837,
+       "dc": 6.047947863407899e-06,
+       "finite": true,
+       "centroid_hz": 153.2025979987394,
+       "hf_share": 0.001125656879168668,
+       "closest_takes_db": 17.899877919745197
+      },
+      "0.7": {
+       "peak": 0.5795999765396118,
+       "dc": 1.0292031220160425e-05,
+       "finite": true,
+       "centroid_hz": 168.8802183352152,
+       "hf_share": 0.00310384356200232,
+       "closest_takes_db": 10.983218730873677
+      },
+      "1.0": {
+       "peak": 0.7200000286102295,
+       "dc": 1.7756623492459767e-05,
+       "finite": true,
+       "centroid_hz": 192.9495257127921,
+       "hf_share": 0.00707048794159159,
+       "closest_takes_db": 14.788748530023877
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.7940034961619107,
+     "soft_over_hard_hf_db": -7.980433561608966,
+     "worst_closest_takes_db": 17.899877919745197,
+     "ok": true,
+     "name": "Low Tine D",
+     "voice": "tine"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.3050000071525574,
+       "dc": 4.051003941185627e-07,
+       "finite": true,
+       "centroid_hz": 779.6003615181032,
+       "hf_share": 0.0012175644495029184,
+       "closest_takes_db": 3.197078424604322
+      },
+      "0.7": {
+       "peak": 0.4025000035762787,
+       "dc": 3.0482615898108634e-07,
+       "finite": true,
+       "centroid_hz": 1152.1175616537587,
+       "hf_share": 0.024548595368904316,
+       "closest_takes_db": 2.939492356842106
+      },
+      "1.0": {
+       "peak": 0.5,
+       "dc": 1.668907572138778e-07,
+       "finite": true,
+       "centroid_hz": 1608.8802100614243,
+       "hf_share": 0.08366054530579116,
+       "closest_takes_db": 6.1088713482368995
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.4845608496162305,
+     "soft_over_hard_hf_db": -18.37028731954871,
+     "worst_closest_takes_db": 6.1088713482368995,
+     "ok": true,
+     "name": "Bell E",
+     "voice": "glass_bell"
+    },
+    {
+     "zones": {
+      "0.4": {
+       "peak": 0.4269999861717224,
+       "dc": 3.526315140334191e-06,
+       "finite": true,
+       "centroid_hz": 300.8022775950352,
+       "hf_share": 0.005962916627460876,
+       "closest_takes_db": 5.241829547462129
+      },
+      "0.7": {
+       "peak": 0.5634999871253967,
+       "dc": 4.0080681174003985e-06,
+       "finite": true,
+       "centroid_hz": 345.7015828892162,
+       "hf_share": 0.016207654568202876,
+       "closest_takes_db": 4.784239221618263
+      },
+      "1.0": {
+       "peak": 0.699999988079071,
+       "dc": 4.53512529929867e-06,
+       "finite": true,
+       "centroid_hz": 447.81587112720047,
+       "hf_share": 0.04033106446238218,
+       "closest_takes_db": 4.342647092905417
+      }
+     },
+     "soft_darker": true,
+     "soft_over_hard_centroid": 0.6717097293534587,
+     "soft_over_hard_hf_db": -8.301809473899095,
+     "worst_closest_takes_db": 5.241829547462129,
+     "ok": true,
+     "name": "Bongo Roll",
+     "voice": "roll",
+     "seconds": 3.2
+    }
+   ],
+   "groove": {
+    "name": "kiln-drumless_groove",
+    "pack": "",
+    "bpm": 100,
+    "dur_s": 6.0,
+    "beats": 10.0,
+    "peak_dbfs": -0.25999999046325684,
+    "rms_dbfs": -16.25,
+    "crest_db": 15.979999542236328,
+    "floor_db_under_rms": 50.20000076293945,
+    "bands": {
+     "20-60": 0.6,
+     "60-150": 63.6,
+     "150-400": 24.6,
+     "400-1000": 6.0,
+     "1000-3000": 3.2,
+     "3000-6000": 1.1,
+     "6000-12000": 0.9,
+     "12000-20000": 0.0
+    },
+    "centroid_hz": 311,
+    "roll95_hz": 1055,
+    "roll99_hz": 5642,
+    "ceiling_60db_hz": 13910,
+    "onsets_per_beat": {
+     "all": 3.1,
+     "low": 1.5,
+     "mid": 3.1,
+     "high": 3.2
+    },
+    "groove_all": {
+     "median_abs_dev_ms": 7.1343537414970015,
+     "swing_pct_16th": 63.854875283446745,
+     "odd16_share": 0.5161290322580645
+    },
+    "groove_high": {
+     "median_abs_dev_ms": 9.155328798185835,
+     "swing_pct_16th": 63.310657596371854,
+     "odd16_share": 0.53125
+    },
+    "attack_over_body_db": 10.3,
+    "near_peak_share": 0.016,
+    "flatness": 0.397,
+    "side_over_mid_db": -223.8,
+    "lr_corr": 1.0,
+    "top_pitch_classes": [
+     "A",
+     "F",
+     "D"
+    ],
+    "low_peak_hz": 86.1,
+    "hits": {
+     "K": {
+      "n": 14,
+      "peak_dbfs": -4.405148175227961,
+      "centroid_hz": 206.3284092439026,
+      "to_m20db_ms": 164.21768707482994,
+      "f0_attack_hz": 83.441162109375,
+      "f0_body_hz": null,
+      "harmonics_over_fund_db": -8.131367905706188
+     },
+     "S": {
+      "n": 9,
+      "peak_dbfs": -7.061260564978892,
+      "centroid_hz": 3271.2920435494834,
+      "to_m20db_ms": 52.44897959183673
+     },
+     "T": {
+      "n": 8,
+      "peak_dbfs": -5.682889549680615,
+      "centroid_hz": 604.7625683407487,
+      "to_m20db_ms": 40.03401360544217
+     }
+    }
+   },
+   "groove_seconds": 6.0,
+   "groove_balance_db": {
+    "Conga Low": 0.0,
+    "Closed Hat": -16.30241611766342,
+    "Low Tine A": -6.661723846632118,
+    "Bongo High": -8.016759802535338,
+    "Tambourine": -14.865213352581247,
+    "Bongo Low": -7.772070273703565,
+    "Snap": -4.03797049387665,
+    "Low Tine E": -8.599924464087502,
+    "Low Tine C": -7.417494739607165,
+    "Scrape": -11.854470251635014,
+    "Bell A": -17.274533736333225,
+    "Low Tine D": -7.772070273703565,
+    "Breath": -16.114695024115274,
+    "Bell E": -17.274533736333225
    }
   }
  }

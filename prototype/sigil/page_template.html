@@ -85,10 +85,10 @@ section > h2 + .note { margin-top: 6px }
 
 <div class="wrap">
   <header>
-    <span class="eyebrow">SnipSnap · drum kits · round 0b: KILN added</span>
+    <span class="eyebrow">SnipSnap · drum kits · round 1: in the app, and drumless</span>
     <h1>SIGIL</h1>
-    <p class="lede">Four kits after your 23 reference loops: heavy, centred kick and snare under percussion that is part organic and part synthetic. One kit per tempo you gave, plus KILN for the swung tape loop and the lullaby bells, each with its own wear.</p>
-    <p class="note">This is the Python test version: every pad is rendered and measured, but nobody has heard it yet. Your loops are not on this page; only numbers taken from them are. Every pad has three velocities and four takes, as the finished kits will.</p>
+    <p class="lede">Four kits after your 23 reference loops, and a drumless twin of each: heavy, centred kick and snare under percussion that is part organic and part synthetic, each kit with its own wear. Every pad on this page is now the app's own render, built in Kotlin, not the Python test version.</p>
+    <p class="note">The four kits are the ones you approved; the drumless kits are new and nobody has heard them yet. A drumless pad that is the same sound as its parent kit's plays the parent's render here. Your loops are not on this page; only numbers taken from them are. Every pad has three velocities and four takes, as the finished kits will.</p>
   </header>
 
   <div class="controls" role="group" aria-label="Playing">
@@ -144,6 +144,10 @@ const ABOUT = {
           print: "Tape: a head bump, warm saturation, the top rolled off; wow, flutter, hiss and crackle on the groove" },
   kiln: { line: "After the swung tape jungle loop at 100 BPM and the lullaby and bell loops: a heavy triplet shuffle, bongos and conga, low thumb-piano tones in A minor, a snap and a scraper.",
           print: "Old sampler: 12 bits with no filter before the hold, so its grit folds back into the sound; record warp and crackle on the groove" },
+  "iron-drumless": { line: "IRON with no kick, snare or clap. The hand drum takes the kick's rhythm and the rim the backbeat, under the logs, glass, breath and rod, with more log and bell notes in A minor.", print: "Blown speaker, as IRON" },
+  "neon-drumless": { line: "NEON with no kick, snare or clap. A low log takes the sub's place and the wood chirp the backbeat, under the hats, shaker, clock, bells and voice chops.", print: "Slam, as NEON" },
+  "ash-drumless": { line: "ASH with no kick or snare. A hand drum on the beat and a tambourine backbeat, under the shakers, four log drums and two tines in A minor.", print: "Tape, as ASH" },
+  "kiln-drumless": { line: "KILN with no kicks or snare. The conga and snap carry the shuffle, with bongos, the scraper, four low tines and two bells in A minor.", print: "Old sampler, as KILN" },
 };
 // MPC order: pad 1 bottom left, pad 16 top right.
 const ORDER = [13,14,15,16, 9,10,11,12, 5,6,7,8, 1,2,3,4];
@@ -173,7 +177,7 @@ function render() {
   const host = document.getElementById("kits");
   for (const kit of KITS) {
     const sec = document.createElement("section");
-    sec.className = "kit"; sec.dataset.kit = kit.id; sec.id = kit.id;
+    sec.className = "kit"; sec.dataset.kit = kit.parent || kit.id; sec.id = kit.id;
     const grid = document.createElement("div"); grid.className = "grid";
     for (const n of ORDER) {
       const p = kit.pads[n - 1];

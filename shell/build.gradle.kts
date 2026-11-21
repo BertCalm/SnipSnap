@@ -645,6 +645,16 @@ tasks.register<JavaExec>("generateFacsimileKits") {
     args(providers.gradleProperty("facsimileKitsOutput").orNull ?: "${rootDir}/testkit/facsimile-kits")
 }
 
+tasks.register<JavaExec>("generateSigilKits") {
+    group = "distribution"
+    description = "Build the eight SIGIL kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.SigilKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("sigilKitsOutput").orNull ?: "${rootDir}/testkit/sigil-kits")
+}
+
 tasks.register<JavaExec>("generateStaggerKits") {
     group = "distribution"
     description = "Build the three STAGGER kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
