@@ -5,8 +5,9 @@ import com.snipsnap.audio.DrumClass
 import kotlin.math.*
 import kotlin.random.Random
 
-/** Listening prototype: these three identities and their numeric voicing are provisional. */
-enum class CreaseVoice { ROUND, PINCH, RUBBER }
+/** ROUND, PINCH and RUBBER are the original voices. PLEAT, SNAP, TWOFOLD and CUP were appended after them
+ * (so saved names and ordinals never move) and kept in round crease-voices-1 (see [Crease.KEPT_VOICES]). */
+enum class CreaseVoice { ROUND, PINCH, RUBBER, PLEAT, SNAP, TWOFOLD, CUP }
 enum class CreaseHistory { STATEFUL, INSTANTANEOUS }
 
 data class CreaseTrace(
@@ -55,6 +56,15 @@ data class CreaseProbe(
  */
 object Crease {
     const val MODEL_VERSION = 3
+    /** The three voices CREASE was built with: the only ones with models 1 and 2 and the original gesture. */
+    val ORIGINAL_VOICES = listOf(CreaseVoice.ROUND, CreaseVoice.PINCH, CreaseVoice.RUBBER)
+    /**
+     * The voices players are offered: all seven. The owner kept PLEAT, SNAP, TWOFOLD and CUP, range and
+     * touch, in round crease-voices-1 (20 Nov 2026). They are model 3 only; each has one factory preset.
+     */
+    val KEPT_VOICES = CreaseVoice.entries.toList()
+    /** A candidate's held loop: long enough that its seeded drift is slow. */
+    const val CANDIDATE_LOOP_SECONDS = 3.2
     const val RATE = Dsp.RATE
     const val DEFAULT_MIDI = 48
     const val MIDI_MIN = 24
@@ -75,11 +85,16 @@ object Crease {
 
     fun macrosFor(voice: CreaseVoice, model: Int = MODEL_VERSION): List<MacroSpec> {
         require(model in 1..MODEL_VERSION) { "Unknown CREASE model $model" }
+        require(voice in ORIGINAL_VOICES || model == MODEL_VERSION) { "CREASE candidate $voice is model $MODEL_VERSION only" }
         if (model == 1) return CreaseV1.macrosFor(voice)
         val values = when (voice) {
             CreaseVoice.ROUND -> floatArrayOf(.20f, .25f, .15f, .15f, .30f)
             CreaseVoice.PINCH -> floatArrayOf(.70f, .55f, .20f, .45f, .35f)
             CreaseVoice.RUBBER -> floatArrayOf(.50f, .70f, .75f, .55f, .65f)
+            CreaseVoice.PLEAT -> floatArrayOf(.40f, .60f, .30f, .40f, .40f)
+            CreaseVoice.SNAP -> floatArrayOf(.35f, .70f, .10f, .30f, .40f)
+            CreaseVoice.TWOFOLD -> floatArrayOf(.40f, .50f, .25f, .45f, .45f)
+            CreaseVoice.CUP -> floatArrayOf(.45f, .55f, .30f, .35f, .45f)
         }
         return listOf("FOLD", "PRESSURE", "DRAG", "SPLIT", "RELAX").mapIndexed { i, name ->
             MacroSpec(name, values[i], values[i])
@@ -126,6 +141,7 @@ object Crease {
         history: CreaseHistory = CreaseHistory.STATEFUL, coupling: Boolean = true,
         oversample: Int = 4, normalize: Boolean = true, model: Int = MODEL_VERSION): CreaseProbe {
         require(model in 1..MODEL_VERSION) { "Unknown CREASE model $model" }
+        require(voice in ORIGINAL_VOICES || model == MODEL_VERSION) { "CREASE candidate $voice is model $MODEL_VERSION only" }
         if (model == 1) return CreaseV1.synthesize(voice, macros, midi, velocity, history, coupling, oversample, normalize)
         require(midi in MIDI_MIN..MIDI_MAX) { "CREASE supports MIDI $MIDI_MIN..$MIDI_MAX" }
         require(oversample == 4 || oversample == 16) { "CREASE diagnostic oversample must be 4 or 16" }
@@ -278,12 +294,15 @@ object Crease {
         val traceStride = max(oversample, rate / TRACE_HZ)
         val transitionStart = when (patch.voice) {
             CreaseVoice.ROUND -> .18; CreaseVoice.PINCH -> .24; CreaseVoice.RUBBER -> .45
+            CreaseVoice.PLEAT -> .25; CreaseVoice.SNAP -> .10; CreaseVoice.TWOFOLD -> .20; CreaseVoice.CUP -> .30
         }
         val transitionEnd = when (patch.voice) {
             CreaseVoice.ROUND -> .50; CreaseVoice.PINCH -> .65; CreaseVoice.RUBBER -> 1.15
+            CreaseVoice.PLEAT -> .70; CreaseVoice.SNAP -> .40; CreaseVoice.TWOFOLD -> .60; CreaseVoice.CUP -> .80
         }
         val amplitudeSettle = when (patch.voice) {
             CreaseVoice.ROUND -> .18; CreaseVoice.PINCH -> .24; CreaseVoice.RUBBER -> .50
+            CreaseVoice.PLEAT -> .30; CreaseVoice.SNAP -> .15; CreaseVoice.TWOFOLD -> .25; CreaseVoice.CUP -> .35
         }
 
         // Integer output-frame periods contain an integer number of root cycles. Both
@@ -393,22 +412,30 @@ object Crease {
         val relax = m.getValue("RELAX").toDouble()
         val held = isLoop(m.getValue("HOLD"))
         private val finiteHold = (m.getValue("HOLD") / HOLD_LOOP).coerceIn(0f, 1f).toDouble()
-        val attack = when (voice) { CreaseVoice.ROUND -> .009; CreaseVoice.PINCH -> .014; CreaseVoice.RUBBER -> .027 }
-        val gate = (when (voice) { CreaseVoice.ROUND -> .66; CreaseVoice.PINCH -> .88; CreaseVoice.RUBBER -> 1.35 }) *
+        val attack = when (voice) { CreaseVoice.ROUND -> .009; CreaseVoice.PINCH -> .014; CreaseVoice.RUBBER -> .027
+            CreaseVoice.PLEAT -> .020; CreaseVoice.SNAP -> .003; CreaseVoice.TWOFOLD -> .012; CreaseVoice.CUP -> .030 }
+        val gate = (when (voice) { CreaseVoice.ROUND -> .66; CreaseVoice.PINCH -> .88; CreaseVoice.RUBBER -> 1.35
+            CreaseVoice.PLEAT -> 1.10; CreaseVoice.SNAP -> 1.20; CreaseVoice.TWOFOLD -> .95; CreaseVoice.CUP -> 1.00 }) *
             2.0.pow(finiteHold)
         val releaseT60 = when (voice) { CreaseVoice.ROUND -> .35 + 1.5 * sqrt(relax)
-            CreaseVoice.PINCH -> .35 + 1.8 * sqrt(relax); CreaseVoice.RUBBER -> .65 + 2.5 * sqrt(relax) }
+            CreaseVoice.PINCH -> .35 + 1.8 * sqrt(relax); CreaseVoice.RUBBER -> .65 + 2.5 * sqrt(relax)
+            CreaseVoice.PLEAT -> .45 + 1.8 * sqrt(relax); CreaseVoice.SNAP -> .25 + .8 * sqrt(relax)
+            CreaseVoice.TWOFOLD -> .40 + 1.6 * sqrt(relax); CreaseVoice.CUP -> .40 + 1.7 * sqrt(relax) }
         val duration = gate + releaseT60 + .035
-        val loopSeconds = when (voice) { CreaseVoice.ROUND -> 1.45; CreaseVoice.PINCH -> 1.65; CreaseVoice.RUBBER -> 2.1 }
+        val loopSeconds = when (voice) { CreaseVoice.ROUND -> 1.45; CreaseVoice.PINCH -> 1.65; CreaseVoice.RUBBER -> 2.1
+            else -> CANDIDATE_LOOP_SECONDS }
+        /** Candidates only: the seeded slow wander of the player's pressure. */
+        val drift = if (voice in ORIGINAL_VOICES) null else HoldDrift(Dsp.seedFor("crease-candidate-drift", voice), intArrayOf(1, 2, 3))
         private val model2Rise = .002 * 40.0.pow(sqrt(drag)) * if (voice == CreaseVoice.RUBBER) 1.5 else 1.0
         private val defaultDrag = when (voice) {
             CreaseVoice.ROUND -> .15f.toDouble(); CreaseVoice.PINCH -> .20f.toDouble(); CreaseVoice.RUBBER -> .75f.toDouble()
+            else -> macrosFor(voice).first { it.name == "DRAG" }.default.toDouble()
         }
         // The accepted default response is retained. Beyond it, DRAG gains a useful long
         // following range: .24/.28/.48 seconds, without altering the pressure source itself.
         val rise = if (version == 2) model2Rise else {
             val beyondDefault = ((drag - defaultDrag) / (1.0 - defaultDrag)).coerceIn(0.0, 1.0).pow(.65)
-            val extension = when (voice) { CreaseVoice.ROUND -> 3.0; CreaseVoice.PINCH -> 3.5; CreaseVoice.RUBBER -> 4.0 }
+            val extension = when (voice) { CreaseVoice.ROUND -> 3.0; CreaseVoice.PINCH -> 3.5; CreaseVoice.RUBBER -> 4.0; else -> 3.0 }
             model2Rise * extension.pow(beyondDefault)
         }
         // These ranges describe T60; the one-pole solver takes tau. RUBBER's accepted
@@ -423,12 +450,25 @@ object Crease {
                     if (relax <= pivot) .12 * (anchor / .12).pow(relax / pivot)
                     else anchor * (4.32 / anchor).pow((relax - pivot) / (1.0 - pivot))
                 }
+                CreaseVoice.PLEAT -> .10 * 30.0.pow(relax)
+                CreaseVoice.SNAP -> .12 * 30.0.pow(relax)
+                CreaseVoice.TWOFOLD -> .09 * 40.0.pow(relax)
+                CreaseVoice.CUP -> .10 * 35.0.pow(relax)
             }
             t60 / ln(1000.0)
         }
 
         fun amplitude(t: Double): Double {
             if (held) return velocity * .68
+            if (voice !in ORIGINAL_VOICES) {
+                val (sustain, decay) = when (voice) {
+                    CreaseVoice.PLEAT -> .60 to .30; CreaseVoice.SNAP -> .55 to .40
+                    CreaseVoice.TWOFOLD -> .55 to .25; else -> .62 to .35
+                }
+                val body = sustain + (1.0 - sustain) * exp(-min(t, gate) / decay)
+                val release = if (t <= gate) 1.0 else exp(-ln(1000.0) * (t - gate) / releaseT60)
+                return velocity * smooth(t / attack) * body * release
+            }
             val sustain = if (voice == CreaseVoice.ROUND) .38 else .62
             val decay = if (voice == CreaseVoice.RUBBER) .42 else .19
             val body = sustain + (1.0 - sustain) * exp(-min(t, gate) / decay)
@@ -455,6 +495,7 @@ object Crease {
         /** Voice phrasing is fixed for a given note/HOLD. DRAG and RELAX act on the
          * causal response, so their audible delay/unfolding is independent of this source. */
         private fun gesture(t: Double, loop: Double?): Double {
+            if (voice !in ORIGINAL_VOICES) return candidateGesture(t, loop)
             if (loop != null) {
                 val a = .5 - .5 * cos(TAU * loop)
                 return when (voice) {
@@ -470,6 +511,7 @@ object Crease {
                         val b = .5 - .5 * cos(2.0 * TAU * loop + 1.0)
                         .08 + .74 * a + .18 * b
                     }
+                    else -> error("$voice is a candidate")
                 }.coerceIn(0.0, 1.0)
             }
             return when (voice) {
@@ -498,7 +540,52 @@ object Crease {
                     val release = if (t <= gate) 1.0 else exp(-(t - gate) / .10)
                     ((.07 + .50 * onset + .78 * push + .22 * late) * release).coerceIn(0.0, 1.0)
                 }
+                else -> error("$voice is a candidate")
             }
+        }
+
+        /** SNAP's picks over one held loop: a player's tremolo, never quite even in time or strength. */
+        private val picks = if (voice == CreaseVoice.SNAP) {
+            val random = Random(Dsp.seedFor("crease-snap-picks", voice))
+            val count = 16
+            Array(count) { k -> doubleArrayOf((k + .18 * (random.nextDouble() - .5)) / count, .72 + .28 * random.nextDouble()) }
+        } else null
+
+        /**
+         * Candidate phrasing. Finite notes have their own pressure phrase; a held loop has a slow
+         * periodic swell (one per loop, with a second-harmonic lean), and both carry the seeded
+         * drift, which closes exactly over the loop. DRAG and RELAX still act on the response.
+         */
+        private fun candidateGesture(t: Double, loop: Double?): Double {
+            val wander = .12 * requireNotNull(drift).at(loop ?: (t / CANDIDATE_LOOP_SECONDS))
+            if (loop != null) {
+                val a = .5 - .5 * cos(TAU * loop)
+                val b = .5 - .5 * cos(2.0 * TAU * loop + .8)
+                val base = when (voice) {
+                    CreaseVoice.PLEAT -> .30 + .45 * a + .25 * b
+                    CreaseVoice.SNAP -> {
+                        var force = .05
+                        for (pick in requireNotNull(picks)) {
+                            var d = abs(loop - pick[0])
+                            d = min(d, 1.0 - d)
+                            force += pick[1] * exp(-(d / .0045).pow(2.0))
+                        }
+                        force
+                    }
+                    CreaseVoice.TWOFOLD -> .30 + .40 * a + .15 * b
+                    else -> .20 + .65 * a + .15 * b
+                }
+                return (base + wander).coerceIn(0.0, 1.0)
+            }
+            val release = if (t <= gate) 1.0 else exp(-(t - gate) / .06)
+            val phrase = when (voice) {
+                CreaseVoice.PLEAT -> .10 + .45 * exp(-t / .10) + .70 * exp(-((t - .30) / .16).pow(2.0)) +
+                    .25 * exp(-((t - gate * .75) / .15).pow(2.0))
+                CreaseVoice.SNAP -> .05 + exp(-t / .010)
+                CreaseVoice.TWOFOLD -> .15 + .55 * exp(-t / .12) + .40 * exp(-((t - .35) / .20).pow(2.0))
+                else -> .20 + .55 * smooth(t / .15) * exp(-t / .9) + .20 * exp(-((t - gate * .7) / .2).pow(2.0))
+            }
+            return ((phrase + wander) * release).coerceIn(0.0, 1.0)
         }
     }
 
@@ -535,7 +622,7 @@ object Crease {
         }
     }
 
-    private class Model(val shape: Shape, rate: Int, hz: Double,
+    private class Model(val shape: Shape, rate: Int, private val hz: Double,
         val history: CreaseHistory, val coupled: Boolean, private val mapDepth: Double = 1.0) {
         var pressure = 0.0
         var dA = 0.0; var dB = 0.0
@@ -637,11 +724,39 @@ object Crease {
                     map(warpA, s, c, a, -widthA)
                     map(warpB, s, c, b, -widthB)
                 }
+                CreaseVoice.PLEAT -> {
+                    // Gentle maps only: PLEAT's colour is its resonance (see candidateOutput);
+                    // the maps keep the load coupling between the two layers alive.
+                    map(warpA, s, c, .05 + .25 * shape.fold + .40 * dA, 0.0)
+                    map(warpB, s, c, .05 + .25 * shape.fold + .40 * dB, 0.0)
+                }
+                CreaseVoice.SNAP -> {
+                    val base = .05 + .50 * shape.fold
+                    val excursion = .20 + 2.5 * shape.pressure
+                    map(warpA, s, c, base + excursion * (.85 * dA + .15 * recoveryA), 0.0)
+                    map(warpB, s, c, base * (1.0 + .30 * shape.split) + excursion * (.60 * dB + .40 * recoveryB), 0.0)
+                }
+                CreaseVoice.TWOFOLD -> {
+                    // The second layer is the sheet folded in half: the same map on twice the phase.
+                    val base = .05 + .55 * shape.fold
+                    val excursion = .10 + 1.6 * shape.pressure
+                    map(warpA, s, c, base + excursion * (.80 * dA + .20 * recoveryA), 0.0)
+                    map(warpB, sin(2.0 * phase), cos(2.0 * phase), .80 * base +
+                        excursion * (.50 * dB + .50 * recoveryB) * (1.0 + .30 * shape.split), 0.0)
+                }
+                CreaseVoice.CUP -> {
+                    // PINCH's half-cycle map turned the other way: it flattens each half into a cup.
+                    val base = .25 + .70 * shape.fold
+                    val excursion = .30 + 1.4 * shape.pressure
+                    map(warpA, s, c, 0.0, base + excursion * dA)
+                    map(warpB, s, c, 0.0, (base + excursion * dB) * (1.0 + .20 * shape.split))
+                }
             }
             // Smooth the bounded residual ENERGY before compressing its mean. Pointwise
             // clipping would erase the sharp features that distinguish these stronger maps.
             val residualA = (warpA.cosine * warpA.derivative - c) / residualScale
-            val residualB = (warpB.cosine * warpB.derivative - c) / residualScale
+            val residualB = (warpB.cosine * warpB.derivative - (if (shape.voice == CreaseVoice.TWOFOLD) cos(2.0 * phase) else c)) /
+                residualScale
             energyA = residualA * residualA + (energyA - residualA * residualA) * loadPole
             energyB = residualB * residualB + (energyB - residualB * residualB) * loadPole
             loadA = energyA / (energyA + loadHalf)
@@ -649,9 +764,39 @@ object Crease {
             minDerivative = min(warpA.derivative, warpB.derivative)
             maxDerivative = max(warpA.derivative, warpB.derivative)
             maxCurvature = max(abs(warpA.curvature), abs(warpB.curvature))
+            if (shape.voice !in ORIGINAL_VOICES) return candidateOutput(phase, s, c, amplitude)
             // Bounded analytic RMS compensation plus fixed linear headroom. Even if both
             // maps and the root peak together, abs(raw) <= .32*(.92*3+.08)*velocity < .91.
             return .32 * amplitude * (.48 * warpA.gain * warpA.sine + .44 * warpB.gain * warpB.sine + .08 * s)
+        }
+
+        /**
+         * Candidates. Every term is bounded by one, the weights sum to under 2.9, and the shared
+         * .32 * amplitude keeps the raw sample under one as for the kept voices.
+         * - PLEAT reads deformation as two resonances, phase distortion's windowed-sine trick: a
+         *   sine at r times the phase, faded by a raised cosine that is silent where each cycle
+         *   restarts. r follows the layer's deformation, so pressure moves two formants (a vowel).
+         *   The formants are capped near 900 Hz and 1.9 kHz, whatever the key.
+         * - SNAP reads deformation as the pick itself: the louder and brighter part of the note is
+         *   the deformation, so it fades as the crease recovers.
+         * - TWOFOLD lets layer A's load, which only bends the other layer in the kept voices,
+         *   open the octave layer: the harder the fold works, the more the octave blooms.
+         * - CUP mixes its two flattened maps like the kept voices.
+         */
+        private fun candidateOutput(phase: Double, s: Double, c: Double, amplitude: Double): Double = when (shape.voice) {
+            CreaseVoice.PLEAT -> {
+                val first = (900.0 / hz).coerceIn(1.0, 9.0)
+                val second = (1_900.0 / hz).coerceIn(1.5, 14.0)
+                val r1 = 1.0 + (first - 1.0) * (.15 + .85 * (.70 * dA + .30 * recoveryA))
+                val r2 = min(second, 1.5 + (second - 1.5) * (.20 + .80 * (.60 * dB + .40 * recoveryB)) * (1.0 + .15 * shape.split))
+                val window = .5 - .5 * c
+                .32 * amplitude * (1.5 * window * (.50 * sin(r1 * phase) + .32 * sin(r2 * phase)) + .30 * s)
+            }
+            CreaseVoice.SNAP -> .32 * amplitude * (.20 + .80 * dA.coerceIn(0.0, 1.0)) *
+                (.48 * warpA.gain * warpA.sine + .44 * warpB.gain * warpB.sine + .08 * s)
+            CreaseVoice.TWOFOLD -> .32 * amplitude * (.52 * warpA.gain * warpA.sine +
+                .40 * (.20 + .80 * loadA) * warpB.gain * warpB.sine + .08 * s)
+            else -> .32 * amplitude * (.48 * warpA.gain * warpA.sine + .44 * warpB.gain * warpB.sine + .08 * s)
         }
     }
 

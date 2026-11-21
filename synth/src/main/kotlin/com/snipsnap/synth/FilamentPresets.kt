@@ -1,6 +1,7 @@
 package com.snipsnap.synth
 
-/** Approved dry factory voices plus the unchanged first and second listening recipes. */
+/** Approved dry factory voices plus the unchanged first and second listening recipes. The twelve
+ * original recipes come first; voices kept later are appended after them, one recipe each. */
 object FilamentPresets {
     private fun p(
         voice: FilamentVoice,
@@ -21,6 +22,7 @@ object FilamentPresets {
             FilamentVoice.THREAD -> listOf(.25f, .15f, .25f, 0f, .20f, 0f)
             FilamentVoice.PULSE -> listOf(.65f, .30f, .65f, .20f, .35f, 0f)
             FilamentVoice.CURL -> listOf(.45f, .65f, .45f, .15f, .50f, 0f)
+            else -> error("$voice has no model-one recipe")
         }
         val names = listOf("INJECT", "BEND", "LENGTH", "BUNDLE", "COLLECT", "HOLD")
         return FilamentPatch(name, voice, names.zip(values).toMap() + macros,
@@ -146,6 +148,14 @@ object FilamentPresets {
         p(FilamentVoice.CURL, "Held Curl",
             "INJECT" to .48f, "BEND" to .68f, "LENGTH" to .86f, "BUNDLE" to .82f, "COLLECT" to .70f, "HOLD" to 1f,
             config = FilamentConfig(seed = 61, profile = FilamentProfile.LATE)),
+        // Kept in round filament-voices-1 (20 Nov 2026), at the default performance the owner heard:
+        // default controls, C3, full touch.
+        FilamentPatch("Glass Flute", FilamentVoice.FRAY, Filament.defaults(FilamentVoice.FRAY)),
+        // Kept in their reworked form in round fix-filament-voices-1 (21 Nov 2026), again at the heard
+        // default performance: default controls, C3, full touch.
+        FilamentPatch("String Braid", FilamentVoice.BRAID, Filament.defaults(FilamentVoice.BRAID)),
+        FilamentPatch("Glass Harmonica", FilamentVoice.HALO, Filament.defaults(FilamentVoice.HALO)),
+        FilamentPatch("Spring Tank", FilamentVoice.SPRING, Filament.defaults(FilamentVoice.SPRING)),
     )
 
     /** Exact model-one starting points for before/after listening and saved-recipe replay. */

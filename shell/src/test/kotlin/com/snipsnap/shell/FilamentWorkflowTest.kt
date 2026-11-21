@@ -165,8 +165,8 @@ class FilamentWorkflowTest {
             assertTrue(audio.peak() > .00001f, "${patch.name} is silent on the starter grid")
             patch
         }
-        assertEquals(FilamentVoice.entries.toSet(), patches.map { it.voice }.toSet())
-        assertEquals(FilamentPresets.all(), patches.drop(4))
+        assertEquals(Filament.ORIGINAL_VOICES.toSet(), patches.map { it.voice }.toSet())
+        assertEquals(FilamentPresets.all().take(12), patches.drop(4), "the kit keeps the twelve original recipes")
         val approvedThread = FilamentPresets.forVoice(FilamentVoice.THREAD).first()
         patches.take(4).forEach { patch ->
             assertEquals(approvedThread.copy(name = patch.name, midi = patch.midi), patch,
