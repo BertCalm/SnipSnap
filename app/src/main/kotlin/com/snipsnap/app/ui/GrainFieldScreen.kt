@@ -701,7 +701,7 @@ private fun GrainFieldCanvas(
                 false
             }
             drawCircle(
-                color = if (lit) scheme.accent.tape else scheme.lcdInk2,
+                color = if (lit) scheme.amber.tape else scheme.lcdInk2,
                 radius = dotRadiusPx,
                 center = center,
             )
@@ -709,7 +709,7 @@ private fun GrainFieldCanvas(
 
         if (t != null) {
             drawCircle(
-                color = scheme.accent.tape,
+                color = scheme.amber.tape,
                 radius = CURSOR_RING_RADIUS.toPx(),
                 center = t,
                 style = Stroke(width = CURSOR_RING_STROKE.toPx()),
@@ -723,7 +723,7 @@ private fun GrainFieldCanvas(
         // GrainFieldCanvas's own KDoc on `touching`).
         if (a != null) {
             drawCircle(
-                color = scheme.accent.tape,
+                color = scheme.amber.tape,
                 radius = AUTO_CURSOR_RING_RADIUS.toPx(),
                 center = Offset(a.x * w, a.y * h),
                 style = Stroke(width = CURSOR_RING_STROKE.toPx()),

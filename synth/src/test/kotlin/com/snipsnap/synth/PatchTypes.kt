@@ -72,8 +72,10 @@ internal object PatchTypes {
      * its Kotlin port (K1) to round K2 (2026-11-14), when its heard round-3 settings became the factory bank. KINDRED sat
      * here from its port (K1, 2026-11-15) until the owner approved its Kotlin kits (2026-11-18). CONSORT joined at its
      * Kotlin port (K1, 2026-11-19) until the owner heard and kept all of round K3 (2026-11-20, "All sounds good").
+     * DRAWL joined at its Kotlin port (round 1, 2026-11-21): the owner kept all six voices of its Python prototype
+     * (rounds 0 to 0d), and nobody has heard the Kotlin render; presets wait for that listen.
      */
-    val PROTOTYPES: Set<String> = setOf(SecondlinePatch.ENGINE, ChitinPatch.ENGINE, FerryPatch.ENGINE, FillPatch.ENGINE, BreakerPatch.ENGINE, SootPatch.ENGINE, KerfPatch.ENGINE)
+    val PROTOTYPES: Set<String> = setOf(SecondlinePatch.ENGINE, ChitinPatch.ENGINE, FerryPatch.ENGINE, FillPatch.ENGINE, BreakerPatch.ENGINE, SootPatch.ENGINE, KerfPatch.ENGINE, DrawlPatch.ENGINE)
 
     /** These voices of otherwise rostered engines await a factory-preset listening verdict. */
     val PROTOTYPE_VOICES: Map<String, Set<String>> = mapOf(

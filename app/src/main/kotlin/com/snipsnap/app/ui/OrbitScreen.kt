@@ -2603,7 +2603,7 @@ private fun StripEditor(
                             val mark = hit?.let { OrbitBrushes.mark(it) }.orEmpty()
                             val edge = when {
                                 step == playheadStep -> inkColor
-                                mark.isNotEmpty() -> scheme.accent.tape
+                                mark.isNotEmpty() -> scheme.amber.tape
                                 accent -> color
                                 else -> scheme.edge.tape
                             }

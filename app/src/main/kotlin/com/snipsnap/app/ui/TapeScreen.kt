@@ -1800,7 +1800,7 @@ private fun WaveformLcd(
             val xOut = (centerX + (model.outFrame - pos) / framesPerPixel).toFloat()
             if (model.hasSelection) {
                 drawRect(
-                    color = scheme.accent.tape.copy(alpha = 0.40f),
+                    color = scheme.amber.tape.copy(alpha = 0.40f),
                     topLeft = Offset(xIn, 0f),
                     size = Size((xOut - xIn).coerceAtLeast(0f), h),
                 )

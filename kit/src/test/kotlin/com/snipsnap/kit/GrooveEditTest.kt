@@ -425,4 +425,27 @@ class GrooveEditTest {
         assertTrue(GrooveEdit.loadAll(dir).all { it.name.startsWith("Break Groove E") })
     }
 
+    /** UAT 2026-11 user states, D-9 (ruled 2026-11-21): a lane whose pad is empty is hidden. */
+    @Test
+    fun `the step editor draws only lanes on filled pads, plus any lane that still holds notes`() {
+        val pads = GrooveEdit.DEFAULT_LANE_PADS
+        val empty = Mpc3Clip("E", bars = 1, notes = emptyList())
+        // A one-pad kit (A01): KICK alone.
+        assertEquals(listOf(GrooveEdit.Lane.KICK), GrooveEdit.visibleLanes(empty, pads, setOf(1)))
+        // Kick and hats filled: their lanes, in lane order.
+        assertEquals(listOf(GrooveEdit.Lane.KICK, GrooveEdit.Lane.HAT_CLOSED, GrooveEdit.Lane.HAT_OPEN), GrooveEdit.visibleLanes(empty, pads, setOf(1, 3, 4)))
+        // A snare note on a pad since emptied stays in view.
+        val snareNote = Mpc3Clip("E", bars = 1, notes = listOf(Mpc3Note(note = GrooveEdit.noteFor(GrooveEdit.Lane.SNARE, pads), timePulses = 0L, velocity = 1f)))
+        assertEquals(listOf(GrooveEdit.Lane.KICK, GrooveEdit.Lane.SNARE), GrooveEdit.visibleLanes(snareNote, pads, setOf(1)))
+        // A lane reassigned onto a filled pad follows its pad.
+        val clapOnB = GrooveEdit.setLanePad(pads, GrooveEdit.Lane.CLAP, 16)
+        assertEquals(listOf(GrooveEdit.Lane.KICK, GrooveEdit.Lane.CLAP), GrooveEdit.visibleLanes(empty, clapOnB, setOf(1, 16)))
+    }
+
+    @Test
+    fun `with no lane on a filled pad and no notes, every lane is drawn so one can be reassigned`() {
+        val empty = Mpc3Clip("E", bars = 1, notes = emptyList())
+        assertEquals(GrooveEdit.Lane.entries, GrooveEdit.visibleLanes(empty, GrooveEdit.DEFAULT_LANE_PADS, setOf(16)))
+        assertEquals(GrooveEdit.Lane.entries, GrooveEdit.visibleLanes(empty, GrooveEdit.DEFAULT_LANE_PADS, emptySet()))
+    }
 }

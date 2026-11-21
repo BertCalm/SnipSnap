@@ -506,5 +506,29 @@
   ],
   "deterministic": true,
   "finite": true
+ },
+ "FAN": {
+  "round": 7,
+  "flaps": 12,
+  "third_octave_error_dB": {
+   "attack": 4.0,
+   "body": 2.61
+  },
+  "envelope_correlation_2ms": 0.91,
+  "centroid_ref": 5828,
+  "centroid_fit": 5852,
+  "velocity_rise_pct": 77
+ },
+ "FAN_SWEEP": {
+  "round": 7,
+  "flaps": 16,
+  "third_octave_error_dB": {
+   "attack": 7.47,
+   "body": 1.8
+  },
+  "envelope_correlation_2ms": 0.46,
+  "centroid_ref": 5858,
+  "centroid_fit": 5622,
+  "velocity_rise_pct": 58
  }
 }
