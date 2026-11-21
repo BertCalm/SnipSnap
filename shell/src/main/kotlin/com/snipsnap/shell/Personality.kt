@@ -2324,6 +2324,13 @@ object Copy {
     const val SPLICE_KIT_GONE = "This pad isn't there any more."
     /** The slot was reassigned while SPLICE was open: the takes belong to a pad that no longer lives here, so nothing is written. */
     const val SPLICE_PAD_CHANGED = "This slot holds a different pad now. Nothing was touched."
+    /** SPLICE's two nudges (UAT 2026-11 user states, S-8): the cut a step earlier or later, for anyone a drag does not serve. */
+    @field:CopyLabel const val SPLICE_CUT_EARLIER = "CUT EARLIER"
+    @field:CopyLabel const val SPLICE_CUT_LATER = "CUT LATER"
+    /** The waveform's accessible name, as an adjustable control (S-8). */
+    @field:CopyLabel const val SPLICE_CUT = "SPLICE CUT"
+    /** The cut's place, read with [SPLICE_CUT]: seconds into the takes, to the hundredth. */
+    fun spliceCutAt(seconds: Double): String = "at %.2f s".format(java.util.Locale.ROOT, seconds)
     const val SPLICE_TAKE_UNREADABLE = "One of those VERSIONS won't read any more. Pick another pair."
     /** `TapeSplice.join`'s own refusal, said before the needle ever shows: a mutated (stereo) take against its mono original, or two rates. */
     const val SPLICE_FORMATS_DIFFER =
