@@ -30,6 +30,11 @@ design keeps all of that and adds three layers:
 3. **FINGERPRINT**: a seed from the capture time and the pixels, plus a few literal metadata
    mappings, making small bounded differences. It also supplies SNAP's round robin.
 
+Round 0c (owner request, 2026-11-21) adds three more: the photo sets its own SCAN and contrast
+amounts (§6.4); the photo chooses one of four sound-makers, BREATH, PLUCK, STRIKE or TONE (§6.5);
+and hue picks the note name while brightness picks the octave, over four octaves (§6.6). A session
+lock keeps a quick re-shot on the same sound-maker and octave (§7).
+
 The characteristic gesture is **the top of the picture strikes → the tone travels down through
 the scene → it settles into the bottom of the frame as it fades**.
 
@@ -102,6 +107,50 @@ What it says:
   movement inside one note, which this metric does not reward. SCAN stays for the gesture.
 - **Total, today to L4:** timbre distance +51% (8.12 to 12.25), shape distance +58% (8.43 to 13.29).
   Pitch holds for every image, and round-robin takes stay small next to different photos.
+
+### 2.4 Round 0c: the photo's own amounts, a sound-maker, a register
+
+`prototype/snap-scan/families.py` (results in `families_report.json`) on the same 99 images. Timbre
+and shape distances still use one centre note; the pitch rows use each photo's own note.
+
+| Measure | L4 (§2.3) | Round 0c |
+|---|---|---|
+| Different photos: timbre distance | 12.25 dB | **17.66 dB** |
+| Different photos: shape distance | 13.29 dB | 14.39 dB |
+| Round-robin takes: timbre / shape | 1.42 / 1.70 dB | 4.01 / 2.04 dB |
+| Pitch range used | 24 semitones, 19 notes, 27% on the top note | **45 semitones, 31 notes, 13% on the top note** |
+| Pitch held on the photo's own note | 100% | 100% |
+| Family share (dominant) | | BREATH 28%, PLUCK 24%, STRIKE 23%, TONE 24% |
+| Images blending two families | | 20% |
+| Spectral centroid 10/50/90% | 308 / 540 / 1018 Hz | 232 / 487 / 1273 Hz |
+
+Same-scene pairs (5 pairs: taken within 2 minutes, with 16 × 16 thumbnail correlation above 0.6;
+a small sample):
+
+| | Free | With the session lock (§7) |
+|---|---|---|
+| Timbre distance, median | 9.2 dB | 6.2 dB |
+| Timbre distance, worst | 27.6 dB | 13.0 dB |
+
+What it says:
+
+- **The families are the largest lever of all.** Timbre distance against today's read is now
+  +117% (8.12 to 17.66 dB).
+- **The register spreads pitch nearly twice as wide,** and the most crowded note falls from 27% of
+  photos to 13%.
+- **Families make re-shots worse unless locked.** One pair of near-twins blended two families in
+  different proportions and landed 27.6 dB apart. The session lock brings the worst case to
+  13.0 dB, under different photos' 17.7 dB. That fits the owner's "subtle to moderate" only at the
+  median; the worst case is closer to "clearly different". A larger same-scene sample is needed.
+- **Two images taken as a pair can still differ greatly** when the camera moved: front and back of
+  the same subject. Those images carry no capture time in their EXIF, so no lock can catch them.
+  That is accepted: they are different pictures.
+- **The first pitch check failed nine notes, all at A1 to B1** (55 to 62 Hz). The autocorrelation
+  detector landed on its own zero-lag lobe. A spectral check put seven of the nine within 15 cents
+  and all within 50 cents of the note. With the detector fixed, all 99 hold.
+- **Families follow image statistics, not subjects.** The family comes from whole-picture detail
+  and contrast, so a flower bed can strike and a printed product page can pluck. That is by design:
+  the reading is honest about the pixels, not about what a person sees in them.
 
 ## 3. Sibling check
 
@@ -216,6 +265,41 @@ what makes photos sound alike. At read time, each strip cycle gets this treatmen
 with the strips; the render pays nothing. Measured in §2.3: +0.5 dB timbre distance and a brighter
 median centroid, with pitch held on every image.
 
+### 6.5 Sound-makers (added in round 0c)
+
+The photo chooses where it sits on two ranks: detail (x) and contrast (y, the luma standard
+deviation). Each family has a centre. Weights fall off as exp(−distance² / 0.03); at most two
+families blend, and a weight above 0.9 plays alone. A near-twin therefore moves along a slope,
+never across a cliff. A wider blend (0.06) was tried: it doubled the blended share to 41%, lost
+1.1 dB of distinctness, and did not shrink same-scene weight changes, so it was rejected.
+
+| Family | Centre (detail, contrast) | Photos it suits | What makes the sound | Kotlin to reuse |
+|---|---|---|---|---|
+| BREATH | (0.2, 0.2) | soft and plain | noise through resonators at the photo's 16 harmonics (gains from the mid strip, fundamental floored at 0.8), a 40% swell, a quiet tone under it to hold the root | `Dsp.Biquad` bandpass or `Dsp.TptSvf` |
+| PLUCK | (0.8, 0.25) | busy, soft-edged | a string whose starting shape is the photo's mid line; loop gain from DECAY, loop low-pass 0.55 to 0.98 from BRIGHT | `Strings.Loop` / `Strings.pluck` |
+| STRIKE | (0.25, 0.8) | plain, hard-edged | 12 partials with the photo's harmonic gains, stretched by B = 0.0002 to 0.0032 on the contrast rank, struck by a 0.3 to 4 ms pulse | `Modes.ring` with `Modes.stiffString`-style ratios |
+| TONE | (0.8, 0.8) | busy, hard-edged | the scanned wavetable (L4) | today's `Snap.synthesize` plus the scan |
+
+All four share PORTRAIT's finish (drift, tilt, SVF following the envelope, drive) and the house
+output stage. Contrast needed a percentile table, and so did vchange (§6.4); both are calibration
+v1b and live in `families_report.json`.
+
+**Amounts (round 0c).** SCAN is no longer a fixed 0.6. It is 0.3 + 0.7 × the rank of *vchange*:
+the mean log-spectral distance between neighbouring strips. A picture that changes a lot top to
+bottom travels further. Spectral contrast widened to an amount of 1.0 to 3.0 (detail rank) and a
+slope of −1.7 to −0.6 (luminance rank). The SCAN knob's default for a new read is this value, and
+the player can still turn it.
+
+### 6.6 Register (added in round 0c)
+
+Hue picks the note name: the hue circle, cut at rose as today, in 12 steps rather than 24. Grey
+and cancelling photos land on A, as today. The luminance rank picks one of four octaves: A1, A2, A3
+or A4 as the base. Dark photos land low and bright photos high, from 55 Hz to 831 Hz.
+
+The TUNE knob keeps its law (24 semitones from A2), so old pads are untouched. A new pad stores
+`register` (−1 to +2 octaves), and its note is A2 + round(TUNE × 24) + 12 × register; a new read
+sets TUNE to note name / 24. Key-locking stays the kit's job (IN KEY), not the engine's.
+
 ## 7. FINGERPRINT
 
 **Seed.** `Dsp.seedFor(captureTimeSeconds, pixelHash)`. The capture time comes from EXIF
@@ -232,6 +316,12 @@ seed is stored on the patch, as NACRE does, never recomputed.
 | Scan start | up to half a strip in | the scan direction |
 | Oscillator start phase | anywhere in the cycle | |
 | Drift LFO phase | anywhere | its depth (that is symmetry's) |
+
+**Session lock (round 0c).** A photo read within 2 minutes of the previous SNAP read on the same
+screen inherits that read's family weights and register. Its readings, strips, note name and seed
+are still its own. The lock is decided once, at read time, and stored on the pad (the weights and
+the register), so a pad never changes after it is saved. Measured in §2.4: same-scene median 9.2
+to 6.2 dB, worst 27.6 to 13.0 dB. A "new sound" button breaks the lock on purpose.
 
 **Round robin.** Take *k* uses seed + *k*. Measured: takes sit 3.46 dB apart against 7.08 dB for
 different photos (§2.2). Follow the existing ACCORD path (`AccordRoundRobinKits.kt`,
@@ -271,7 +361,8 @@ different photos (§2.2). Follow the existing ACCORD path (`AccordRoundRobinKits
 
 | Round | Scope | Lands |
 |---|---|---|
-| 1 | `:synth` only: strip read, alignment, scan, PORTRAIT readings with calibration v1, fingerprint from the pixel hash and the phone clock, round robin, all probes | SNAP renders, sidecar, velocity and RR through render, save, playback, export |
+| 1a | `:synth` only: strip read, alignment, scan with the photo's own amount, PORTRAIT readings with calibration v1 and v1b, spectral contrast, register, fingerprint from the pixel hash and the phone clock, round robin, all probes; TONE family only | SNAP renders, sidecar, velocity and RR through render, save, playback, export |
+| 1b | `:synth`: BREATH, PLUCK and STRIKE on the house toolkit, family weights and blending, and the session lock (stored weights) | the four sound-makers |
 | 2 | `:app`: `TakePicture` to a cache file plus `PickVisualMedia` for the gallery; `androidx.exifinterface` reads only the fields in §7; the file is deleted after reading; only derived numbers stored | literal metadata mappings |
 | 3 | PALETTE second voice | direction B |
 
@@ -290,13 +381,20 @@ different photos (§2.2). Follow the existing ACCORD path (`AccordRoundRobinKits
 - **D1.** On an old pad without strips, should SCAN be hidden or shown greyed? Recommendation: greyed, with a note that a new photo enables it.
 - **D2.** Should the default SCAN for a new read be 0.6 (clear movement) or 0.4 (gentler)? Decide by listening to the round-0 set.
 - **D3.** Should the fingerprint strength be fixed at 0.5 or offered as a sixth knob? Recommendation: fixed; six knobs crowds the screen.
+- **D4.** Should the family be shown, and overridable? Recommendation: show its name on the LCD
+  ("PLUCK, from this photo's texture") and let a long-press cycle it. A family the player chose is
+  stored like any other.
+- **D5.** Should the session lock last 2 minutes, or until the player taps "new sound"? Recommendation: 2 minutes, plus the button.
+- **D6.** Four octaves (55 to 831 Hz), or three without the A4 register? Recommendation: four; A1
+  serves the kit's bass slot. Listen to `breath_sign` and `tone_mural` in the round 0c set, which
+  sit near the two ends.
 
 ## 12. Ledger
 
 - **Verified (grep at `c68e4c17c`):** every API in the header; SNAP is rosterless; the camera path returns no file and no EXIF; `validateMacros` accepts missing keys.
-- **Measured (Python harness):** §2 in full, including round 0b (§2.3); the harness is `prototype/snap-scan/`.
-- **Proposed:** every pairing in §6.2 and §7, the spectral-contrast ranges in §6.4, the SCAN law, the default 0.6, the fingerprint ranges, the render budget, the border crop.
-- **Heard:** nothing yet. Two listening sets went to the owner on 2026-11-21: round 0 (four photos × today, SCAN, take 2, full SCAN) and round 0b (six photos × today, the L4 build, its take 2, each at the photo's own hue pitch).
+- **Measured (Python harness):** §2 in full, including round 0b (§2.3) and round 0c (§2.4); the harness is `prototype/snap-scan/`.
+- **Proposed:** every pairing in §6.2 and §7, the spectral-contrast ranges in §6.4, the family centres and sound-makers in §6.5, the register law in §6.6, the session lock, the SCAN law, the default 0.6, the fingerprint ranges, the render budget, the border crop.
+- **Heard:** nothing yet. Two listening sets went to the owner on 2026-11-21: round 0 (four photos × today, SCAN, take 2, full SCAN) round 0b (six photos × today, the L4 build, its take 2, each at the photo's own hue pitch) and round 0c (two photos per family × today, the round-0c build, its take 2, plus one same-scene pair).
 
 ## 13. Why it is built this way
 

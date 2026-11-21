@@ -12,6 +12,8 @@ These are not Kotlin tests. Every number they print is labelled "Python harness"
 | `listen.py` | Renders a listening set (today, SCAN, round-robin take 2, full SCAN) for four photos. |
 | `distinct.py` | Round 0b: stacks every layer (L0 today to L5 colour layers) and measures how far apart different photos land, in timbre and in loudness shape, with pitch held. It writes `distinct_report.json`. |
 | `listen2.py` | Round 0b listening set: today against L4, plus a round-robin take, for six photos at their own pitch. |
+| `families.py` | Round 0c: the photo's own amounts, four sound-makers (BREATH, PLUCK, STRIKE, TONE) and a four-octave register. It calibrates contrast and vchange (v1b) on the same set and writes `families_report.json`. Set `SNAP_TAU` to change the blend width. |
+| `listen3.py` | Round 0c listening set: two photos per family plus one same-scene pair. |
 | `calib_report.json` | The owner's calibration result: 100 uploads, 99 unique, 69 camera photos, 30 screenshots. |
 
 The owner's photos are **not** in the repository and must never be added. Only derived numbers
