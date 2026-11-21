@@ -375,6 +375,12 @@ class PadEngine(preferredSampleRate: Int) {
             clickAccentIndex = -1
             clickFrames = 0L
             clickAccentFrames = 0L
+            // Stems and clicks belong to no kit, so they carry no kit's glue. The glue
+            // goes with the bank ([load]); this bank replaces the one `load` built, and
+            // without this the last kit's chain (BOROUGH's compressor, saturator and
+            // limiter, and its 3 ms of lookahead) would keep colouring the stems until
+            // another kit loaded. Queued in the same breath as the commit, as [load] does.
+            configureGlue(GlueSettings.OFF)
         }
         return indices
     }
