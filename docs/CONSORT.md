@@ -113,7 +113,8 @@ keyboard's held keys followed the same day ("Keys should be like held"), first o
 cycle (a solo instrument about 60 MB of PCM24, twice as slow to make), then, on the owner's ask for a
 middle ground, on a four-second cycle with the same deeper wanders: a key sample about 4.3 s instead of
 2.3 s, a solo instrument about 31 MB, a CLARINET instrument's test 45 s against 29 s. A key is rarely held
-past a second wrap. `ConsortK3PinsTest` is on `k3-heard-v3.sha256`: only the key lines changed.
+past a second wrap. The owner heard the 4 s keys and kept them ("Keys sound good"). `ConsortK3PinsTest` is on
+`k3-heard-v3.sha256`: only the key lines changed.
 Every HOLD under the
 step renders as before.
 
