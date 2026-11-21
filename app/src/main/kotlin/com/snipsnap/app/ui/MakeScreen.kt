@@ -71,7 +71,14 @@ import kotlinx.coroutines.withContext
  * says what to do first.
  */
 @Composable
-fun MakeList(onOpen: (Bench) -> Unit, hasKit: Boolean, onMyVoice: (() -> Unit)? = null, kitName: String? = null) {
+fun MakeList(
+    onOpen: (Bench) -> Unit,
+    hasKit: Boolean,
+    onMyVoice: (() -> Unit)? = null,
+    kitName: String? = null,
+    /** LIBRARY ▸ under the no-kit line (UAT 2026-11 user states, D-6): where a kit is opened. */
+    onOpenLibrary: (() -> Unit)? = null,
+) {
     val scheme = LocalScheme.current
     Column(
         Modifier
@@ -93,6 +100,10 @@ fun MakeList(onOpen: (Bench) -> Unit, hasKit: Boolean, onMyVoice: (() -> Unit)? 
         if (!hasKit) {
             TapeText(if (onMyVoice == null) Copy.ADD_KIT_FIRST else "Open a kit for new pads. MY VOICE can keep a personal source first.",
                 TapeType.pixelSmall, scheme.ink2.tape, Modifier.fillMaxWidth(), maxLines = 3)
+            // The line named a kit and offered no way to one (D-6): the LIBRARY is where it is opened.
+            if (onOpenLibrary != null) {
+                ActionButton(Copy.LIBRARY_DOOR, scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onOpenLibrary)
+            }
         }
         MakeGroupHeading(Copy.MAKE_A_SOUND)
         for (bench in listOf(Bench.SYNTH, Bench.SNAP, Bench.SURFACE, Bench.CONFLUENCE_VOICES)) {
@@ -157,6 +168,8 @@ fun InstrumentsBench(
     murmurInstrumentEnabled: Boolean = true,
     roundRobinShelf: File? = null,
     onOpenRoundRobin: ((MurmurRoundRobinShelf.SavedBank) -> Unit)? = null,
+    /** SYNTH ▸ under the empty list (UAT 2026-11 user states, D-6): SYNTH's MAKE INSTRUMENT is where one is made. */
+    onOpenSynth: (() -> Unit)? = null,
 ) {
     val scheme = LocalScheme.current
     var expanding by remember { mutableStateOf<KitShelf.InstrumentEntry?>(null) }
@@ -233,7 +246,13 @@ fun InstrumentsBench(
                     .padding(14.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                TapeText(NO_INSTRUMENTS, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    TapeText(NO_INSTRUMENTS, TapeType.lcdSmall, scheme.lcdInk.tape, maxLines = 3)
+                    // The line named SYNTH and offered no way there (D-6).
+                    if (onOpenSynth != null) {
+                        ActionButton(Copy.SYNTH_DOOR, scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onOpenSynth)
+                    }
+                }
             }
         } else {
             LazyColumn(

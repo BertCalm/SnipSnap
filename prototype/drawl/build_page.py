@@ -168,6 +168,8 @@ def ab_section(ab_dir, site):
 
     def val(d, voice, level, key):
         v = d[voice][level][key] if level else d[voice].get(key)
+        if isinstance(v, list):
+            return " to ".join(str(x) for x in v)
         return "n/a" if v is None else v
 
     blocks = []

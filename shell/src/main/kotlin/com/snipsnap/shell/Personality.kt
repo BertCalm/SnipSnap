@@ -3578,6 +3578,12 @@ object Copy {
     const val NOTHING_DELETED = "Nothing deleted."
     /** SNIPS' own empty state. */
     const val SNIPS_EMPTY = "No samples yet."
+    /** The empty SAVED SAMPLES' way forward (D-6): the mic, named as the dock names it. */
+    @field:CopyLabel const val LISTEN_MIC = "LISTEN · MIC"
+    /** CREATE's way to a kit when none is open (D-6): the LIBRARY, where kits are opened. */
+    @field:CopyLabel const val LIBRARY_DOOR = "LIBRARY ▸"
+    /** The empty INSTRUMENTS list's way forward (D-6): SYNTH, whose MAKE INSTRUMENT makes one. */
+    @field:CopyLabel const val SYNTH_DOOR = "SYNTH ▸"
     /** SAVED SAMPLES while the first read of the folder is still running: not "no samples", which it has not found out yet. */
     const val SNIPS_LOADING = "Loading SAVED SAMPLES…"
     /**

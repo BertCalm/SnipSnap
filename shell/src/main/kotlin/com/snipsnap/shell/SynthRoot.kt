@@ -22,6 +22,8 @@ import com.snipsnap.synth.RivetPatch
 import com.snipsnap.synth.BorePatch
 import com.snipsnap.synth.Consort
 import com.snipsnap.synth.ConsortPatch
+import com.snipsnap.synth.Drawl
+import com.snipsnap.synth.DrawlPatch
 import com.snipsnap.synth.Cairn
 import com.snipsnap.synth.CairnPatch
 import com.snipsnap.synth.CausticInstrument
@@ -324,6 +326,7 @@ object SynthRoot {
         is ChitinPatch -> tune(patch, { Chitin.midiFor(patch.voice, it) })
         is BorePatch -> tune(patch, { Bore.midiFor(patch.voice, it) })
         is ConsortPatch -> tune(patch, { Consort.midiFor(patch.voice, it) })
+        is DrawlPatch -> tune(patch, { Drawl.midiFor(patch.voice, it) })
         is CircuitPatch -> tune(patch, { Circuit.midiFor(it) })
         is ContourPatch -> tune(patch, { ContourEngine.midiFor(patch.voice, it) })
         is CorollaPatch -> tune(patch, { Corolla.midiFor(patch.voice, it) })

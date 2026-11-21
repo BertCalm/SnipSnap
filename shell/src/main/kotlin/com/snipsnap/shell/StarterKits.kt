@@ -1295,6 +1295,27 @@ object StarterKits {
             "The sixteen TERRA PUNJAB pads with soft, medium and hard touch and four takes on each: a repeated hit lands a little differently every time.",
             seeded = false,
         ) { com.snipsnap.synth.TerraGenreRoundRobinKits.build(com.snipsnap.synth.TerraGenreRoundRobinKits.Kit.PUNJAB) },
+        // TERRA's Japanese kits from the stick voices (docs/TERRA_STICKS.md); provisional, appended after PUNJAB TAKES.
+        Starter(
+            com.snipsnap.synth.TerraStickKits.Kit.MATSURI.id, "TERRA MATSURI",
+            "Japanese street festival drums: barrel drum, small drum, rim clicks, hand gong, cymbals, a roll and a riser. Three touch levels and four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.TerraStickKits.Kit.MATSURI.bpm.toFloat(),
+        ) { com.snipsnap.synth.TerraStickKits.build(com.snipsnap.synth.TerraStickKits.Kit.MATSURI) },
+        Starter(
+            com.snipsnap.synth.TerraStickKits.Kit.THUNDER.id, "TERRA THUNDER",
+            "Big Japanese drums: two odaiko and their pair, tuned barrel-drum toms, rim cracks, a cymbal wash, two rolls and a riser. Three touch levels and four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.TerraStickKits.Kit.THUNDER.bpm.toFloat(),
+        ) { com.snipsnap.synth.TerraStickKits.build(com.snipsnap.synth.TerraStickKits.Kit.THUNDER) },
+        Starter(
+            com.snipsnap.synth.TerraStickKits.Kit.BON.id, "TERRA BON",
+            "Japanese dance percussion: water drum, shaken cowbell, small drum, hand gong and slats, a slat roll and a bell riser. Three touch levels and four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.TerraStickKits.Kit.BON.bpm.toFloat(),
+        ) { com.snipsnap.synth.TerraStickKits.build(com.snipsnap.synth.TerraStickKits.Kit.BON) },
+        Starter(
+            com.snipsnap.synth.TerraStickKits.Kit.DUSK.id, "TERRA DUSK",
+            "Processed Japanese percussion: rewound and roomy odaiko, echoed drums, rim and gong, a smeared small drum, a ghosted fan, a dubbed water drum. Three touch levels and four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.TerraStickKits.Kit.DUSK.bpm.toFloat(),
+        ) { com.snipsnap.synth.TerraStickKits.build(com.snipsnap.synth.TerraStickKits.Kit.DUSK) },
     )) + com.snipsnap.synth.SideroomKits.Kit.entries.map { kit ->
         Starter(kit.id, "SIDEROOM ${kit.title.uppercase(java.util.Locale.ROOT)}",
             "Synthesized ${kit.title} drums: eight instruments, a snare roll and a drum fill. Three strike strengths and three alternate hits.",

@@ -823,10 +823,12 @@ class FxTest {
     }
 
     @Test
-    fun `REWIND sits after ECHO and before SPRING, and an absent section keeps old recipes byte-stable`() {
+    fun `REWIND sits after ECHO and before GRAIN and SPRING, and an absent section keeps old recipes byte-stable`() {
         val names = FxChain.SECTION_NAMES
         assertEquals(names.indexOf("echo") + 1, names.indexOf("rewind"), "REWIND is not right after ECHO: $names")
-        assertEquals(names.indexOf("rewind") + 1, names.indexOf("spring"), "REWIND is not right before SPRING: $names")
+        // GRAIN (2026-11-20), the other time effect, sits between REWIND and SPRING; REWIND is still before the spring.
+        assertEquals(names.indexOf("rewind") + 1, names.indexOf("grain"), "GRAIN is not right after REWIND: $names")
+        assertEquals(names.indexOf("grain") + 1, names.indexOf("spring"), "GRAIN is not right before SPRING: $names")
 
         val without = FxChain(echo = Echo.defaults())
         assertTrue(!without.toJsonText().contains("rewind"), "no rewind key unless the section is set")
