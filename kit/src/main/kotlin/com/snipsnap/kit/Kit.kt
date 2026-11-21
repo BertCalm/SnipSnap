@@ -299,6 +299,49 @@ data class WearLedger(
 }
 
 /**
+ * The whole-kit glue a kit asks its live player for: input trim, an optional
+ * tape-style saturator `tanh(g x) / tanh(g)` with g = 10^([saturationDb]/20)
+ * (null = no saturator), then a compressor and a lookahead limiter driven
+ * [limiterDriveDb] into [ceilingDbfs]. BOROUGH's kits carry the chain the
+ * owner picked (docs/BOROUGH.md, round 3.1; `recipes.json` `kits[].glue`).
+ *
+ * Numbers only, and live playback only: the app maps them to its native bus
+ * (`GlueSettings` in `:app`), which is where any calibration of the live mix
+ * belongs - [inputTrimDb] is the recipe's, set for the exported samples at
+ * their own level. No export format (MPC 3, MPC 2, SFZ, DecentSampler)
+ * applies it; the samples on disk are never glued. Ranges match the native
+ * bus's validation.
+ */
+data class KitGlue(
+    /** dB in front of everything, -24..+24: the demo groove's peak to 0 dBFS at the exported samples' level. */
+    val inputTrimDb: Float,
+    /** The saturator's drive in dB, 0..12; null = none. */
+    val saturationDb: Float?,
+    /** The compressor's threshold in dBFS, -40..0. */
+    val thresholdDbfs: Float = -10f,
+    /** 1..20. */
+    val ratio: Float = 4f,
+    /** dB after the compressor, 0..24. */
+    val makeupDb: Float = 0f,
+    /** dB into the limiter, 0..24. */
+    val limiterDriveDb: Float = 0f,
+    /** The limiter's sample-peak ceiling in dBFS, -12..0. */
+    val ceilingDbfs: Float = -1f,
+) {
+    init {
+        fun check(name: String, v: Float, lo: Float, hi: Float) =
+            require(v.isFinite() && v in lo..hi) { "glue $name must be $lo..$hi: $v" }
+        check("input trim", inputTrimDb, -24f, 24f)
+        saturationDb?.let { check("saturation", it, 0f, 12f) }
+        check("threshold", thresholdDbfs, -40f, 0f)
+        check("ratio", ratio, 1f, 20f)
+        check("makeup", makeupDb, 0f, 24f)
+        check("limiter drive", limiterDriveDb, 0f, 24f)
+        check("ceiling", ceilingDbfs, -12f, 0f)
+    }
+}
+
+/**
  * A kit: a name and up to 128 filled pad slots.
  *
  * On disk a kit is a folder holding the WAVs plus a `kit.json` sidecar (see
@@ -338,6 +381,12 @@ data class Kit(
     val id: String? = null,
     /** The kit-wide round-robin defaults that pads with [RobinSettings.followsKit] follow; null = never set. */
     val robin: KitRobin? = null,
+    /**
+     * The live whole-kit glue this kit asks for ([KitGlue]); null = none, the
+     * default and every kit made before the field existed. The player
+     * switches its glue off for a kit without one.
+     */
+    val glue: KitGlue? = null,
 ) {
     init {
         tempoBpm?.let { require(it > 0f && it < 1000f) { "tempoBpm out of range: $it" } }

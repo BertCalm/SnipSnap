@@ -113,6 +113,8 @@ object KitAssembler {
         key: com.snipsnap.audio.KeySpec? = null,
         /** The source's detected tempo — persisted, and stamped into LOOP stems. */
         tempoBpm: Float? = null,
+        /** The live whole-kit glue the kit asks its player for ([Kit.glue]); null = none. */
+        glue: KitGlue? = null,
     ): Kit {
         require(arranged.size <= 128) { "at most 128 pad slots, got ${arranged.size}" }
         dir.mkdirs()
@@ -200,7 +202,7 @@ object KitAssembler {
             )
         }
 
-        val kit = Kit(name, pads, key, tempoBpm)
+        val kit = Kit(name, pads, key, tempoBpm, glue = glue)
         KitStore.save(kit, dir)
         return kit
     }

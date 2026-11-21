@@ -129,6 +129,23 @@ object PadHit {
         return left.coerceIn(0f, 1f) to right.coerceIn(0f, 1f)
     }
 
+    /**
+     * What a pad's sample is multiplied by on its way into the pads' mix - and so into the whole-kit glue, which
+     * takes the mix before the master gain - when it is hit at full velocity, at a new pad's level, centred: [gains]
+     * at those values. The balance law is unity at centre and full velocity is 1, so this is the default level alone,
+     * 0.707946 (-3.0 dB, the MPC's own unity). The native mix adds nothing of its own (a mono sample is the same on
+     * both sides; the master gain comes after the glue). A glue recipe set for the exported samples at their own
+     * level, as BOROUGH's input trims are, needs [DEFAULT_HIT_GAIN_DB] taken back off in front of it live.
+     */
+    val DEFAULT_HIT_GAIN: Float = KitPad(slot = 1, sampleFile = "unity.wav").level.let { level ->
+        val (left, right) = gains(level, 0.5f, 1f)
+        check(left == right) { "a centred pad is not centred: $left / $right" }
+        left
+    }
+
+    /** [DEFAULT_HIT_GAIN] in dB: -3.0. */
+    val DEFAULT_HIT_GAIN_DB: Double = 20.0 * kotlin.math.log10(DEFAULT_HIT_GAIN.toDouble())
+
     /** Coarse semitones plus fine cents as a speed ratio. */
     fun pitchRatio(tuneCoarse: Int, tuneFine: Int): Double =
         2.0.pow((tuneCoarse + tuneFine / 100.0) / 12.0)

@@ -78,6 +78,8 @@ object StarterKits {
         val key: KeySpec? = null,
         /** Authored tempo, when timing is part of the kit recipe. */
         val tempoBpm: Float? = null,
+        /** The live whole-kit glue the kit carries in its kit.json ([com.snipsnap.kit.KitGlue]); null = none. */
+        val glue: com.snipsnap.kit.KitGlue? = null,
         /** Optional source payloads written before kit.json makes a kit visible. */
         private val prepare: ((directory: File) -> Unit)? = null,
         private val build: (seed: Int) -> List<ArrangedPad?>,
@@ -89,7 +91,7 @@ object StarterKits {
         fun render(name: String, dir: File, seed: Int = 0): Kit {
             require(Names.isMpcSafe(name)) { "kit name isn't MPC-safe: '$name'" }
             prepare?.invoke(dir)
-            val kit = KitAssembler.assembleArranged(name, build(seed), dir, key, tempoBpm = tempoBpm)
+            val kit = KitAssembler.assembleArranged(name, build(seed), dir, key, tempoBpm = tempoBpm, glue = glue)
             // BACKWASH, BREAKER and FIRED BRONZE pads carry their recipes; the shared robin deals each pad's
             // velocity zones and re-struck takes from it (FIRED BRONZE model 2 its own four strike layers), then
             // the pad keeps its recipe.
@@ -878,6 +880,45 @@ object StarterKits {
             "Toms and tone rebuilt by synthesis: pitched toms, sub notes, a crisp hat and a backbeat tambourine. Three touch zones, four takes; the Tom, World and Thin Perc grooves, hit for hit.",
             seeded = false, tempoBpm = com.snipsnap.synth.FacsimileKits.Kit.TEXTURE.bpm.toFloat(),
         ) { com.snipsnap.synth.FacsimileKits.build(com.snipsnap.synth.FacsimileKits.Kit.TEXTURE) },
+        // BOROUGH (docs/BOROUGH.md, round 3): generated in the app from the accepted recipes, each kit with the perc
+        // stack the owner heard it with on A13 to A16. Any other stack is BoroughKits.build(kit, stack). Each carries
+        // its live glue (round 3.1, BoroughKits.glueOf), which the pads' player switches on when the kit loads.
+        Starter(
+            "borough-stoop", "BOROUGH STOOP DUST",
+            "NYC boom bap, the middle of the six: a round falling kick with a knock, a papery snare crack with late wires, swung hats, through a dark driven record; a tambourine stack on top. Three touch zones, three takes; a snare roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.BoroughKits.Kit.STOOP.bpm.toFloat(),
+            glue = com.snipsnap.synth.BoroughKits.glueOf(com.snipsnap.synth.BoroughKits.Kit.STOOP),
+        ) { com.snipsnap.synth.BoroughKits.build(com.snipsnap.synth.BoroughKits.Kit.STOOP) },
+        Starter(
+            "borough-cellar", "BOROUGH CELLAR BOOM",
+            "Boom bap from below: a sub kick with a long tail, a tight dry snare, bright hats; a hands stack of shaker, bongos and block. Three touch zones, three takes; a snare roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.BoroughKits.Kit.CELLAR.bpm.toFloat(),
+            glue = com.snipsnap.synth.BoroughKits.glueOf(com.snipsnap.synth.BoroughKits.Kit.CELLAR),
+        ) { com.snipsnap.synth.BoroughKits.build(com.snipsnap.synth.BoroughKits.Kit.CELLAR) },
+        Starter(
+            "borough-cranked", "BOROUGH CRANKED",
+            "Driven and squashed: a high-knock kick, a cracking snare, dark buried hats; a tops stack of clap, ride, bell and sticks. Three touch zones, three takes; a snare roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.BoroughKits.Kit.CRANKED.bpm.toFloat(),
+            glue = com.snipsnap.synth.BoroughKits.glueOf(com.snipsnap.synth.BoroughKits.Kit.CRANKED),
+        ) { com.snipsnap.synth.BoroughKits.build(com.snipsnap.synth.BoroughKits.Kit.CRANKED) },
+        Starter(
+            "borough-wax", "BOROUGH WAX",
+            "Slow and dark at 80 BPM: the darkest top end, a fat low snare, a heavy drive; a bells stack of two bells, a jingle and a log. Three touch zones, three takes; a snare roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.BoroughKits.Kit.WAX.bpm.toFloat(),
+            glue = com.snipsnap.synth.BoroughKits.glueOf(com.snipsnap.synth.BoroughKits.Kit.WAX),
+        ) { com.snipsnap.synth.BoroughKits.build(com.snipsnap.synth.BoroughKits.Kit.WAX) },
+        Starter(
+            "borough-dry", "BOROUGH DRY ROOM",
+            "Gated and clean: a short kick, a short snare, silence between hits; a hands stack of shaker, bongos and block. Three touch zones, three takes; a snare roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.BoroughKits.Kit.DRY.bpm.toFloat(),
+            glue = com.snipsnap.synth.BoroughKits.glueOf(com.snipsnap.synth.BoroughKits.Kit.DRY),
+        ) { com.snipsnap.synth.BoroughKits.build(com.snipsnap.synth.BoroughKits.Kit.DRY) },
+        Starter(
+            "borough-rims", "BOROUGH RIDE AND RIMS",
+            "A rim-led snare and a ride where the hats were, the pedal hat on two and four, the most swing; a bells stack on top. Three touch zones, three takes; a snare roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.BoroughKits.Kit.RIMS.bpm.toFloat(),
+            glue = com.snipsnap.synth.BoroughKits.glueOf(com.snipsnap.synth.BoroughKits.Kit.RIMS),
+        ) { com.snipsnap.synth.BoroughKits.build(com.snipsnap.synth.BoroughKits.Kit.RIMS) },
         Starter(
             com.snipsnap.synth.BreakerKits.ID, "BREAKER",
             "Surf rock by way of boom bap: dusty drums through a spring tank, a crush and a surf amp. Three touch zones, three takes; a snare riser and a surf tom fill.",
