@@ -6832,7 +6832,8 @@ private enum class Engine {
         // MERCURY shows the three voices the owner kept at R1's gate (2026-10-04). EDDY, VESSEL
         // and SHARD (R2c) stay in the roster and the CLI until round 7's listen, VENT's shape.
         MERCURY -> listOf(MercuryVoice.PING, MercuryVoice.SING, MercuryVoice.BLADE)
-        // FRAY joined THREAD, PULSE and CURL once the owner kept it in round filament-voices-1 (20 Nov 2026).
+        // FRAY joined THREAD, PULSE and CURL once the owner kept it in round filament-voices-1 (20 Nov 2026);
+        // BRAID, HALO and SPRING followed in their reworked form in round fix-filament-voices-1 (21 Nov 2026).
         FILAMENT -> Filament.KEPT_VOICES
         TIDAL -> TidalVoice.entries
         CHAMBER -> ChamberVoice.entries

@@ -151,6 +151,11 @@ object FilamentPresets {
         // Kept in round filament-voices-1 (20 Nov 2026), at the default performance the owner heard:
         // default controls, C3, full touch.
         FilamentPatch("Glass Flute", FilamentVoice.FRAY, Filament.defaults(FilamentVoice.FRAY)),
+        // Kept in their reworked form in round fix-filament-voices-1 (21 Nov 2026), again at the heard
+        // default performance: default controls, C3, full touch.
+        FilamentPatch("String Braid", FilamentVoice.BRAID, Filament.defaults(FilamentVoice.BRAID)),
+        FilamentPatch("Glass Harmonica", FilamentVoice.HALO, Filament.defaults(FilamentVoice.HALO)),
+        FilamentPatch("Spring Tank", FilamentVoice.SPRING, Filament.defaults(FilamentVoice.SPRING)),
     )
 
     /** Exact model-one starting points for before/after listening and saved-recipe replay. */

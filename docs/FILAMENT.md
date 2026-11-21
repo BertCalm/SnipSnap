@@ -9,8 +9,9 @@ shared, damped halo. The gesture is **contain → bend → spill**.
 The supplied [engineering specification](superpowers/specs/2026-10-19-filament-engine-engineering-spec.md)
 is preserved as the proposal. The approved instrument implements THREAD, PULSE and
 CURL with four path classes, four loss sections per strand, up to four
-persistent strands and eight halo modes. BRAID, HALO, FRAY and the proposed
-36-preset library remain later work. The reduced bend model is a musical
+persistent strands and eight halo modes. BRAID, HALO, FRAY and SPRING were
+added and kept in November 2026 (see the candidate rounds below); the proposed
+36-preset library remains later work. The reduced bend model is a musical
 approximation, not an electromagnetic solver or measured optical fiber.
 
 ## Controls and saved sound
@@ -535,3 +536,19 @@ is periodic over the 4.6 s loop. Measured (Kotlin): nearest other voice 20.5/22.
 13.5/12.9/10.8 (HALO), 10.8/8.9/10.6 (SPRING); roots within 4 cents C2 to C6; soft against hard 8.4, 11.6 and
 12.5 dB of tone; held 2 to 8 kHz at C4 -36, -53 and -35.5 dB (ceiling -23.5). Desk round filament-voices-2:
 clips GA1 to GC1 play the heard round-1 notes and then the new version; GD1 is THREAD, PULSE, CURL and FRAY.
+
+### Verdict, round fix-filament-voices-1 (2026-11-21)
+
+- **BRAID (GA1), HALO (GB1), SPRING (GC1): KEEP**, the reworked versions, no notes. FILAMENT now has seven voices:
+  `Filament.KEPT_VOICES` is every `FilamentVoice`, so the app picker offers all seven. Each new voice has one factory
+  preset, appended after Glass Flute at the default performance the owner heard in the clips' "after" halves (default
+  controls, C3, full touch, model 3): **String Braid** (BRAID), **Glass Harmonica** (HALO) and **Spring Tank**
+  (SPRING). The FILAMENT starter kit still holds its twelve original recipes; the new voices ship as presets only.
+- Pinned in `FilamentCandidateVoicesTest`: the heard renders, C2, C3 and C5 at the default performance and the held
+  C4 key, from the build whose renders gave GA1 to GC1 byte for byte. SPRING above E5 was thinned after those clips
+  (identical at E5 and below), so its C6 and the notes above E5 were never heard and are not pinned.
+- Held keys: `FilamentKeys.supports` takes every voice, so the three play as held keys through the same network path
+  as the others; their held C4 is what GA1 to GC1 played after the three notes.
+- Touch: the soft/medium/hard behaviour the owner kept (clips DA2, DB2, DD2) was heard on the round-1 versions. The
+  reworked versions keep the same touch rule (softer is darker and slower to start), measured 8.4, 11.6 and
+  12.5 dB soft against hard, but their own soft/medium/hard was not heard on its own.

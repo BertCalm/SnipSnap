@@ -27,6 +27,9 @@ class FilamentPresetsTest {
             CURL|Spilled Silver|0.82,0.6,0.68,0.72,0.64,0.0|29|COIL
             CURL|Held Curl|0.48,0.68,0.86,0.82,0.7,1.0|61|LATE
             FRAY|Glass Flute|0.5,0.6,0.45,0.35,0.55,0.0|0|VOICE
+            BRAID|String Braid|0.45,0.3,0.55,0.85,0.3,0.0|0|VOICE
+            HALO|Glass Harmonica|0.35,0.75,0.6,0.45,0.85,0.0|0|VOICE
+            SPRING|Spring Tank|0.6,0.35,0.5,0.3,0.3,0.0|0|VOICE
         """.trimIndent().lines()
         val presets = FilamentPresets.all()
         assertEquals(expected, presets.map { patch ->
@@ -44,11 +47,13 @@ class FilamentPresetsTest {
 
     @Test
     fun `factory roster contains distinct named finite and held recipes for all three voices`() {
-        // The twelve original recipes come first; FRAY, kept on 20 Nov 2026, adds one at its heard default.
-        assertEquals(listOf("Glass Flute"), FilamentPresets.all().drop(12).map { it.name })
-        assertEquals(FilamentPresets.forVoice(FilamentVoice.FRAY), FilamentPresets.all().drop(12))
-        assertEquals(FilamentPatch("Glass Flute", FilamentVoice.FRAY, Filament.defaults(FilamentVoice.FRAY)), FilamentPresets.all().last())
-        assertEquals(Filament.ORIGINAL_VOICES + FilamentVoice.FRAY, Filament.KEPT_VOICES)
+        // The twelve original recipes come first; FRAY (kept 20 Nov 2026) and BRAID, HALO and SPRING (kept
+        // 21 Nov 2026) add one each at their heard default.
+        val added = listOf(FilamentVoice.FRAY to "Glass Flute", FilamentVoice.BRAID to "String Braid",
+            FilamentVoice.HALO to "Glass Harmonica", FilamentVoice.SPRING to "Spring Tank")
+        assertEquals(added.map { (voice, name) -> FilamentPatch(name, voice, Filament.defaults(voice)) }, FilamentPresets.all().drop(12))
+        for ((voice, _) in added) assertEquals(1, FilamentPresets.forVoice(voice).size)
+        assertEquals(FilamentVoice.entries, Filament.KEPT_VOICES)
         val presets = FilamentPresets.all().take(12)
         assertTrue(presets.all { it.voice in Filament.ORIGINAL_VOICES })
         assertEquals(listOf(FilamentVoice.THREAD, FilamentVoice.PULSE, FilamentVoice.CURL), Filament.ORIGINAL_VOICES)

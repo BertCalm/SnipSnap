@@ -53,11 +53,11 @@ object Filament {
     /** The three voices FILAMENT was built with: the only ones with models 1 and 2 and the original source. */
     val ORIGINAL_VOICES = listOf(FilamentVoice.THREAD, FilamentVoice.PULSE, FilamentVoice.CURL)
     /**
-     * The voices players are offered. FRAY joined after the owner kept it in round filament-voices-1
-     * (20 Nov 2026); BRAID, HALO and SPRING were sent back as "More distinctive" and stay candidates
-     * (no preset, kit or starter) until their reworked round is heard.
+     * The voices players are offered: all seven. FRAY was kept in round filament-voices-1 (20 Nov 2026);
+     * BRAID, HALO and SPRING, sent back there as "More distinctive", were kept in their reworked form in
+     * round fix-filament-voices-1 (21 Nov 2026). They are model 3 only; each has one factory preset.
      */
-    val KEPT_VOICES = ORIGINAL_VOICES + FilamentVoice.FRAY
+    val KEPT_VOICES = FilamentVoice.entries.toList()
     private const val RATE = Dsp.RATE
     private const val HIGH_RATE = RATE * Dsp.OVERSAMPLE
 

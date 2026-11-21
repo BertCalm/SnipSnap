@@ -15,7 +15,8 @@ import kotlin.test.assertTrue
  * that THREAD, PULSE and CURL leave unused: BRAID the strands as separate drifting players, HALO
  * the halo modes as the instrument, FRAY breath escaping at the bends, SPRING (the spare) the
  * collector through a dispersive cascade. Every candidate has the same held-key path as the kept
- * voices. Nothing here is heard. The kept renders are pinned below against the build before this round.
+ * voices. All four were kept (FRAY in round filament-voices-1, the reworked BRAID, HALO and SPRING in round
+ * fix-filament-voices-1); their heard renders and the original voices' renders are pinned below.
  */
 class FilamentCandidateVoicesTest {
     private val M = CandidateVoiceMeasures
@@ -51,15 +52,19 @@ class FilamentCandidateVoicesTest {
     }
 
     @Test
-    fun `candidates are appended, FRAY is offered with its heard default and the rest are offered nowhere`() {
+    fun `candidates are appended and each is offered with one preset at its heard default`() {
         assertEquals(listOf(FilamentVoice.BRAID, FilamentVoice.HALO, FilamentVoice.FRAY, FilamentVoice.SPRING), candidates)
         assertEquals(FilamentVoice.entries.take(3), Filament.ORIGINAL_VOICES)
-        assertEquals(FilamentVoice.entries.take(3) + FilamentVoice.FRAY, Filament.KEPT_VOICES)
-        assertTrue(FilamentPresets.all().all { it.voice in Filament.KEPT_VOICES }, "an unkept candidate has a preset")
-        val flute = FilamentPresets.forVoice(FilamentVoice.FRAY).single()
-        assertContentEquals(Filament.render(FilamentVoice.FRAY).samples, flute.render().samples, "FRAY's preset is not the heard default")
+        assertEquals(FilamentVoice.entries, Filament.KEPT_VOICES)
+        assertEquals(listOf("Glass Flute", "String Braid", "Glass Harmonica", "Spring Tank"), FilamentPresets.all().drop(12).map { it.name })
         for (voice in candidates) {
-            if (voice !in Filament.KEPT_VOICES) assertTrue(FilamentPresets.forVoice(voice).isEmpty(), "$voice has presets")
+            val preset = FilamentPresets.forVoice(voice).single()
+            assertEquals(Filament.defaults(voice), preset.macros, "$voice's preset is not the default controls")
+            assertEquals(48, preset.midi)
+            assertEquals(1f, preset.velocity)
+            assertContentEquals(Filament.render(voice, midi = 48).samples, preset.render().samples, "$voice's preset is not the heard default")
+        }
+        for (voice in candidates) {
             assertEquals(Filament.macrosFor(FilamentVoice.THREAD).map { it.name }, Filament.macrosFor(voice).map { it.name })
             val saved = patch(voice).copy(macros = Filament.defaults(voice) + ("BEND" to .3f))
             assertEquals(saved, Patches.fromJsonText(saved.toJsonText()), "$voice does not survive saving")
@@ -213,7 +218,24 @@ class FilamentCandidateVoicesTest {
         assertEquals(FRAY_RENDERS, M.hash(lines), lines.joinToString("\n"))
     }
 
+    @Test
+    fun `BRAID, HALO and SPRING render exactly what the owner heard and kept in round fix-filament-voices-1`() {
+        // The heard "after" halves of GA1 to GC1: C2, C3 and C5 at the default performance, then the held
+        // C4 key. SPRING above E5 was thinned after those clips; nothing pinned here is above E5.
+        val lines = ArrayList<String>()
+        for (voice in listOf(FilamentVoice.BRAID, FilamentVoice.HALO, FilamentVoice.SPRING)) {
+            for (midi in listOf(36, 48, 72)) lines += "FILAMENT ${voice.name} midi $midi " + M.hash(Filament.render(voice, midi = midi).samples)
+            val held = FilamentKeys.note(FilamentPatch("Held", voice, Filament.defaults(voice), midi = 60))
+            lines += "FILAMENT held ${voice.name} 60 " + M.hash(held.snip.samples) + " loop " + held.loopStartFrame
+        }
+        assertEquals(REWORKED_LINES, lines.size)
+        assertEquals(REWORKED_RENDERS, M.hash(lines), lines.joinToString("\n"))
+    }
+
     private companion object {
+        /** SHA-256 over the lines above, from the build whose renders gave the heard clips GA1 to GC1 byte for byte. */
+        const val REWORKED_RENDERS = "ab12b878b9b619a8fce0922afd26529f7e8c49349fad6997bba47e4b8afa5725"
+        const val REWORKED_LINES = 12
         /** SHA-256 over FRAY's lines, from the build whose renders gave the heard clips DC1 and DC2 byte for byte. */
         const val FRAY_RENDERS = "5bf4c9936395eb9587b967bab44f544835dc924934fd05d2ea1c8bccde7d3bb4"
         const val FRAY_LINES = 10
