@@ -231,7 +231,9 @@ class ConsortTest {
             assertEquals(Consort.drumClassFor(voice, m), Classifier.classify(Consort.render(voice, m, velocity = velocity)).drumClass,
                 "$voice TUNE $tune velocity $velocity HOLD $hold")
         }
-        assertFalse(Consort.isLoop(1f), "HOLD's top step is a long note, not a loop")
+        assertTrue(Consort.isLoop(1f) && Consort.isLoop(Consort.LOOP_FROM), "HOLD's top step sustains")
+        assertFalse(Consort.isLoop(Math.nextDown(Consort.LOOP_FROM)), "every HOLD under the step is a finite note")
+        assertTrue(ConsortPresets.all().none { Consort.isLoop(it.macros.getValue("HOLD")) }, "no factory recipe sustains")
     }
 
     @Test

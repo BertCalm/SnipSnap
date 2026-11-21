@@ -65,8 +65,10 @@ enum class ConsortGesture { PLAIN, SCOOP, TRILL, FLUTTER, FALL }
  * (2026-11-20: "Yes, I listened; it sounds good"). That render is the accepted baseline; a change here
  * that moves the sound needs a new listen, and a change that should not is measured against it.
  *
- * HOLD is breath length. Its top step is a long note, not a seamless loop: a loop with a room in it
- * needs the wash to be periodic too, and that is not built. [isLoop] is false for every setting.
+ * HOLD is breath length. Its top step ([LOOP_FROM], BORE's) is a held note as one seamless loop
+ * ([renderLoop]), for a gated pad that sustains while it is held: the keys' held note
+ * ([heldNote], whose slow motions, noise and players repeat every two seconds), cut once and
+ * closed by a blend. Every HOLD under the step renders as before.
  */
 object Consort {
 
@@ -203,9 +205,11 @@ object Consort {
 
     fun holdSeconds(hold: Float): Float = Dsp.expMap(hold, HOLD_MIN_SECONDS, HOLD_MAX_SECONDS)
 
-    /** HOLD's top step is a long note, never a loop (see the class note). */
-    @Suppress("UNUSED_PARAMETER")
-    fun isLoop(hold: Float): Boolean = false
+    /** Where HOLD's top step starts, BORE's [Bore.LOOP_THRESHOLD]: from here a render is one seamless loop. */
+    const val LOOP_FROM = Bore.LOOP_THRESHOLD
+
+    /** HOLD's top step: the render is one seamless loop for a gated, sustaining pad ([renderLoop]). */
+    fun isLoop(hold: Float): Boolean = hold >= LOOP_FROM
 
     private fun washSeconds(room: Float): Float = Dsp.lin(room, WASH_MIN_SECONDS, WASH_MAX_SECONDS)
 
@@ -218,6 +222,7 @@ object Consort {
 
     fun drumClassFor(voice: ConsortVoice, macros: Map<String, Float> = emptyMap()): DrumClass {
         val m = settled(macros, voice)
+        if (isLoop(m.getValue("HOLD"))) return DrumClass.LOOP
         return if (renderFrames(m).toFloat() / RATE > LOOP_THRESHOLD_SECONDS) DrumClass.LOOP else DrumClass.PERC
     }
 
@@ -225,7 +230,9 @@ object Consort {
     fun scramble(voice: ConsortVoice, random: Random, temperature: Float = 0.35f, near: Patch? = null): Map<String, Float> {
         val base = defaults(voice)
         val seed = if (near != null) base + near.macros.filterKeys { it in base } else base
-        return Dsp.scrambleNear(seed, temperature, random)
+        val rolled = Dsp.scrambleNear(seed, temperature, random)
+        // HOLD's top step (a sustaining loop) is a choice, not a roll: BORE caps it the same way
+        return rolled + ("HOLD" to rolled.getValue("HOLD").coerceAtMost(Math.nextDown(LOOP_FROM)))
     }
 
     /** Velocity rides on BREATH: BREATH sets where the player sits, the hit pushes from there. */
@@ -794,6 +801,7 @@ object Consort {
         require(chairs.size <= MAX_CHAIRS) { "CONSORT seats at most $MAX_CHAIRS harmony players, got ${chairs.size}" }
         val m = settled(macros, voice)
         val v = if (velocity.isFinite()) velocity.coerceIn(0f, 1f) else DEFAULT_VELOCITY
+        if (isLoop(m.getValue("HOLD"))) return Snip(renderLoop(voice, m, chairs, v, take).loop, channels = 1, sampleRate = RATE)
         val out = perform(voice, m, chairs, v, take, renderFrames(m), ((holdSeconds(m.getValue("HOLD")) + AFTER_SECONDS) * RATE).toInt(), held = false)
         Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
         Dsp.fadeTail(out)
@@ -930,4 +938,53 @@ object Consort {
      * second early at full LOOSE) and [Bore.LOOP_MARGIN_SECONDS] before the release.
      */
     internal val HELD_USABLE_FRAMES: Int = ((HELD_SECONDS - 0.08f - Bore.LOOP_MARGIN_SECONDS) * RATE).toInt()
+
+    /**
+     * How alike the two waves a held loop blends must be ([ConsortKeys] and [renderLoop]). A solo voice
+     * is held to BORE's floor ([Bore.LOOP_MIN_CORRELATION]); a section to [SECTION_MIN_CORRELATION],
+     * since a chair taken far above its own range never quite repeats; FLUTTER to the level guard alone,
+     * since the tongue restarts the tone 24 times a second. The dip guard applies to all of them.
+     */
+    internal fun loopFloor(m: Map<String, Float>, chairs: List<ConsortChair>): Double = when {
+        gestureFor(m.getValue("GESTURE")) == ConsortGesture.FLUTTER -> 0.0
+        chairs.isNotEmpty() -> SECTION_MIN_CORRELATION
+        else -> Bore.LOOP_MIN_CORRELATION
+    }
+
+    /** The section floor: the lowest join measured on the K3 presets' keys was 0.82, at REED TRIO's top key. */
+    const val SECTION_MIN_CORRELATION = 0.8
+
+    /** A pad's loop and how its join was made. */
+    internal class LoopRender(val loop: FloatArray, val lengthFrames: Int, val correlation: Double, val blendDipDb: Double)
+
+    /**
+     * HOLD's top step: the held note ([heldNote]) cut once into one loop of about [HELD_PERIOD_SECONDS],
+     * from [HELD_FROM_FRAMES], its length searched as BORE's is ([Bore.bestLength]) and its head blended
+     * from the audio that follows its end ([Bore.assembleLoop]), so its last sample runs on into its first;
+     * turned onto a zero crossing ([Bore.rotateOntoCrossing]) and levelled. The keys' guards hold it: the
+     * waves blended correlate at least [loopFloor], and the blend dips the note no more than
+     * [Bore.LOOP_MAX_DIP_DB] against the note itself ([BoreKeys.sourceDipDb]). Refused by name otherwise.
+     */
+    internal fun renderLoop(voice: ConsortVoice, m: Map<String, Float>, chairs: List<ConsortChair>, v: Float, take: Int): LoopRender {
+        val x = heldNote(voice, m, chairs, v, take)
+        val blend = Bore.LOOP_BLEND_FRAMES
+        val from = HELD_FROM_FRAMES
+        val (length, correlation) = Bore.bestLength(x, from, blend, Bore.LOOP_LENGTH_LOW_FRAMES, Bore.LOOP_LENGTH_HIGH_FRAMES)
+        require(from + length + blend <= HELD_USABLE_FRAMES) { "CONSORT $voice: no room for a loop" }
+        val loop = Bore.assembleLoop(x, from, length, blend, correlation)
+        val probe = x.copyOf()
+        for (i in 0 until blend) probe[from + i] = loop[i]
+        val dip = BoreKeys.sourceDipDb(x, probe, from, blend)
+        val name = "CONSORT $voice${if (chairs.isEmpty()) "" else " section"} HOLD loop"
+        val floor = loopFloor(m, chairs)
+        require(correlation >= floor) {
+            "$name: the loop's join does not hold (the waves blended correlate %.3f, floor %.2f)".format(java.util.Locale.ROOT, correlation, floor)
+        }
+        require(dip >= -Bore.LOOP_MAX_DIP_DB) {
+            "$name: the loop dips %.2f dB inside its blend (limit %.1f)".format(java.util.Locale.ROOT, -dip, Bore.LOOP_MAX_DIP_DB)
+        }
+        val (rotated, _) = Bore.rotateOntoCrossing(loop)
+        Dsp.levelTo(rotated, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
+        return LoopRender(rotated, length, correlation, dip)
+    }
 }

@@ -72,24 +72,12 @@ object ConsortKeys {
         return BoreKeys.cutHeld(x, minOf(x.size, Consort.HELD_USABLE_FRAMES), name, Consort.HELD_FROM_FRAMES, minCorrelation(patch))
     }
 
-    /**
-     * How alike the two waves a loop blends must be. A solo voice is held to BORE's floor
-     * ([Bore.LOOP_MIN_CORRELATION]): its held note repeats to the phase (every solo key measured 0.96
-     * or better). A section is held to [SECTION_MIN_CORRELATION]: each player is retuned to repeat
-     * ([Consort.heldTrimCents]), but a chair taken far above its own instrument's range (REED TRIO's
-     * BASSOON a minor seventh over an OBOE at A#5) blows a tone that never quite repeats. FLUTTER is
-     * held to the level guard alone: the tongue restarts the tone 24 times a second and no two
-     * restarts are the same wave, so a flutter loop blends two passes of one texture. The dip guard
-     * ([Bore.LOOP_MAX_DIP_DB], read against the note itself) applies to all of them.
-     */
-    internal fun minCorrelation(patch: ConsortPatch): Double = when {
-        Consort.gestureFor(Consort.settled(patch.macros, patch.voice).getValue("GESTURE")) == ConsortGesture.FLUTTER -> 0.0
-        patch.chairs.isNotEmpty() -> SECTION_MIN_CORRELATION
-        else -> Bore.LOOP_MIN_CORRELATION
-    }
+    /** How alike the two waves a key's loop blends must be: the engine's own floor ([Consort.loopFloor]). */
+    internal fun minCorrelation(patch: ConsortPatch): Double =
+        Consort.loopFloor(Consort.settled(patch.macros, patch.voice), patch.chairs)
 
-    /** The section floor: the lowest join measured on the provisional presets' keys was 0.83, at those top keys. */
-    const val SECTION_MIN_CORRELATION = 0.8
+    /** The section floor, [Consort.SECTION_MIN_CORRELATION]. */
+    const val SECTION_MIN_CORRELATION = Consort.SECTION_MIN_CORRELATION
 
     /** One zone's six layers at [midi], in layer order (soft to hard, each touch's takes in turn). */
     fun zone(patch: ConsortPatch, midi: Int, cancelled: () -> Boolean = { false }): List<KeyNote> {

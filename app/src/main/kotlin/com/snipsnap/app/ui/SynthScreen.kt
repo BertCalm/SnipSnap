@@ -2334,6 +2334,8 @@ fun SynthScreen(
             !allowLoop -> null
             engine == Engine.RIME && Rime.isLoop(macros) -> rimeOpeningPreview.loopFor(target)
             engine == Engine.APSIS && Apsis.isLoop(macros["HOLD"] ?: 0f) -> 0 until heard.frameCount
+            // CONSORT's top HOLD step renders exactly one seamless loop.
+            engine == Engine.CONSORT && Consort.isLoop(macros["HOLD"] ?: 0f) -> 0 until heard.frameCount
             engine == Engine.TIDAL && Tidal.isHeld(macros["HOLD"] ?: 0f) -> 0 until heard.frameCount
             engine == Engine.LIBRATION && LibrationKeys.isHeld(macros["HOLD"] ?: 0f) -> 0 until heard.frameCount
             // GROTTO's and CONCH's top HOLD step renders exactly one seamless loop.
@@ -2664,6 +2666,9 @@ fun SynthScreen(
                         }
                         if (patch is ApsisPatch) {
                             model.update(slot) { ApsisPad.configure(it, patch) }
+                        }
+                        if (patch is ConsortPatch) {
+                            model.update(slot) { com.snipsnap.shell.ConsortPad.configure(it, patch) }
                         }
                         if (patch is TidalPatch) model.update(slot) { TidalPad.configure(it, patch) }
                         if (patch is CausticPatch) model.update(slot) { CausticPad.configure(it, patch) }
@@ -5260,6 +5265,7 @@ private fun macroReadout(
     engine == Engine.PLUCK && voice == PluckVoice.UPRIGHT && name == "TUNE" ->
         Scales.nameOf(28 + (macros.getValue(name) * Pluck.TUNE_SEMITONES).roundToInt())
     engine == Engine.APSIS && name == "HOLD" && Apsis.isLoop(macros.getValue(name)) -> "LOOP"
+    engine == Engine.CONSORT && name == "HOLD" && Consort.isLoop(macros.getValue(name)) -> "LOOP"
     engine == Engine.CAUSTIC && name == "HOLD" -> if (macros.getValue(name) == 1f) "LOOP"
         else if (macros.getValue(name) == 0f) "NOTE"
         else "%.1fs".format(Locale.ROOT, CausticInstrument.durationSeconds(voice as CausticVoice, macros, 2))
