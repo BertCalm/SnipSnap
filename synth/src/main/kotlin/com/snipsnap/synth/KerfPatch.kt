@@ -40,7 +40,8 @@ data class KerfPatch(
 
         fun fromJsonValue(value: JsonValue): Patch =
             Patches.decode(value, ENGINE, { n -> KerfVoice.entries.firstOrNull { it.name == n } }) { name, voice, macros ->
-                KerfPatch(name, voice, macros, value.obj()["model"]?.int() ?: Kerf.MODEL_VERSION)
+                // a save without a model is from before model 2 existed, so it is model 1
+                KerfPatch(name, voice, macros, value.obj()["model"]?.int() ?: 1)
             }
 
         fun fromJsonText(text: String): KerfPatch = fromJsonValue(Json.parse(text)) as KerfPatch

@@ -140,17 +140,18 @@ class TremorPresetsTest {
     }
 
     @Test
-    fun `no preset name is an engine's name, a voice's or a rack section's`() {
+    // Rack section names are not reserved (the owner's ruling of 2026-11-21, when the rack gained GRAIN).
+    fun `no preset name is an engine's name or a voice's`() {
         val taken = listOf(
             ThumpPatch.ENGINE, SkinPatch.ENGINE, TinesPatch.ENGINE, PluckPatch.ENGINE, TonewheelPatch.ENGINE, VelvetPatch.ENGINE,
             FathomPatch.ENGINE, ResinPatch.ENGINE, TidePatch.ENGINE, VoxPatch.ENGINE, SnapPatch.ENGINE, GlintPatch.ENGINE,
             SirenPatch.ENGINE, ForkPatch.ENGINE, TerraPatch.ENGINE, SilkPatch.ENGINE, BorePatch.ENGINE, ArcoPatch.ENGINE,
             MercuryPatch.ENGINE, GyrePatch.ENGINE, MagnetPatch.ENGINE, TremorPatch.ENGINE,
-        ) + FxChain.SECTION_NAMES.map { it.uppercase() } + TremorVoice.entries.map { it.name }
+        ) + TremorVoice.entries.map { it.name }
         for (preset in TremorPresets.all()) {
             val words = preset.name.split(Regex("[^A-Z0-9]+")).filter { it.isNotEmpty() }
             val clash = words.filter { it in taken }
-            assertTrue(clash.isEmpty(), "${preset.name} names $clash, which is an engine, a voice or a rack section")
+            assertTrue(clash.isEmpty(), "${preset.name} names $clash, which is an engine or a voice")
         }
     }
 
