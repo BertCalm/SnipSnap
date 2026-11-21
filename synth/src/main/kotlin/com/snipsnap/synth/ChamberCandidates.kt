@@ -3,8 +3,10 @@ package com.snipsnap.synth
 import kotlin.math.pow
 
 /**
- * CHAMBER's candidate voices (listening round chamber-voices-1, 20 Nov 2026). Nothing here is heard yet and none is
- * offered anywhere until the owner keeps it ([Chamber.KEPT_VOICES]); each renders on the register model only.
+ * CHAMBER's candidate voices (listening round chamber-voices-1, 20 Nov 2026). None is offered anywhere until the owner
+ * keeps it ([Chamber.KEPT_VOICES]); each renders on the register model only. Round 1 kept GLAZE (21 Nov 2026) and asked
+ * for TIMBER, MASS, ALLOY and BOUNCE to be "More distinctive": they now carry an instrument layer of their own over the
+ * room below ([ChamberCandidateLayers], round chamber-voices-2). GLAZE is unchanged.
  *
  * HYBRID and AQUARIUM are two rooms around the same struck quartet. Each candidate keeps the engine whole (one
  * shared strike, modal instruments, the passive room network that takes energy from them and gives it back, the

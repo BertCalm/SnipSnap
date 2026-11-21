@@ -688,6 +688,7 @@ object Chamber {
         val samples=finished.copyOf()
         if(shape!=null && options.normalize && velocity>0f) {
             // A candidate ends on a release, is leveled by loudness, then touched, then kept under the ceiling.
+            if(ChamberCandidateLayers.layered(voice)) ChamberCandidateLayers.apply(voice,samples,midi,touch,seed)
             Dsp.fadeTailCosine(samples,shape.releaseSeconds)
             val loud=com.snipsnap.audio.Loudness.of(samples,1,RATE)
             val gain=if(loud>1e-6f) (CANDIDATE_LOUDNESS/loud*10.0.pow(ChamberCandidates.levelDb(shape,touch)/20)).toFloat() else 1f

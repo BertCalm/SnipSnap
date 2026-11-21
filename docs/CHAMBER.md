@@ -549,3 +549,29 @@ quieter), the pitch (within 15 cents from C2 to C6), distinctness (at least 3.7 
 measured 6.0, ALLOY/BOUNCE at G#4), clean ends, a top register no brighter than AQUARIUM's plus 3 dB, and one check of
 each voice's own mechanism. It also pins 30 kept renders (both rooms on every model, touch and register extremes, all
 presets and the kit's original recipes) to hashes from the build before this round (7495ca56c).
+
+## Candidate voices, round chamber-voices-2 (21 Nov 2026)
+
+Verdict on round chamber-voices-1 (21 Nov 2026): GLAZE, range and touch, KEEP. TIMBER, MASS, ALLOY and BOUNCE, range
+and touch, TWEAK: "More distinctive". Through the room network alone they shared CHAMBER's strike, envelope and body.
+As FILAMENT's kept round 2 did, each reworked voice now carries an identity layer of its own, a recognisable
+instrument with its own attack, sustain, motion and spectrum (`ChamberCandidateLayers.kt`, built from
+`VoiceLayerKit.kt`), and the voice's room network plays underneath at .27 (MASS .30) after both are brought to the same
+loudness. The engine's release, leveling and touch level then run as before. GLAZE renders bit for bit as heard
+(pinned: 16 renders against c42bc8e89), and so do HYBRID, AQUARIUM, every preset and the kit (the 30 kept pins).
+
+| Voice | Instrument | What makes it unlike the others |
+|---|---|---|
+| TIMBER | a marimba | a yarn mallet's thock; bar modes 1 : 3.93 : 9.2 whose overtones die within half a second; the root held up by the tube, which blooms in over 20 ms and rings longer, with a faint hollow twelfth |
+| MASS | a huge low drum in a hall | the pitch drops 1 to 4 semitones in the first 50 ms (the skin relaxing; more when hard); membrane modes; the hall booms back with a low noise bloom and its own modes at 41 to 118 Hz; a hard beater adds the skin's slap |
+| ALLOY | a steel pan | harmonic partials 1 to 5 whose pitch bends down 15 to 50 cents as the note speaks; the octave blooms in after the root; every partial has a partner a few hertz up and root and octave trade energy three times a second (the shimmer) |
+| BOUNCE | a cimbalom | a course of three strings 1.5 cents apart; a hand hammer that rebounds twice (about 60 and 105 ms later, each landing on a whole number of periods, a little brighter, with its own click); more and louder rebounds when hard |
+
+Touch is the mallet, beater, stick or hammer itself: soft leaves mostly the root, gentle and dark (and for MASS a hall
+that barely wakes), hard is bright, quick and noisy. Measured at C3 and C4 (soft .3, default .75, hard 1): each step
+5.6 to 16.2 dB of level-matched third-octave shape, soft against hard 13.1 to 31.7 dB, soft 11 dB under hard. Nearest
+other voice over C2, E3, G#4, C6: TIMBER 17.3 dB, MASS 10.7, ALLOY 14.2, BOUNCE 10.7. `ChamberCandidateVoicesTest`
+now asks at least 9 dB of the reworked voices (3.7 for the rest) and checks each instrument: TIMBER's 3.93 mode falls
+48 dB while its root falls 11 (.05 to .6 s), MASS's pitch is 235 cents high at the strike, its hall mode at 53 Hz 16
+times the 47 Hz gap, ALLOY's root wavers 2.1 dB, BOUNCE's rebound lifts the level 1.4 times at the default touch. The
+layer is mixed by one call from `renderProbe`, whose bytecode grows by 24 bytes to about 7,460 of HotSpot's 8,000.

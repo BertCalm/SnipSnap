@@ -13,11 +13,12 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * Candidate voices for listening round ferry-voices-1 (FerryCandidates). Each is PASSAGE's passive coupled network
- * with a new graph: TWIN (Weinreich's unison strings on a lossy bridge), SWELL (the struck wood is mute, only what
- * crosses into the wire is heard), TARAB (sympathetic strings), CHIME (a handbell's split mode pairs), RELAY (wood to
- * wire to glass) and TINE, the spare (a kalimba tine on a box with fixed pitches). FERRY is finite: no held keys.
- * Nothing here is heard. The kept renders are pinned below against the build before this round.
+ * Candidate voices (FerryCandidates). Round ferry-voices-1 (21 Nov 2026) kept TINE (a kalimba tine on a box with fixed
+ * pitches) and asked for the rest to be "More distinctive". Round ferry-voices-2 gives each its own instrument layer over
+ * its network (FerryCandidateLayers): TWIN (a piano's beating double string), SWELL (a bowed swell), TARAB (a sitar's
+ * sweeping jawari and sympathetic strings), PEAL (a handbell, was CHIME), BATON (wood, wire, glass, was RELAY) and VANE,
+ * the spare (a vibraphone's motor tremolo). FERRY is finite: no held keys. PASSAGE is pinned against the build before
+ * round 1, TINE against the build the owner heard.
  */
 class FerryCandidateVoicesTest {
     private val M = CandidateVoiceMeasures
@@ -50,7 +51,7 @@ class FerryCandidateVoicesTest {
 
     @Test
     fun `candidates are appended, model four only and offered nowhere`() {
-        assertEquals(listOf(FerryVoice.TWIN, FerryVoice.SWELL, FerryVoice.TARAB, FerryVoice.CHIME, FerryVoice.RELAY, FerryVoice.TINE), candidates)
+        assertEquals(listOf(FerryVoice.TWIN, FerryVoice.SWELL, FerryVoice.TARAB, FerryVoice.PEAL, FerryVoice.BATON, FerryVoice.TINE, FerryVoice.VANE), candidates)
         assertEquals(listOf(FerryVoice.PASSAGE), Ferry.KEPT_VOICES)
         assertEquals(FerryVoice.PASSAGE, FerryVoice.entries.first())
         assertTrue(FerryPresets.all().all { it.voice in Ferry.KEPT_VOICES }, "a candidate has a preset")
@@ -111,10 +112,22 @@ class FerryCandidateVoicesTest {
             for (a in candidates) for (b in FerryVoice.entries) if (a != b) {
                 val d = M.distance(shapes.getValue(a), shapes.getValue(b))
                 println("FERRY third-octave distance MIDI$midi $a/$b = %.1f dB".format(d))
-                if (d < M.DISTINCT_DB) close += "$a and $b are only $d dB apart at MIDI $midi"
+                val bar = if (FerryCandidateLayers.layered(a)) REWORKED_DB else M.DISTINCT_DB
+                if (d < bar) close += "$a and $b are only $d dB apart at MIDI $midi"
             }
         }
         assertTrue(close.isEmpty(), close.joinToString("\n"))
+    }
+
+    @Test
+    fun `TINE, kept on 21 Nov 2026, renders exactly what the owner heard`() {
+        val lines = ArrayList<String>()
+        for (midi in listOf(36, 48, 60, 72)) for (v in listOf(.35f, .7f, 1f)) lines += "FERRY TINE midi $midi v $v " +
+            M.hash(Ferry.render(FerryVoice.TINE, emptyMap(), midi, v).samples)
+        for (loss in listOf(0f, 1f)) lines += "FERRY TINE LOSS $loss " + M.hash(Ferry.render(FerryVoice.TINE, mapOf("LOSS" to loss), 48, 1f).samples)
+        lines += "FERRY TINE macros " + M.hash(Ferry.render(FerryVoice.TINE, mapOf("HANDOFF" to .2f, "MATCH" to .4f), 55, .8f).samples)
+        assertEquals(15, lines.size)
+        assertEquals(TINE_RENDERS, M.hash(lines), lines.joinToString("\n"))
     }
 
     @Test
@@ -144,22 +157,43 @@ class FerryCandidateVoicesTest {
     }
 
     @Test
-    fun `each candidate does what its graph says`() {
+    fun `each candidate carries its own instrument`() {
         val f = hz(60)
         val swell = render(FerryVoice.SWELL, 60)
         println("FERRY SWELL level at the strike %.4f, at .15 to .25 s %.4f".format(rms(swell, 0.0, .03), rms(swell, .15, .25)))
         assertTrue(rms(swell, .15, .25) > 3 * rms(swell, 0.0, .03), "SWELL does not grow out of the strike")
+        // SWELL blooms for about half a second; every struck voice peaks within a few tens of milliseconds.
+        val peaks = candidates.associateWith { peakSeconds(render(it, 60)) }
+        println("FERRY loudest 10 ms at middle C: " + peaks.entries.joinToString { "${it.key} %.2f s".format(it.value) })
+        assertTrue(peaks.getValue(FerryVoice.SWELL) > .35, "SWELL does not swell")
+        for (voice in listOf(FerryVoice.TWIN, FerryVoice.TARAB, FerryVoice.TINE, FerryVoice.VANE))
+            assertTrue(peaks.getValue(voice) < .05, "$voice is not struck")
         val twin = render(FerryVoice.TWIN, 60)
         val prompt = 20 * log10(rms(twin, .05, .1) / rms(twin, .45, .5)) / .4
         val after = 20 * log10(rms(twin, 1.0, 1.1) / rms(twin, 2.5, 2.6)) / 1.5
         println("FERRY TWIN decay: prompt %.1f dB/s, aftersound %.1f dB/s".format(prompt, after))
         assertTrue(prompt > 3 * after, "TWIN has no prompt sound and aftersound")
-        val relay = render(FerryVoice.RELAY, 60)
-        fun upper(x: FloatArray, at: Double) = (2..6).sumOf { M.component(x, f * it, at, .3).pow(2) } / M.component(x, f, at, .3).pow(2)
-        println("FERRY RELAY upper partials against the root: at the strike %.3f, at 1.5 s %.4f".format(upper(relay, .02), upper(relay, 1.5)))
-        assertTrue(upper(relay, 1.5) < .1 * upper(relay, .02), "RELAY does not end on the glass tone")
+        val beating = wobble(twin, f)
+        println("FERRY TWIN root wavers %.2f dB about its decay (the two strings beat)".format(beating))
+        assertTrue(beating > WAVER_DB, "TWIN's strings do not beat")
+        // BATON: a dark knock, then the bright wire, then the pure glass.
+        val baton = render(FerryVoice.BATON, 60)
+        fun upper(x: FloatArray, at: Double, s: Double = .3) = (2..8).sumOf { M.component(x, f * it, at, s).pow(2) } / M.component(x, f, at, s).pow(2)
+        val stages = listOf(upper(baton, .0, .08), upper(baton, .3, .2), upper(baton, 1.6, .3))
+        println("FERRY BATON upper partials against the root: knock %.3f, wire %.3f, glass %.4f".format(stages[0], stages[1], stages[2]))
+        assertTrue(stages[1] > 2 * stages[0] && stages[2] < .05 * stages[1], "BATON does not pass wood to wire to glass")
+        // TARAB: the jawari's resonance sweeps down through the partials over the first second.
+        val sitar = render(FerryVoice.TARAB, 60)
+        val sweep = listOf(.03, 1.0).map { centroid(sitar, f, it) }
+        println("FERRY TARAB centre of partials 2 to 12: %.1f at the pluck, %.1f at 1 s".format(sweep[0], sweep[1]))
+        assertTrue(sweep[0] > 1.25 * sweep[1], "TARAB's jawari does not sweep")
+        // VANE: the motor's vanes pulse the root about five and a half times a second.
+        val vibes = render(FerryVoice.VANE, 60)
+        val pulse = tremoloDb(vibes, f)
+        println("FERRY VANE root pulses %.1f dB peak to trough".format(pulse))
+        assertTrue(pulse > 6, "VANE has no tremolo")
         // CHIME's root pair beats; TARAB's sympathetic octave string beats against the played string's octave.
-        for ((voice, partial) in listOf(FerryVoice.CHIME to 1, FerryVoice.TARAB to 2)) {
+        for ((voice, partial) in listOf(FerryVoice.PEAL to 1, FerryVoice.TARAB to 2)) {
             val w = wobble(render(voice, 60), f * partial)
             println("FERRY $voice partial $partial wavers %.2f dB about its decay".format(w))
             assertTrue(w > WAVER_DB, "$voice's partial $partial does not waver")
@@ -172,6 +206,22 @@ class FerryCandidateVoicesTest {
             println("FERRY TINE MIDI$midi box mode %.4f against 160 Hz %.4f".format(box, gap))
             assertTrue(box > 2 * gap, "TINE MIDI$midi has no fixed box mode")
         }
+    }
+
+    private fun peakSeconds(x: FloatArray): Double = (0 until x.size / 441 - 1).maxBy { rms(x, it * .01, it * .01 + .01) } * .01
+
+    /** The amplitude-weighted mean partial number among partials 2 to 12 over 80 ms from [at]: where the buzz sits. */
+    private fun centroid(x: FloatArray, f: Double, at: Double): Double {
+        val a = (2..12).map { M.component(x, f * it, at, .08) }
+        return a.indices.sumOf { (it + 2) * a[it] } / a.sum()
+    }
+
+    /** Peak-to-trough swing, dB, of the root's 40 ms amplitude between .3 and 1 s, about its trend. */
+    private fun tremoloDb(x: FloatArray, f: Double): Double {
+        val a = (0 until 70).map { 20 * log10(M.component(x, f, .3 + .01 * it, .04) + 1e-12) }
+        val k = (a.last() - a.first()) / (a.size - 1)
+        val d = a.indices.map { a[it] - k * it }
+        return d.max() - d.min()
     }
 
     /** RMS deviation, dB, of the root's 100 ms amplitude from a straight-line (exponential) decay, .2 to 2.5 s. */
@@ -206,6 +256,13 @@ class FerryCandidateVoicesTest {
         /** SHA-256 over the lines above, taken from the build before this round (7495ca56c). */
         const val KEPT_RENDERS = "1cf7c87f37a059e46037afc1e5439f63721d102a998c77c23e1b91f244176196"
         const val KEPT_LINES = 19
+        /** SHA-256 over TINE's lines, taken from the build the owner heard in round ferry-voices-1 (c42bc8e89). */
+        const val TINE_RENDERS = "4abbc5bbd5126963a3498ae108c348e6d92a43016d6a0185271040a383dd4b49"
+        /**
+         * The reworked voices (round ferry-voices-2, "More distinctive") must stand at least this far from every other
+         * voice; the rest keep ETCH's bar. Measured 8.5 (TWIN against SWELL, which swells where TWIN strikes) to 27 dB.
+         */
+        const val REWORKED_DB = 8.0
         const val ROOT_SHARE = .1
         /** Soft, medium and hard as the desk plays them. */
         val TOUCH = listOf(.35f, .7f, 1f)

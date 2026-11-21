@@ -13,11 +13,11 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 /**
- * Candidate voices for listening round chamber-voices-1 (ChamberCandidates). Each keeps the struck quartet's passive
- * room and changes what it holds: TIMBER (a marimba bar over note-tuned wooden resonators), MASS (a big skin in a stone
- * hall), ALLOY (a steel pan's tuned shell in a metal room), GLAZE (a singing bowl's split mode pairs in a glass room)
- * and BOUNCE, the spare (a hammered string whose hammer bounces). CHAMBER is finite: no held keys. Nothing here is
- * heard. The kept renders are pinned below against the build before this round.
+ * Candidate voices (ChamberCandidates). Round chamber-voices-1 (21 Nov 2026) kept GLAZE (a singing bowl's split mode
+ * pairs in a glass room) and asked for the rest to be "More distinctive". Round chamber-voices-2 gives each its own
+ * instrument layer over its room network (ChamberCandidateLayers): TIMBER (a marimba), MASS (a huge low drum and its
+ * hall), ALLOY (a steel pan) and BOUNCE (a cimbalom whose hammer rebounds). CHAMBER is finite: no held keys. HYBRID and
+ * AQUARIUM are pinned against the build before round 1, GLAZE against the build the owner heard.
  */
 class ChamberCandidateVoicesTest {
     private val M = CandidateVoiceMeasures
@@ -106,10 +106,21 @@ class ChamberCandidateVoicesTest {
             for (a in candidates) for (b in ChamberVoice.entries) if (a != b) {
                 val d = M.distance(shapes.getValue(a), shapes.getValue(b))
                 println("CHAMBER third-octave distance MIDI$midi $a/$b = %.1f dB".format(d))
-                if (d < M.DISTINCT_DB) close += "$a and $b are only $d dB apart at MIDI $midi"
+                val bar = if (ChamberCandidateLayers.layered(a)) REWORKED_DB else M.DISTINCT_DB
+                if (d < bar) close += "$a and $b are only $d dB apart at MIDI $midi"
             }
         }
         assertTrue(close.isEmpty(), close.joinToString("\n"))
+    }
+
+    @Test
+    fun `GLAZE, kept on 21 Nov 2026, renders exactly what the owner heard`() {
+        val lines = ArrayList<String>()
+        for (midi in listOf(36, 52, 60, 68, 84)) for (v in listOf(.3f, .75f, 1f)) lines += "CHAMBER GLAZE midi $midi v $v " +
+            M.hash(Chamber.render(ChamberVoice.GLAZE, emptyMap(), midi, v).samples)
+        lines += "CHAMBER GLAZE macros " + M.hash(Chamber.render(ChamberVoice.GLAZE, mapOf("STRIKE" to .8f, "MATERIAL" to .2f), 55, .6f).samples)
+        assertEquals(16, lines.size)
+        assertEquals(GLAZE_RENDERS, M.hash(lines), lines.joinToString("\n"))
     }
 
     @Test
@@ -142,38 +153,64 @@ class ChamberCandidateVoicesTest {
     }
 
     @Test
-    fun `each candidate does what its room says`() {
+    fun `each candidate carries its own instrument`() {
         val f = hz(60)
         val quiet = Chamber.ProbeOptions(normalize = true, recordDiagnostics = false, recordStems = false)
-        // TIMBER's resonators and MASS's hall live in the room: take the room away and the note changes.
-        for (voice in listOf(ChamberVoice.TIMBER, ChamberVoice.MASS)) {
-            val on = Chamber.probe(voice, midi = 60, options = quiet).samples
-            val off = Chamber.probe(voice, midi = 60, options = quiet.copy(roomEnabled = false)).samples
-            val d = M.distance(M.bands(on), M.bands(off))
-            println("CHAMBER $voice with and without its room: %.1f dB".format(d))
-            assertTrue(d > 2.5, "$voice's room does nothing")
-        }
+        // The room network still plays under every layer: take TIMBER's resonating walls away and the note changes.
+        val on = Chamber.probe(ChamberVoice.TIMBER, midi = 60, options = quiet).samples
+        val off = Chamber.probe(ChamberVoice.TIMBER, midi = 60, options = quiet.copy(roomEnabled = false)).samples
+        val room = M.distance(M.bands(on), M.bands(off))
+        println("CHAMBER TIMBER with and without its room: %.1f dB".format(room))
+        assertTrue(room > 2.5, "TIMBER's room does nothing")
+        // TIMBER: a marimba bar's second mode (3.93) dies long before its tube-held root.
+        val bar = render(ChamberVoice.TIMBER, 60, 1f)
+        val second = 3.93 * f
+        val rootFall = 20 * log10(M.component(bar, f, .05, .1) / M.component(bar, f, .6, .1))
+        val secondFall = 20 * log10(M.component(bar, second, .05, .1) / M.component(bar, second, .6, .1))
+        println("CHAMBER TIMBER .05 to .6 s: root falls %.1f dB, the 3.93 mode %.1f dB".format(rootFall, secondFall))
+        assertTrue(secondFall > rootFall + 10, "TIMBER's bar modes do not die before its root")
+        // MASS: the skin's pitch starts high and drops; the hall's low modes boom under the note.
+        val drum = render(ChamberVoice.MASS, 72, 1f)
+        val early = peakCents(drum, hz(72), .004, .03)
+        val late = peakCents(drum, hz(72), .3, .03)
+        println("CHAMBER MASS MIDI72 hard: pitch %+.0f cents at the strike, %+.0f cents at .3 s".format(early, late))
+        assertTrue(early - late > 60, "MASS's pitch does not drop")
+        val hall = render(ChamberVoice.MASS, 60, 1f)
+        val boom = M.component(hall, 53.0, .1, .6) / M.component(hall, 47.0, .1, .6)
+        println("CHAMBER MASS hall mode at 53 Hz against 47 Hz: %.1f".format(boom))
+        assertTrue(boom > 3, "MASS's hall does not boom")
+        // ALLOY: a pan's tuned tone field, its root and octave trading energy (the shimmer).
         val pan = render(ChamberVoice.ALLOY)
         val octave = 20 * log10(M.component(pan, 2 * f, .05, .5) / M.component(pan, f, .05, .5))
         val twelfth = 20 * log10(M.component(pan, 3 * f, .05, .5) / M.component(pan, f, .05, .5))
-        println("CHAMBER ALLOY octave %.1f dB, twelfth %.1f dB against the root".format(octave, twelfth))
+        val shimmer = wobble(pan, f, 1.5)
+        println("CHAMBER ALLOY octave %.1f dB, twelfth %.1f dB against the root; root wavers %.2f dB".format(octave, twelfth, shimmer))
         assertTrue(octave > -14 && twelfth > -26, "ALLOY's tone field is not tuned")
+        assertTrue(shimmer > 1.0, "ALLOY does not shimmer")
+        // GLAZE (kept, unchanged): its mode pairs beat.
         val bowl = wobble(render(ChamberVoice.GLAZE), f)
-        val bar = wobble(render(ChamberVoice.TIMBER), f)
-        println("CHAMBER GLAZE root wavers %.2f dB about its decay (TIMBER %.2f)".format(bowl, bar))
-        assertTrue(bowl > 2.5 && bowl > 2 * bar, "GLAZE's mode pairs do not beat")
-        // BOUNCE: the hammer's return is a second rise in the first 40 ms.
-        val string = render(ChamberVoice.BOUNCE)
-        println("CHAMBER BOUNCE 24-32 ms %.3f, 32-40 ms %.3f".format(rms(string, .024, .032), rms(string, .032, .040)))
-        assertTrue(rms(string, .032, .040) > 1.2 * rms(string, .024, .032), "BOUNCE's hammer does not come back")
+        println("CHAMBER GLAZE root wavers %.2f dB about its decay".format(bowl))
+        assertTrue(bowl > 2.5, "GLAZE's mode pairs do not beat")
+        // BOUNCE: the hammer rebounds: two clear rises after the first strike, more of them when hard.
+        for (velocity in listOf(Chamber.NORMAL_VELOCITY, 1f)) {
+            val string = render(ChamberVoice.BOUNCE, 60, velocity)
+            val before = rms(string, .045, .055)
+            val after = (0 until 30).maxOf { rms(string, .055 + .001 * it, .060 + .001 * it) }
+            println("CHAMBER BOUNCE v$velocity 45-55 ms %.4f, loudest 5 ms after it %.4f".format(before, after))
+            assertTrue(after > 1.3 * before, "BOUNCE's hammer does not come back at v$velocity")
+        }
     }
 
-    /** RMS deviation, dB, of the root's 100 ms amplitude from a straight-line (exponential) decay, .2 to 3 s. */
-    private fun wobble(x: FloatArray, f: Double): Double {
+    /** The strongest component's offset from [hz], cents, -200 to +500, in a short window. */
+    private fun peakCents(x: FloatArray, hz: Double, from: Double, seconds: Double): Double =
+        (-200..500 step 5).maxBy { M.component(x, hz * 2.0.pow(it / 1200.0), from, seconds) }.toDouble()
+
+    /** RMS deviation, dB, of the root's 100 ms amplitude from a straight-line (exponential) decay, .2 to [until] s. */
+    private fun wobble(x: FloatArray, f: Double, until: Double = 3.0): Double {
         val t = ArrayList<Double>()
         val a = ArrayList<Double>()
         var s = .2
-        while (s + .1 <= 3.0) { t += s; a += 20 * log10(M.component(x, f, s, .1) + 1e-12); s += .05 }
+        while (s + .1 <= until) { t += s; a += 20 * log10(M.component(x, f, s, .1) + 1e-12); s += .05 }
         val mt = t.average()
         val ma = a.average()
         val k = t.indices.sumOf { (t[it] - mt) * (a[it] - ma) } / t.indices.sumOf { (t[it] - mt).pow(2) }
@@ -199,6 +236,13 @@ class ChamberCandidateVoicesTest {
         /** SHA-256 over the lines above, taken from the build before this round (7495ca56c). */
         const val KEPT_RENDERS = "a93155010715568b410b94a59bd2c2abb86698e14558e769ef0c263ed7556641"
         const val KEPT_LINES = 30
+        /** SHA-256 over GLAZE's lines, taken from the build the owner heard in round chamber-voices-1 (c42bc8e89). */
+        const val GLAZE_RENDERS = "f76065e863620b220a36e2922d8460d6a044095f7965fc26e756be093d4e8cae"
+        /**
+         * The reworked voices (round chamber-voices-2, "More distinctive") must stand at least this far from every other
+         * voice; the rest keep ETCH's bar. Measured 10.5 to 17.3 dB.
+         */
+        const val REWORKED_DB = 9.0
         const val ROOT_SHARE = .1
         /** Soft, medium (the default, the sound a KEEP keeps) and hard as the desk plays them. */
         val TOUCH = listOf(.3f, Chamber.NORMAL_VELOCITY, 1f)

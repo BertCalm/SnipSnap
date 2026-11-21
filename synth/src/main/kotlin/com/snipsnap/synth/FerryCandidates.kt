@@ -8,8 +8,10 @@ import kotlin.math.sin
 import kotlin.math.sqrt
 
 /**
- * FERRY's candidate voices (listening round ferry-voices-1, 20 Nov 2026). Nothing here is heard yet and none is
- * offered anywhere until the owner keeps it ([Ferry.KEPT_VOICES]).
+ * FERRY's candidate voices (listening round ferry-voices-1, 20 Nov 2026). None is offered anywhere until the owner
+ * keeps it ([Ferry.KEPT_VOICES]). Round 1 kept TINE (21 Nov 2026) and asked for the rest to be "More distinctive": they
+ * now carry an instrument layer of their own over the network below ([FerryCandidateLayers], round ferry-voices-2),
+ * CHIME is renamed PEAL, RELAY is renamed BATON and VANE (a vibraphone bar over its tube) is added. TINE is unchanged.
  *
  * Every candidate is the same instrument as PASSAGE: a passive complex network da/dt = (i H - Gamma) a, struck
  * once by displacing some of its states, observed through pickups, compiled once into [FerryNetwork.Compiled]
@@ -21,9 +23,9 @@ import kotlin.math.sqrt
  *    the note grows out of silence and breathes as energy passes back and forth.
  *  - TARAB: a bright plucked string under four sympathetic strings (octave, fifth, twelfth, double octave),
  *    slightly apart, so a shimmering halo rings on after the pluck (a sitar's or sarod's tarab).
- *  - CHIME: a handbell. Each partial is a pair of nearly equal modes (a bell is never perfectly round); the
+ *  - PEAL (was CHIME): a handbell. Each partial is a pair of nearly equal modes (a bell is never perfectly round); the
  *    strike fills one of each pair and the coupling turns the energy round the bell, so the tone wavers.
- *  - RELAY: a chain of three materials, wood to wire to glass, one way along: a dark knock, a bright wire
+ *  - BATON (was RELAY): a chain of three materials, wood to wire to glass, one way along: a dark knock, a bright wire
  *    bloom, then a pure glass tone that is left ringing.
  *  - TINE (the spare): a kalimba. The tine's inharmonic modes drive a wooden box whose modes stay at fixed
  *    pitches whatever the note, so the box colours every note differently; the tine is retuned so the
@@ -85,8 +87,9 @@ internal object FerryCandidates {
             FerryVoice.TWIN -> twin(f, pace, match, t)
             FerryVoice.SWELL -> swell(f, pace, t)
             FerryVoice.TARAB -> tarab(f, pace, match, t)
-            FerryVoice.CHIME -> chime(f, pace, match, t)
-            FerryVoice.RELAY -> relay(f, pace, t)
+            FerryVoice.PEAL -> chime(f, pace, match, t)
+            FerryVoice.BATON -> relay(f, pace, t)
+            FerryVoice.VANE -> vane(f, pace, t)
             FerryVoice.TINE -> tine(f, pace, t)
             FerryVoice.PASSAGE -> error("PASSAGE is not a candidate")
         }
@@ -193,6 +196,16 @@ internal object FerryCandidates {
         }
     }
 
+    private fun vane(f: Double, pace: Double, t: Double) = Graph().apply {
+        // A vibraphone bar tuned 1:4:10 over its tube: the tube is a mode on the root that the bar fills.
+        val ratios = doubleArrayOf(1.0, 4.0, 10.0)
+        val bar = IntArray(3)
+        for (k in ratios.indices) bar[k] = mode(f * ratios[k], doubleArrayOf(5.0, 1.4, .5)[k], doubleArrayOf(.6, .5, .3)[k],
+            doubleArrayOf(1.0, .4, .15)[k] * hardness(t, k, 2.0))
+        val tube = mode(f, 1.2, 1.0)
+        link(bar[0], tube, 6.0 * pace * low(f))
+    }
+
     /** Shift state [index]'s diagonal until the eigenmode it leads sits exactly at [hz]. */
     private fun retune(h: Array<DoubleArray>, index: Int, hz: Double) {
         repeat(4) {
@@ -218,6 +231,7 @@ internal object FerryCandidates {
             val x = out[i] - mean.toFloat()
             out[i] = x - hp.lp(x, 20f)
         }
+        if (FerryCandidateLayers.layered(voice)) FerryCandidateLayers.apply(voice, out, midi, velocity, m)
         Dsp.fadeTailCosine(out, minOf(RELEASE_SECONDS, frames * .3f / Dsp.RATE))
         // Leveled by loudness alone, then touched, then kept under the ceiling: a ceiling applied before the touch
         // would pull a bright hard strike down to the level of a medium one.

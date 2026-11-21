@@ -9,7 +9,7 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 
 /** PASSAGE is kept; the rest are candidates appended after it (see [Ferry.KEPT_VOICES] and FerryCandidates). */
-enum class FerryVoice { PASSAGE, TWIN, SWELL, TARAB, CHIME, RELAY, TINE }
+enum class FerryVoice { PASSAGE, TWIN, SWELL, TARAB, PEAL, BATON, TINE, VANE }
 
 /**
  * A finite wood-to-wire exchange: strike -> handoff -> sympathetic bloom -> return.
