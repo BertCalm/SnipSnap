@@ -279,6 +279,7 @@ object Velocity {
         is BorePatch -> Bore.macrosFor(patch.voice)
         is ObbligatoPatch -> Obbligato.macrosFor()
         is ConsortPatch -> Consort.macrosFor(patch.voice)
+        is DrawlPatch -> Drawl.macrosFor(patch.voice)
         is ArcoPatch -> Arco.macrosFor(patch.voice)
         is TempestPatch -> Tempest.macrosFor(patch.voice)
         is MercuryPatch -> Mercury.macrosFor(patch.voice)
@@ -491,6 +492,8 @@ object Velocity {
         is ObbligatoPatch -> patch.copy(velocity = v).render()
         // CONSORT's velocity is breath effort: its own render turns a harder hit into more harmonics, more air and the overblow.
         is ConsortPatch -> patch.copy(velocity = v).render()
+        // DRAWL's velocity is the pick: harder is a brighter, rougher burst, a sharper start and more cone or amp drive, at one gain per sound.
+        is DrawlPatch -> patch.copy(velocity = v).render()
         is BellowsPatch -> patch.copy(velocity = v).render()
         is MurmurPatch -> patch.copy(velocity = v).render()
         is OspreyPatch -> patch.copy(velocity = v).render()
@@ -568,7 +571,8 @@ object Velocity {
         is SootPatch -> patch.render(v)
         // KERF strikes the fitted hit through KerfVelocity at the owner's depth: duller, a softer tick, the bleed kept.
         is KerfPatch -> patch.render(v)
-        is TerraPatch -> Terra.render(patch.voice, patch.macros, patch.striker, velocity = v)
+        // through the patch, so a struck pad keeps its striker and a roll stays a roll
+        is TerraPatch -> patch.render(v)
         // THUMP's and ONSET's kicks take the same contact law (a shallower
         // pitch drop, a quieter and duller click); their other voices keep
         // their brightness macro or soften().

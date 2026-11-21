@@ -124,6 +124,12 @@ fun ChopScreen(
      * milliseconds and the test clock is frozen.
      */
     holdRead: () -> Unit = {},
+    /**
+     * The chop being worked on, kept across leaving CHOP (UAT 2026-11 user states, S-6, ruled
+     * 2026-11-21: CHOP keeps its edits on leaving). App holds one for its whole life; the
+     * default, one per screen, is the old behaviour, for a test that builds CHOP alone.
+     */
+    hold: ChopHold = remember { ChopHold() },
 ) {
     val scheme = LocalScheme.current
 
@@ -151,6 +157,15 @@ fun ChopScreen(
         sourceFile = null
         model = null
         emptyReason = null
+        // Back on CHOP over the same source (S-6): the chop as it was left, slices, classes,
+        // mode and layout, not a fresh one from the sample. A different source starts fresh.
+        val heldKey = ChopHold.Key(kitDir?.path, lastCommit)
+        val kept = hold.takeFor(heldKey)
+        if (kept != null) {
+            sourceFile = kept.first
+            model = kept.second
+            return@LaunchedEffect
+        }
         // The decode (and the classifier's first pass over every slice) are
         // both real work on real audio — off the main thread, matching
         // TapeScreen's own `loadLongestTape`.
@@ -177,6 +192,7 @@ fun ChopScreen(
         } else {
             sourceFile = loaded.first
             model = loaded.second
+            hold.start(heldKey, loaded.first, loaded.second)
         }
     }
 
@@ -223,6 +239,7 @@ fun ChopScreen(
         onToast = onToast,
         onSentToGrid = onSentToGrid,
         onLandedOnto = onLandedOnto,
+        hold = hold,
     )
 }
 
@@ -374,6 +391,7 @@ private fun ChopContent(
     onToast: (String) -> Unit,
     onSentToGrid: (KitShelf.Entry, String) -> Unit,
     onLandedOnto: (KitShelf.Entry, Int, String) -> Unit,
+    hold: ChopHold,
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
@@ -412,7 +430,11 @@ private fun ChopContent(
     // one's keying an inconsistency rather than a policy. `initialModel`
     // rather than no key at all because a genuinely new source is a
     // different job and should start on CLASSIC.
-    var layout by remember(initialModel) { mutableStateOf(ChopLayout.CLASSIC) }
+    var layout by remember(initialModel) { mutableStateOf(hold.layout) }
+    // What is on screen goes back into the hold as it changes (S-6): the model (a re-chop
+    // replaces it; a class chip mutates its rows in place, which the hold shares) and the
+    // layout, so leaving CHOP and coming back finds both as they were.
+    LaunchedEffect(model, layout) { hold.keep(model, layout) }
     val melodic = layout == ChopLayout.MELODIC
     val fold = layout == ChopLayout.FOLD
     // MELODIC's placement runs pitch detection over every row on first
@@ -1404,7 +1426,7 @@ private fun SourceStrip(source: Snip, cuts: List<Int>, scheme: Scheme) {
         }
         for (cut in cuts) {
             val x = (cut.toFloat() / source.frameCount * size.width).coerceIn(0f, size.width - 1f)
-            drawRect(color = scheme.accent.tape, topLeft = Offset(x, 0f), size = Size(2.dp.toPx(), h))
+            drawRect(color = scheme.amber.tape, topLeft = Offset(x, 0f), size = Size(2.dp.toPx(), h))
         }
     }
 }
@@ -1805,7 +1827,54 @@ private fun SecondaryButton(
 }
 
 /** Which layout the grid preview and SEND use: the classifier's placement, the low-to-high scale, or one pad per sound. */
-private enum class ChopLayout { CLASSIC, FOLD, MELODIC }
+internal enum class ChopLayout { CLASSIC, FOLD, MELODIC }
+
+/**
+ * The chop being worked on, held where it outlives the CHOP screen (UAT 2026-11 user states,
+ * S-6, ruled 2026-11-21: CHOP keeps its edits on leaving, with no Back guard). The review model
+ * was plain `remember`, so a trip to PADS and back rebuilt it from the sample: every class set,
+ * every re-chop and the layout went, and nothing said so.
+ *
+ * One chop at a time, keyed by the source CHOP opened ([Key]: the kit's folder and the TAPE
+ * commit). Back on the same source it is handed back as it was left; a different source starts
+ * fresh and replaces it. In memory only: it lasts as long as the app's process, as the rest of
+ * a session's unsaved state does.
+ */
+class ChopHold {
+    /** What CHOP was opened over: the open kit's folder, if any, and the TAPE commit, if any. */
+    data class Key(val kitDir: String?, val commit: TapeCommit?)
+
+    private var key: Key? = null
+    private var source: File? = null
+    private var model: ChopReviewModel? = null
+
+    /** The layout last on screen; CLASSIC for a chop not yet looked at. */
+    internal var layout: ChopLayout = ChopLayout.CLASSIC
+        private set
+
+    /** The held chop for [k], or null when nothing is held for it. */
+    internal fun takeFor(k: Key): Pair<File, ChopReviewModel>? {
+        if (k != key) return null
+        val s = source ?: return null
+        val m = model ?: return null
+        return s to m
+    }
+
+    /** A fresh chop of a new source: it replaces whatever was held, and starts on CLASSIC. */
+    internal fun start(k: Key, file: File, fresh: ChopReviewModel) {
+        key = k
+        source = file
+        model = fresh
+        layout = ChopLayout.CLASSIC
+    }
+
+    /** The chop as it stands on screen. */
+    internal fun keep(current: ChopReviewModel, currentLayout: ChopLayout) {
+        if (key == null) return
+        model = current
+        layout = currentLayout
+    }
+}
 
 /** The "NOT SURE" dashed-chip treatment — a guess, and honest about it. */
 private fun Modifier.dashedBorder(color: Color, radius: Dp = 4.dp): Modifier = this.drawWithContent {

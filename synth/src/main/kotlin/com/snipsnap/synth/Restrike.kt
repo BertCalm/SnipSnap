@@ -89,7 +89,7 @@ object Restrike {
                 val pos = Terra.defaults(patch.voice)["POS"]
                 val moved = if (take == 0 || pos == null) patch.macros
                 else patch.macros + ("POS" to ((patch.macros["POS"] ?: pos) + offset).coerceIn(0f, 1f))
-                Terra.render(patch.voice, moved, patch.striker, velocity = v, take = take)
+                patch.render(v, take, moved)
             }
             else -> null
         }
