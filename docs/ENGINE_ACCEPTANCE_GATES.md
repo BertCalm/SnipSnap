@@ -1366,7 +1366,7 @@ sounds good now" (2026-11-20); the Kotlin port matches it within the prototype's
 | Velocity and round robin: rendering | Pass in software | Soft zones are different strikes and, over their four takes, never brighter; four different strikes per zone; a groove's soft zone is a softer performance |
 | Velocity and round robin: saving, playback, export | Pass in software | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 68 pads; MPC 2 not written (format limit). No phone or MPC playback yet |
 
-## BOROUGH kits (round 3, 2026-11-20: generated in Kotlin and on the shelf; the Kotlin render not yet heard)
+## BOROUGH kits (rounds 3 and 3.1: generated in Kotlin, on the shelf, with their own glue; accepted by ear 2026-11-21)
 
 Six boom-bap drum kits (A01-A12) and four perc stacks (A13-A16), generated in the app from the recipes of the round-2
 Python kits the owner accepted ("I think they are all ready", 2026-11-20), on top of EMBER. See [BOROUGH](BOROUGH.md),
@@ -1376,7 +1376,7 @@ Python kits the owner accepted ("I think they are all ready", 2026-11-20), on to
 | Gate | Status | Evidence |
 |---|---|---|
 | Melodic, keygroups, chord tools, STRUM | Not applicable | Drum kits |
-| Drums: multiple distinct genre kits on the shelf | Built; Python sound accepted, Kotlin render not heard | Six FRESH TAPE starters under SKINS, each with its default stack; 81 of 88 pads inside the spread of Python's own realisations, the rest within 0.45 dB of it |
+| Drums: multiple distinct genre kits on the shelf | Built and accepted by ear ("Ready", 2026-11-21: the app's own pads through the native glue) | Six FRESH TAPE starters under SKINS, each with its default stack; 81 of 88 pads inside the spread of Python's own realisations, the rest within 0.45 dB of it |
 | Percussion: roll/riser | Built, finite | A snare roll (EMBER's press roll) on A12 of every kit |
 | Velocity and round robin: rendering | Pass in software | Three zones are different strikes on all 88 pads (gain-matched residual above -20 dB); three distinct takes per zone |
 | Velocity and round robin: saving, playback, export | Pass in software | Save, reload, the pad resolver at all 127 velocities, SFZ round trip and MPC 3 for a shelf kit; every kit by the generator (864 slices); MPC 2 keeps each zone's first take (format limit). No phone or MPC playback yet |
@@ -1386,7 +1386,8 @@ rides and rims"). The app's native bus (`GlueBus.h`: input trim, saturator, comp
 loads and switches it off for every other kit. On each kit's demo groove the native bus matches the Python
 `model()` to -148 dB. The live trim adds +3.0 dB for a default pad's level. The glue changes no velocity or
 round-robin gate: it is a whole-kit bus after the pads, the pads on disk are not glued, and no export (MPC 3, MPC 2,
-SFZ, DecentSampler) applies it. Nothing has been heard from the native glue, and no phone or MPC has played it. The
-app-side mapping test and `:app:assembleDebug` wait on CI's Android SDK.
+SFZ, DecentSampler) applies it. The owner heard each kit's groove from the app's exported pads through the native
+glue (`glue_render`), beside the picks, level-matched, and answered "Ready" (2026-11-21). CI's android-build ran the
+app-side mapping test and `:app:assembleDebug`. No phone or MPC has played the kits.
 
-Open: the owner's listen to the Kotlin kits and to the native glue, the stack picker, phone and MPC hardware.
+Open: the stack picker, phone and MPC hardware.

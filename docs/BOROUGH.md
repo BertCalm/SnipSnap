@@ -2,9 +2,10 @@
 
 Status (round 3, 2026-11-20): the owner accepted the round-2 Python kits ("I think they are all ready") and chose to
 generate them in the app. The Kotlin port (`Borough.kt`, `BoroughKits.kt`) is built and measured against the
-prototype (see "Round 3: Kotlin port"), and the six kits are on the shelf with their default stacks. The Kotlin
-render has not been heard; the stack picker is a later step. Round 3.1 (2026-11-21): each kit carries the live glue the
-owner picked and the app's native bus plays it when the kit loads (see "Round 3.1: the live glue"); not yet heard.
+prototype (see "Round 3: Kotlin port"), and the six kits are on the shelf with their default stacks. Round 3.1
+(2026-11-21): the stacks sit at their kit's level with shorter tails, and each kit carries the live glue the owner
+picked, which the app's native bus plays when the kit loads (see "Round 3.1: the live glue"). The owner heard the
+app's own pads through the native glue and said "Ready" (2026-11-21). Next: the stack picker. No phone or MPC yet.
 Repository read: `afb0fa98` (2026-11-18); round 3 from `1b1d2d65b`.
 
 The characteristic gesture is **heavy swept kick → papery snare crack with late wires → dark, driven recording chain → a perc stack riding on top**.
@@ -728,6 +729,8 @@ Listening page (private until shared): https://claude.ai/artifact/6y32yHPUszWK58
     unchanged, RIDE AND RIMS' ride at its full ring); each kit's live glue pinned in recipes kits[].glue
     (glue_recipe.py: saturation on five kits, none on RIDE AND RIMS). Read as: RIDE AND RIMS takes the perc fix
     only, full ride, plain glue; on the page for the owner to confirm.
+  - round 3.1, as built (the app's own pads through the native glue, beside the picks, level-matched; RIDE AND
+    RIMS with its ride ringing and no saturation): "Ready" (2026-11-21). Accepted. Next: the stack picker.
   Heard as better is not accepted for the shelf: no kit has been approved yet.
 - **Round 3.1, the live glue (measured, not heard):** the native bus matches `model()` to -148 dB on every kit's demo
   groove (`glue_native.py`, with `model()`'s reflect edge removed); the live calibration is +3.0 dB (a default pad's
