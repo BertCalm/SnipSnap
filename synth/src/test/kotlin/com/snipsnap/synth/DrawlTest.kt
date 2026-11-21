@@ -244,6 +244,82 @@ class DrawlTest {
         assertTrue(!PresetTestSupport.trademarkBlocklist.containsMatchIn("NATIONAL ANTHEM"), "plain English is refused")
     }
 
+    /** The level of one frequency over a stretch of the render (a Hann-windowed single-bin transform), in dB. */
+    private fun levelDb(s: Snip, hz: Double, fromSec: Float, seconds: Float = .5f): Double {
+        val from = (fromSec * s.sampleRate).toInt()
+        val n = (seconds * s.sampleRate).toInt()
+        var re = 0.0
+        var im = 0.0
+        for (i in 0 until n) {
+            val w = 0.5 - 0.5 * cos(2 * PI * i / (n - 1))
+            val x = s.samples[from + i] * w
+            re += x * cos(2 * PI * hz * i / s.sampleRate)
+            im -= x * sin(2 * PI * hz * i / s.sampleRate)
+        }
+        return 20 * log10(sqrt(re * re + im * im) / n + 1e-12)
+    }
+
+    private val triad = DrawlStrum.Articulation(listOf(0, 4, 7))
+
+    @Test
+    fun `a strum sounds every chord tone, once each string has landed`() {
+        for (voice in DrawlVoice.entries) {
+            val s = Drawl.render(voice, mapOf("WAVER" to 0f), strum = triad)
+            val root = Drawl.midiFor(voice, .5f)
+            val from = if (voice == DrawlVoice.STEEL) 1.0f else .45f
+            val off = levelDb(s, Keys.midiHz(root + 2).toDouble(), from)
+            for (iv in triad.intervals) {
+                val on = levelDb(s, Keys.midiHz(root + iv).toDouble(), from)
+                assertTrue(on > off + 6, "$voice chord tone +$iv sits ${"%.1f".format(on - off)} dB over a tone not in the chord")
+            }
+        }
+    }
+
+    @Test
+    fun `strum direction, sweep and STEEL's pedals each change the chord`() {
+        for (voice in DrawlVoice.entries) {
+            val down = Drawl.render(voice, strum = triad)
+            assertTrue(rmsDiff(down, Drawl.render(voice)) > 1e-3, "$voice strum sounds like the single note")
+            assertTrue(rmsDiff(down, Drawl.render(voice, strum = triad.copy(direction = DrawlStrum.Direction.UP))) > 1e-3, "$voice UP is DOWN")
+            assertTrue(rmsDiff(down, Drawl.render(voice, strum = triad.copy(sweepSeconds = .2))) > 1e-3, "$voice sweep does nothing")
+            assertEquals(Drawl.render(voice).samples.size, down.samples.size, "$voice strum changes the length")
+            assertContentEquals(down.samples, Drawl.render(voice, strum = triad).samples, "$voice strum is not deterministic")
+        }
+        val pedalled = Drawl.render(DrawlVoice.STEEL, mapOf("SLIDE" to 1f), strum = triad)
+        val still = Drawl.render(DrawlVoice.STEEL, mapOf("SLIDE" to 0f), strum = triad)
+        val top = Keys.midiHz(Drawl.midiFor(DrawlVoice.STEEL, .5f) + 7).toDouble()
+        // before the pedal goes down (it starts at 0.4 s) the pedalled chord's top tone is two semitones flat
+        assertTrue(levelDb(pedalled, top, .15f, .2f) < levelDb(still, top, .15f, .2f) - 6, "STEEL's pedals do not hold the top tone back")
+    }
+
+    @Test
+    fun `a strum round-trips, takes the chord tool's voicing and refuses a bad chord`() {
+        val chord = ChordStabs.Stab("Am7", 69, listOf(0, 3, 7, 10))
+        val patch = DrawlStrum.fromChord(DrawlPatch("Chord", DrawlVoice.LAP), chord, .12, DrawlStrum.Direction.UP)
+        assertEquals(listOf(0, 3, 7, 10), patch.strum!!.intervals)
+        // A4 sits within TUNE's octave of LAP's D4 root, so it is played where it is
+        assertEquals(69, Drawl.midiFor(DrawlVoice.LAP, patch.macros.getValue("TUNE")))
+        assertEquals(patch, DrawlPatch.fromJsonText(patch.toJsonText()))
+        assertEquals(patch, Patches.fromJsonText(patch.toJsonText()))
+        val far = DrawlStrum.fromChord(DrawlPatch("Low", DrawlVoice.GUT), ChordStabs.Stab("C", 24, listOf(0, 4, 7)))
+        assertEquals(48, Drawl.midiFor(DrawlVoice.GUT, far.macros.getValue("TUNE")), "a chord out of reach moves by whole octaves")
+        assertFailsWith<IllegalArgumentException> { DrawlStrum.Articulation(listOf(4, 7)) }
+        assertFailsWith<IllegalArgumentException> { DrawlStrum.Articulation(listOf(0)) }
+        assertFailsWith<IllegalArgumentException> { DrawlStrum.Articulation(listOf(0, 4), sweepSeconds = .5) }
+        assertEquals(DrumClass.LOOP, Drawl.drumClassFor(DrawlVoice.CONE))
+    }
+
+    @Test
+    fun `ROBIN deals the saved sound first, then takes 1 to 3 in turn, keeping the chord`() {
+        val patch = DrawlPatch("Robin", DrawlVoice.CONE, strum = triad)
+        assertTrue(Restrike.canRestrike(patch))
+        assertContentEquals(patch.render().samples, Restrike.take(patch, 1f, 0, 0)!!.samples, "take 0 is the saved render")
+        val dealt = (1..6).map { Restrike.drawlTake(patch.take, it) }
+        assertEquals(listOf(1, 2, 3, 1, 2, 3), dealt)
+        for (k in 1..3) assertContentEquals(patch.copy(take = k).render().samples, Restrike.take(patch, 1f, 99, k)!!.samples, "take $k")
+        assertContentEquals(patch.copy(velocity = .375f).render().samples, Restrike.take(patch, .5f, 0, 0)!!.samples, "Robin's velocity scales the saved touch")
+    }
+
     @Test
     fun `a note renders in a playable time`() {
         // the house playability rule is tens of ms per knob turn; a cached sound pays for one render

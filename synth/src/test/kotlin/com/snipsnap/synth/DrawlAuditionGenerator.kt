@@ -46,6 +46,13 @@ object DrawlAuditionGenerator {
         }
         recipes.append("]\n")
         File(root, "recipes.json").writeText(recipes.toString())
+        // The kept renders' hashes, for synth/src/test/resources/drawl/ (DrawlNativePinsTest).
+        val pins = StringBuilder()
+        for ((id, patch) in DrawlNativePins.cases()) {
+            val snip = patch.render()
+            pins.append("$id ${snip.frameCount} ${DrawlNativePins.sha(snip.samples)}\n")
+        }
+        File(root, "native-kept.sha256").writeText(pins.toString())
         println("DRAWL audition: ${all.size} clips under $root")
     }
 }

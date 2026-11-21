@@ -194,7 +194,7 @@ object Drawl {
      * A take varies the player (pick shape and place, slide time, landing, vibrato) and never
      * the target pitch, as ACCORD's takes do.
      */
-    private class Performance(val voice: DrawlVoice, m: Map<String, Float>, val velocity: Double, val take: Int, val midi: Int) {
+    private class Performance(val voice: DrawlVoice, m: Map<String, Float>, val velocity: Double, val take: Int, val midi: Int, lowest: Int = 0) {
         val spec = SPECS.getValue(voice)
         val seed = Dsp.seedFor("DRAWL", voice.name, midi, take)
         private val u = DoubleArray(8).also { u ->
@@ -241,8 +241,8 @@ object Drawl {
         val seconds = Drawl.seconds(voice, m.getValue("HOLD"))
         val frames = (seconds * R).toInt()
         val target = midiHz(midi)
-        /** The open string under the bar: five semitones below the slide's lowest point for a bar, one for the rest. */
-        val open = target * 2.0.pow((min(0.0, -extent) - 100 - (if (spec.stop == Stop.BAR) 500 else 0)) / 1200)
+        /** The open string under the bar (under the chord's lowest tone): five semitones below the slide's lowest point for a bar, one for the rest. */
+        val open = midiHz(midi + lowest) * 2.0.pow((min(0.0, -extent) - 100 - (if (spec.stop == Stop.BAR) 500 else 0)) / 1200)
     }
 
     // ---- the pitch path --------------------------------------------------------------------
@@ -254,7 +254,7 @@ object Drawl {
      * STEEL: the pedal ramp to a stop under a gentle bar vibrato after the swell. A hard pick
      * adds tension modulation: the note starts sharp and settles.
      */
-    private class Path(p: Performance) {
+    private class Path(p: Performance, extent: Double = p.extent, fretChord: Boolean = false) {
         val steps = p.frames / CONTROL + 2
         val cents = DoubleArray(steps)
         val scraping = DoubleArray(steps)
@@ -265,29 +265,33 @@ object Drawl {
             // the base: landing, frets or pedal
             val base = DoubleArray(steps)
             val onset: Double
-            if (p.spec.stop == Stop.PEDAL) {
+            if (fretChord) {
+                // a fretted chord is fingered, not slid: no landing and no pick tension, the hand
+                // vibrato from 50 ms (the prototype's chord path)
+                onset = .05
+            } else if (p.spec.stop == Stop.PEDAL) {
                 val start = max(.4, p.swell * .8)
                 onset = start + p.slideSeconds
-                if (p.extent > 0) {
+                if (extent > 0) {
                     val k = exp(-dt / .005)
-                    var y = -p.extent
+                    var y = -extent
                     for (i in 0 until steps) {
                         val t = i * dt
-                        val c = -p.extent * (1 - ((t - start) / max(p.slideSeconds, 1e-3)).coerceIn(0.0, 1.0))
+                        val c = -extent * (1 - ((t - start) / max(p.slideSeconds, 1e-3)).coerceIn(0.0, 1.0))
                         y = (1 - k) * c + k * y
                         base[i] = y
                     }
                 }
             } else {
-                onset = if (p.extent > 0) p.slideSeconds else .05
-                if (p.extent > 0) {
+                onset = if (extent > 0) p.slideSeconds else .05
+                if (extent > 0) {
                     // The arm is a damped mass-spring aimed at the note, ~90 % there at slideSeconds;
                     // with zeta .8 it overshoots about 1.5 % and settles: the bar lands, then corrects.
                     val ctrl = 2000.0
                     val wn = 3.2 / max(p.slideSeconds, 1e-3)
                     val armSteps = (n / RD * ctrl).toInt() + 2
                     val arm = DoubleArray(armSteps)
-                    var x = -p.extent
+                    var x = -extent
                     var v = 0.0
                     for (i in 0 until armSteps) {
                         arm[i] = x
@@ -324,7 +328,7 @@ object Drawl {
                 val r = ((t - onset - .15) / .35).coerceIn(0.0, 1.0)
                 val ramp = .5 - .5 * cos(PI * r)
                 val s = if (oneSided) .5 - .5 * cos(phase) else sin(phase)
-                val vib = p.vibDepth * ramp * s + p.tensionCents * exp(-t / p.spec.tensionSeconds)
+                val vib = p.vibDepth * ramp * s + (if (fretChord) 0.0 else p.tensionCents * exp(-t / p.spec.tensionSeconds))
                 cents[i] = base[i] + vib
                 // what drags along the ribs: the slide, and a little of the vibrato (a bar vibrato
                 // mostly rocks the contact; 15 % is a shape value)
@@ -406,9 +410,9 @@ object Drawl {
      * house exciter is all noise, which dealt a LAP take's second harmonic 1 to 13 dB over its
      * fundamental depending on the seed (round 0).
      */
-    private fun pick(p: Performance, startHz: Double): DoubleArray {
+    private fun pick(p: Performance, startHz: Double, seed: Int): DoubleArray {
         val period = max(2, (RD / startHz).toInt())
-        val noise = Dsp.Noise(p.seed)
+        val noise = Dsp.Noise(seed)
         val k = exp(-2 * PI * p.pickHz / RD)
         val pos = p.position.coerceIn(.02, .5)
         val pull = DoubleArray(period) { if (it.toDouble() / period < pos) 1 / pos else -1 / (1 - pos) }
@@ -524,31 +528,69 @@ object Drawl {
 
     // ---- render -----------------------------------------------------------------------------
 
-    /** The raw string and body at the internal rate, before the output stage. */
-    internal fun raw(voice: DrawlVoice, m: Map<String, Float>, velocity: Float, take: Int): FloatArray {
-        val p = Performance(voice, m, velocity.toDouble(), take, midiFor(voice, m.getValue("TUNE")))
-        val path = Path(p)
+    /**
+     * The raw strings and body at the internal rate, before the output stage. One string, or with
+     * [strum] one per chord tone picked in turn (see [DrawlStrum]): a bar chord shares the one path,
+     * STEEL's pedals raise the inner and top tones by half and all of SLIDE's travel, a fretted
+     * chord is not slid, a chord has no string behind the bar, and every string shares the body.
+     */
+    internal fun raw(voice: DrawlVoice, m: Map<String, Float>, velocity: Float, take: Int, strum: DrawlStrum.Articulation? = null): FloatArray {
+        val intervals = strum?.intervals ?: listOf(0)
+        val p = Performance(voice, m, velocity.toDouble(), take, midiFor(voice, m.getValue("TUNE")), intervals.min())
+        val tones = strum?.picked ?: intervals
+        val chord = tones.size > 1
+        val ordered = intervals.sorted()
+        val out = DoubleArray(p.frames)
+        for ((k, iv) in tones.withIndex()) {
+            val delay = if (chord) Math.round(strum!!.sweepSeconds * RD * k / (tones.size - 1)).toInt() else 0
+            val path = when {
+                chord && p.spec.stop == Stop.FRET -> Path(p, 0.0, fretChord = true)
+                chord && p.spec.stop == Stop.PEDAL -> {
+                    val rank = ordered.indexOf(iv)
+                    Path(p, if (rank == 0) 0.0 else p.extent * (if (rank == ordered.size - 1) 1.0 else .5))
+                }
+                else -> Path(p)
+            }
+            val y = string(p, path, midiHz(p.midi + iv), p.seed + 101 * k, delay, ghost = !chord)
+            for (i in out.indices) out[i] += y[i]
+        }
+        if (chord) {
+            val scale = 1 / sqrt(tones.size.toDouble())
+            for (i in out.indices) out[i] *= scale
+        }
+        val shaped = body(p, out)
+        if (p.swell > 0) {
+            for (i in shaped.indices) {
+                val r = (i / RD / p.swell).coerceAtMost(1.0)
+                shaped[i] *= (.5 - .5 * cos(PI * r)).toFloat()
+            }
+        }
+        return shaped
+    }
+
+    /** One string at [target] Hz following [path], picked [delay] samples in with [seed]'s pick and scrape. */
+    private fun string(p: Performance, path: Path, target: Double, seed: Int, delay: Int, ghost: Boolean): DoubleArray {
         val n = p.frames
         val bar = p.spec.stop == Stop.BAR
-        val wound = if (p.target < 260) 1.0 else .25
+        val wound = if (target < 260) 1.0 else .25
         // control-rate quantities, interpolated per sample
         val steps = path.steps
-        val delay = DoubleArray(steps)
+        val loopDelay = DoubleArray(steps)
         val gain = DoubleArray(steps)
         val ghostDelay = DoubleArray(steps)
         val ghostGain = DoubleArray(steps)
         val scrapeG = DoubleArray(steps)
         val scrapeLevel = DoubleArray(steps)
         var minHz = Double.MAX_VALUE
-        var length = SCALE_M * p.open / (p.target * 2.0.pow(path.scraping[0] / 1200))
+        var length = SCALE_M * p.open / (target * 2.0.pow(path.scraping[0] / 1200))
         var speed = 0.0
         val speedK = exp(-(CONTROL / RD) / .003)
         for (i in 0 until steps) {
-            val hz = p.target * 2.0.pow(path.cents[i] / 1200)
+            val hz = target * 2.0.pow(path.cents[i] / 1200)
             minHz = min(minHz, hz)
-            delay[i] = delayFor(hz, p.loopHz)
+            loopDelay[i] = delayFor(hz, p.loopHz)
             gain[i] = gainFor(hz, p.t60, p.loopHz)
-            if (p.ghost > 0) {
+            if (ghost && p.ghost > 0) {
                 // behind the bar: the stretch between bar and nut, its pitch moving against the note's
                 val stopped = (p.open / hz).coerceIn(0.0, .97)
                 val behind = min(p.open / (1 - stopped), 6000.0)
@@ -557,7 +599,7 @@ object Drawl {
             }
             if (bar) {
                 // the bar over a wound string's ribs: rib-passing frequency is bar speed / rib pitch
-                val now = SCALE_M * p.open / (p.target * 2.0.pow(path.scraping[i] / 1200))
+                val now = SCALE_M * p.open / (target * 2.0.pow(path.scraping[i] / 1200))
                 val v = abs(now - length) / (CONTROL / RD)
                 length = now
                 speed = (1 - speedK) * v + speedK * speed
@@ -567,15 +609,15 @@ object Drawl {
             }
         }
         val string = Read(RD / minHz + 8, p.loopHz)
-        val behind = if (p.ghost > 0) Read(RD / p.open + 8, 5000.0) else null
-        val exc = pick(p, p.target * 2.0.pow(path.cents[0] / 1200))
-        val noise = Dsp.Noise(p.seed + 11)
+        val behind = if (ghost && p.ghost > 0) Read(RD / p.open + 8, 5000.0) else null
+        val exc = pick(p, target * 2.0.pow((if (delay == 0) path.cents[0] else path.at(delay, path.cents)) / 1200), seed)
+        val noise = Dsp.Noise(seed + 11)
         var ic1 = 0.0
         var ic2 = 0.0
         val k = 1 / 3.0
         val out = DoubleArray(n)
         for (i in 0 until n) {
-            var input = if (i < exc.size) exc[i] else 0.0
+            var input = if (i >= delay && i - delay < exc.size) exc[i - delay] else 0.0
             if (bar) {
                 // the scrape: noise through a TPT SVF band-pass at the rib frequency (Q 3)
                 val g = path.at(i, scrapeG)
@@ -589,23 +631,16 @@ object Drawl {
                 ic2 = 2 * v2 - ic2
                 input += v1 * path.at(i, scrapeLevel)
             }
-            var y = string.next(input, path.at(i, delay), path.at(i, gain))
+            var y = string.next(input, path.at(i, loopDelay), path.at(i, gain))
             if (behind != null) y += behind.next(y * p.ghost * .02, path.at(i, ghostDelay), path.at(i, ghostGain))
             out[i] = y
         }
-        val shaped = body(p, out)
-        if (p.swell > 0) {
-            for (i in shaped.indices) {
-                val r = (i / RD / p.swell).coerceAtMost(1.0)
-                shaped[i] *= (.5 - .5 * cos(PI * r)).toFloat()
-            }
-        }
-        return shaped
+        return out
     }
 
     /** The house output stage up to the level: band limit, decimate, mean, 20 Hz high-pass. */
-    private fun conditioned(voice: DrawlVoice, m: Map<String, Float>, velocity: Float, take: Int): FloatArray {
-        val raw = raw(voice, m, velocity, take)
+    private fun conditioned(voice: DrawlVoice, m: Map<String, Float>, velocity: Float, take: Int, strum: DrawlStrum.Articulation?): FloatArray {
+        val raw = raw(voice, m, velocity, take, strum)
         Tide.bandLimit(raw, R)
         val out = Dsp.decimate(raw, RATE)
         var mean = 0.0
@@ -619,7 +654,7 @@ object Drawl {
         return out
     }
 
-    private data class GainKey(val voice: DrawlVoice, val macros: Map<String, Float>)
+    private data class GainKey(val voice: DrawlVoice, val macros: Map<String, Float>, val strum: DrawlStrum.Articulation?)
     private val gains = ConcurrentHashMap<GainKey, Float>()
     private const val GAINS = 256
 
@@ -629,13 +664,13 @@ object Drawl {
      * ceiling. A soft pick is quieter as well as darker. Two extra renders the first time a
      * sound is played, then cached.
      */
-    internal fun performanceGain(voice: DrawlVoice, m: Map<String, Float>): Float {
-        val key = GainKey(voice, m)
+    internal fun performanceGain(voice: DrawlVoice, m: Map<String, Float>, strum: DrawlStrum.Articulation? = null): Float {
+        val key = GainKey(voice, m, strum)
         gains[key]?.let { return it }
-        val medium = conditioned(voice, m, DEFAULT_VELOCITY, 0)
+        val medium = conditioned(voice, m, DEFAULT_VELOCITY, 0, strum)
         val loud = Loudness.of(medium, 1, RATE)
         var g = if (loud > 1e-6f) Dsp.MELODIC_LOUDNESS_TARGET / loud else 1f
-        val hard = conditioned(voice, m, 1f, 0)
+        val hard = conditioned(voice, m, 1f, 0, strum)
         var peak = 0f
         for (x in hard) if (x.isFinite()) peak = max(peak, abs(x))
         if (peak > 1e-9f) g = min(g, CEILING / peak)
@@ -644,13 +679,19 @@ object Drawl {
         return g
     }
 
-    /** The engine. Pure: the same inputs give the same samples. */
-    fun render(voice: DrawlVoice, macros: Map<String, Float> = emptyMap(), velocity: Float = DEFAULT_VELOCITY, take: Int = 0): Snip {
+    /** The engine. Pure: the same inputs give the same samples. [strum] plays a chord (see [DrawlStrum]). */
+    fun render(
+        voice: DrawlVoice,
+        macros: Map<String, Float> = emptyMap(),
+        velocity: Float = DEFAULT_VELOCITY,
+        take: Int = 0,
+        strum: DrawlStrum.Articulation? = null,
+    ): Snip {
         require(take >= 0) { "DRAWL take must not be negative: $take" }
         val m = settled(voice, macros)
         val v = if (velocity.isFinite()) velocity.coerceIn(0f, 1f) else DEFAULT_VELOCITY
-        val out = conditioned(voice, m, v, take)
-        val g = performanceGain(voice, m)
+        val out = conditioned(voice, m, v, take, strum)
+        val g = performanceGain(voice, m, strum)
         for (i in out.indices) out[i] *= g
         Dsp.limitPeak(out, CEILING) // only a take hotter than take 0 at full touch can reach this
         Dsp.fadeTail(out)
