@@ -1284,6 +1284,32 @@ Source: the commit that adds this entry. Details: [CONSORT](CONSORT.md).
 Nothing here is a completion claim. A passing `ConsortTest` and an audition page do not close a gate.
 
 
+
+## DRAWL (Kotlin port, round 1, 2026-11-21)
+
+A bar-stopped string whose pitch path is the performance: resonator guitar, electric slide, lap steel,
+pedal steel, country flat-top and western nylon. Design, every listen and every measured number:
+[the DRAWL spec](superpowers/specs/2026-11-20-drawl-engine-design.md). The owner kept all six voices of the
+Python prototype on 21 Nov 2026 after four rounds of notes; the native Kotlin engine is built and probed and
+nobody has heard it.
+
+| Gate | Current evidence | Status |
+|---|---|---|
+| Six melodic voices | CONE, BOTTLE, LAP, STEEL, FLATTOP, GUT: kept by ear as the Python prototype (round 0d). Native renders measured against those clips (`round1_compare_kotlin.json`); not heard. | Open: the owner's listen to the native renders |
+| Presets | None. In `PatchTypes.PROTOTYPES` until the native renders are kept. | Open |
+| Playable keygroups | None. | Open (round 4) |
+| Premade kit | None. | Open (round 3) |
+| Chord-tool compatibility | No STRUM yet; designed to take a `ChordStabs.Stab` (spec §9). | Open (round 2) |
+| Appropriate HOLD | Finite: HOLD lengthens the note to 8 s and never loops (the HALOBAR and ACCORD policy). A swell loop for STEEL and LAP is the owner's decision at round 3. | Open: the owner's decision |
+| STRUM | Applies: every voice is picked. Prototyped and heard in Python (round 0); not built in Kotlin. | Open (round 2) |
+| Percussion, drums | Not applicable: a melodic string engine. | Not applicable |
+| Velocity: rendering | Native: a harder pick is louder and has a brighter level-matched onset on all six voices (`DrawlTest`), at one gain per sound. Heard as timbre in Python; native not heard. | Pass in software; listen open |
+| Velocity: saving, playback, export | `DrawlPatch` saves velocity; no pad, kit or export path yet. | Open |
+| Round robin | `DrawlPatch.take`: four distinct strikes in tune per voice (`DrawlTest`). Not in `Restrike`, no pad pool, save/load playback or export. | Open (rounds 2 and 3) |
+| Picker | No entry. | Open (round 4) |
+| Hardware | Not attempted. | Open |
+
+Nothing here is a completion claim.
 ## KERF synthetic chops (rounds 1 to 4, sound approved, hardware confirmed: complete)
 
 Source: the commit that adds this entry. Details: [the KERF spec](superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md). KERF is a capture-side tool (SYNTH TWIN on the pad sheet, SYNTH TWIN ALL on the kit screen, `snipsnap kerf`) and, since round 4, a registered drum engine on the SYNTH picker (`Kerf`, six voices over the bank's 63 fitted hits) with four genre kits on FRESH TAPE (`KerfKits`).
