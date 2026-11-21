@@ -270,11 +270,11 @@ tbody th { font-weight: 500; color: var(--ink2); }
 </style>
 <div class="window">
   <div class="titlebar"><span class="mark" aria-hidden="true"></span><h1>DRAWL</h1>
-    <span class="status">ROUND 0C · PYTHON HARNESS · NOTES HEARD</span></div>
+    <span class="status">ROUND 0D · PYTHON HARNESS · NOTES HEARD</span></div>
   <div class="intro">
     <p class="eyebrow">Proposed engine · western and cosmic country strings</p>
     <p class="gesture">PICK → THE BAR SLIDES THE NOTE IN → THE BAR SHIMMERS → THE STRING RINGS OUT THROUGH ITS BODY</p>
-    <p>Six voices on one mechanism: a string whose pitch path is the performance. These are Python prototype renders, measured against your fifteen reference loops. You have heard it twice; your latest notes and their changes open the page. Your loops are not on this page; only their numbers are used.</p>
+    <p>Six voices on one mechanism: a string whose pitch path is the performance. These are Python prototype renders, measured against your fifteen reference loops. You have heard it three times; your latest note and its change open the page. Your loops are not on this page; only their numbers are used.</p>
     <p>Each sheet plays the default note, its low and high notes, soft and hard touch, three more round-robin takes, the bar held still, a long slide with wide vibrato, and a strum each way. On each dark panel the amber line is the default note's measured pitch and the pale line the long slide's: watch the bar slide up to the dashed note, land, and start to shimmer. A line stops where the note has rung too quiet to track.</p>
   </div>
   {{AB}}

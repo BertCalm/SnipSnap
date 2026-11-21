@@ -15,6 +15,9 @@ whine (sustain):
                    0.1 s and 1.0 s: positive means the upper harmonics keep singing
 vibrato (round 0c, "a smidge slower" on the long slide):
   vibrato_hz_w1    vibrato rate at WAVER 1 (bar landed, SLIDE 0), from the pitch track's spectrum
+vibrato depth (round 0d, "a tad shallower"):
+  vibrato_pp_w05, vibrato_pp_w1, vibrato_pp_default
+                   peak-to-peak cents (2·sqrt(2)·std over the longest unbroken pitch stretch)
 """
 from __future__ import annotations
 
@@ -66,6 +69,29 @@ def probe(voice, velocity=.75, module=dp):
     }
 
 
+def _stretch(voice, macros, module):
+    y, p = module.render(voice, dict(macros, SLIDE=0.0))
+    tr, dt = measure.pitch_track(y, RATE)
+    c = 1200 * np.log2(tr / module.hz(p.midi))
+    c = c[int(.45 / dt):int(min(len(y) / RATE - .3, 2.6) / dt)]
+    best, start = (0, 0), None
+    for i, ok in enumerate(np.append(np.isfinite(c), False)):
+        if ok and start is None:
+            start = i
+        elif not ok and start is not None:
+            best = max(best, (i - start, start))
+            start = None
+    return c[best[1]:best[1] + best[0]], dt
+
+
+def vibrato_pp(voice, waver=None, module=dp):
+    """Peak-to-peak vibrato depth in cents; None when under 0.4 s of pitch can be tracked."""
+    seg, dt = _stretch(voice, {} if waver is None else {"WAVER": waver}, module)
+    if len(seg) * dt < .4:
+        return None
+    return round(float(2 * np.sqrt(2) * np.std(seg - seg.mean())))
+
+
 def vibrato_hz(voice, waver=1.0, module=dp):
     y, p = module.render(voice, {"SLIDE": 0.0, "WAVER": waver})
     tr, dt = measure.pitch_track(y, RATE)
@@ -92,7 +118,10 @@ def main(module=dp):
     out = {}
     for v in ("CONE", "BOTTLE", "LAP", "STEEL"):
         out[v] = {"medium": probe(v, .75, module), "hard": probe(v, 1.0, module),
-                  "vibrato_hz_w1": vibrato_hz(v, 1.0, module)}
+                  "vibrato_hz_w1": vibrato_hz(v, 1.0, module),
+                  "vibrato_pp_default": vibrato_pp(v, None, module),
+                  "vibrato_pp_w05": vibrato_pp(v, .5, module),
+                  "vibrato_pp_w1": vibrato_pp(v, 1.0, module)}
         print(v, json.dumps(out[v]))
     if len(sys.argv) > 1:
         json.dump(out, open(sys.argv[1], "w"), indent=1)
