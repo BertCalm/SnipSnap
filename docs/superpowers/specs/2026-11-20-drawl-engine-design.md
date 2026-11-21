@@ -1,9 +1,10 @@
 # DRAWL Engine: Engineering Specification
 
 Version 0.1 · 2026-11-20
-Status: round 1 built. The owner kept all six voices of the Python prototype after rounds 0b to 0d
-(§18); the native Kotlin engine is built and probed and awaits its first listen (As built). No
-acceptance gate is passed yet.
+Status: round 3 built. The owner kept all six voices of the Python prototype after rounds 0b to 0d
+(§18), then the native Kotlin engine (round 1) and its strums and takes (round 2), all pinned. Round 3
+files the factory bank and puts the DRAWL and DRAWL TAKES starters on the shelf; the owner kept both
+kits by ear and they are pinned (As built). HOLD is finite, the owner's decision (§10). Round 4 adds keys, chord-tool voicings and the SYNTH picker (As built); the keys await a listen.
 Repository truth: read at `7fd194f1`. APIs grepped: `Strings.Loop` and `Strings.Loop.retune`
 (`Strings.kt:529`, `:675`), `Strings.tune` (`:101`), `Strings.pluckExciter` (`:366`), `Strings.pickup`
 (`:401`), `Strings.bodyRing` (`:1321`), `Restrike.canRestrike` (`Restrike.kt:35`), `OsteriaStrum`
@@ -255,6 +256,10 @@ exception worth asking about: a swelled steel chord is a pad, and a loop cut fro
 BORE strategy, seam measured against a real preceding cycle) is possible. That is the owner's call at
 the round-3 gate; until then it is refused and the test says so.
 
+**Decided (21 Nov 2026, round 3).** Asked whether STEEL and LAP should sustain while a pad is held, the
+owner answered "All sound good" to the recommendation to let every voice ring out: HOLD stays finite on
+all six voices, `Drawl.isLoop` is false for every HOLD, and no loop is cut.
+
 ## 11. Render budget
 
 Python round 0 (numba string loop, scipy filters, desktop): the string loop costs 6 to 11 ms per note;
@@ -343,7 +348,8 @@ emmons, sho-bud, and "national" only as `national\s*reso` (the word alone is ord
 | LAP's whine and the slower wide vibrato (0c) | heard, owner, 20 Nov 2026 | "Better, but maybe the vibrato needs to be a tad shallower." |
 | The shallower vibrato (0d) | heard, owner, 21 Nov 2026 | "Yes" |
 | All six voices of the Python prototype (round 0d) | kept by ear, owner, 21 Nov 2026 | "Keep all" |
-| The native Kotlin engine (round 1) sounds like what was kept | measured, not heard | `round1_compare_kotlin.json`; the round-1 listening page |
+| The native Kotlin engine (round 1) sounds like what was kept | kept by ear, owner, 21 Nov 2026 | "Sound great, proceed"; pinned by `DrawlNativePinsTest` |
+| Native strums and takes 2 and 3 (round 2) | not heard | the round-2 listening page |
 
 ## 17. Why it is built this way
 
@@ -478,3 +484,96 @@ macro moves the render, an unknown key does not, a NaN falls back; WAVER's pitch
 the knob; a harder pick is louder and has a brighter level-matched onset on every voice; four takes
 are four distinct strikes in tune; render length equals `renderFrames` and the class is LOOP, never
 a drum; the tail decays under half the strike; JSON round-trips; scramble stays in bounds.
+
+### Round 2: pins, ROBIN and STRUM (21 Nov 2026)
+
+The owner heard the round-1 page and kept the native engine: "Sound great, proceed."
+
+- **Pins.** `DrawlNativePinsTest` and `synth/src/test/resources/drawl/native-kept-v1.sha256` hold the
+  30 renders that page played (each voice's default, soft and hard pick, long slide with full vibrato,
+  and take 1) by the SHA-256 of their float samples. `generateDrawlAudition` writes the hashes; after
+  this round's refactor every one of its 84 round-1 WAVs matched the heard clips byte for byte.
+- **ROBIN.** `Restrike.canRestrike` takes `DrawlPatch`. As with ACCORD, velocity is the pick's timbre,
+  so ROBIN's hit scales the saved touch with no force spread; take 0 is the saved render and later
+  hits cycle through takes 1 to 3, never back to 0 (`Restrike.drawlTake`). A strum keeps its chord.
+- **STRUM.** `DrawlStrum.Articulation` (2 to 6 tones, 10 to 240 ms, DOWN or UP) on `DrawlPatch`, saved
+  as a versioned `strum` object only when present; `DrawlStrum.fromChord` takes the chord tool's
+  voicing and moves its root by whole octaves into TUNE's reach. The chord is §9's, as the round-0
+  prototype played it: each string its own pick and scrape seed (seed + 101 per string), a bar chord on
+  one path, STEEL's pedals per string, a fretted chord unslid and without pick tension, no string
+  behind the bar, one body, scaled by 1 / sqrt(strings). The length is the single note's.
+- **Dropped:** §9's extra pedal-timing variation for STEEL's takes. The owner has heard and kept
+  STEEL's take 1 as it is, and the variation would change it.
+
+`DrawlTest` gains: every chord tone sits over 6 dB above a non-chord tone on all six voices once the
+strings have landed; direction, sweep and STEEL's pedals each change the chord (the pedalled top tone
+is held back before the pedal goes down); strums keep length and class, round-trip, and refuse a
+chord without the played note or a sweep past 240 ms; `fromChord`'s octave moves; ROBIN's dealing.
+Locally: `DrawlTest`, `DrawlNativePinsTest`, `RestrikeTest`, `PresetsTest`, `PatchesTest` and the DRAWL
+determinism canary pass; the full suite runs this session's container out of memory, so CI holds it.
+
+### Round 3: factory bank, DRAWL and DRAWL TAKES (21 Nov 2026)
+
+The owner heard the round-2 page (each voice's strum down and up and takes 3 and 4, beside the
+prototype) and answered "All sound good": the strums and takes are kept, and HOLD stays finite (§10).
+
+- **Pins.** `native-round2-v1.sha256` holds those 24 renders (`DrawlNativePins.round2Cases`); every
+  one's WAV matched the round-2 page's clips byte for byte before it was pinned.
+- **Factory bank.** `DrawlPresets` leaves `PatchTypes.PROTOTYPES` and files 18 presets in `Presets`:
+  per voice its default note, its long slide with full vibrato (SLIDE 1, WAVER 1) and its strum (the
+  heard chord, `DrawlPresets.STRUMS`, DOWN). Each is a render the owner kept, which `DrawlTest` proves
+  by hash against the round-1 and round-2 pins. The names were shortened to the 14 characters a pad
+  and a user preset show (RESO TWANG, BOTTLENECK, LAP STEEL, PEDAL STEEL, FLAT-TOP, WESTERN NYLON, and
+  each voice's SLIDE and STRUM); the trademark blocklist holds.
+- **DRAWL** (`drawl`, the plucks shelf): sixteen dry finite pads in D major pentatonic, the key every
+  voice's root sits in. A01 to A08 walk RESO TWANG from D3 to F#4 by TUNE; A09 to A12 are BOTTLENECK,
+  LAP STEEL, PEDAL STEEL and WESTERN NYLON; A13 and A14 LAP SLIDE and PEDAL SLIDE; A15 and A16 FLAT-TOP
+  STRUM (open D, the I chord) and RESO STRUM (open A, the V). Pads A09 to A16 and RESO A3 are heard
+  presets, hash for hash; the other seven scale notes are rendered, not heard. Every pad carries its
+  recipe and regenerates its WAV; all file as LOOP (over 1.5 s), a duration class, never a wrap.
+- **DRAWL TAKES** (`drawl-takes`, right after it): the same pads with three touches (soft .3, medium
+  .75, hard 1) of all four engine takes, the takes ROBIN deals, as ACCORD TAKES' grid. Each pad's medium
+  first take is its DRAWL pad, sample for sample; 34 of its renders are pinned heard ones. Within a
+  touch no two takes are the same strike, and a harder pick is louder at the sound's one gain. The kit
+  is 546 s of audio (72 MB of PCM24), under ACCORD TAKES.
+- **Save, playback, export.** `DrawlStarterTest`: both starters save and reload unchanged, pass
+  preflight, and play through `PadHit.resolve`. DRAWL's pads regenerate from their recipes and export
+  their PCM to MPC 3 and MPC 2. DRAWL TAKES' resolver picks the touch for the velocity and deals the four
+  takes in order, cycling; MPC 3 carries every take (`TriadKitProof`), and MPC 2 plays each touch's first
+  take with the export screen's note, the recorded format limit.
+
+`DrawlKitsTest` covers the kits' contents and pins. Locally: `DrawlTest`, `DrawlNativePinsTest`,
+`DrawlKitsTest`, `PresetsTest`, `PatchesTest`, `PadRecipeTest`, `DrawlStarterTest`, `StarterShelfTest`,
+`SynthRootTest` and `StarterKitsTest`'s stable-IDs test pass; CI holds the full suite.
+
+**Kits kept (21 Nov 2026).** The owner heard the round-3 page (every pad of both kits, the resonator walk,
+the strums, the leads and the steels, and each pad's twelve repeated hits) and kept both kits as they are.
+`DrawlKitsTest` pins all 208 renders, DRAWL's 16 pads and DRAWL TAKES' 192 takes, by the SHA-256 of their
+float samples (`drawl/kits-v1.sha256`); each matched the page's WAVs byte for byte.
+
+### Round 4: keys, chords and the picker (21 Nov 2026)
+
+The owner said go after keeping both kits. User-facing summary: [DRAWL.md](../../DRAWL.md).
+
+- **Keys** (`DrawlKeygroupMaker`, `DrawlPadMaker`, ACCORD's shape):
+  - Range and roots: each voice's root an octave either side, the reach of TUNE, at minor-third roots plus the saved note.
+  - Touches and takes: three touches (.3, .75, 1) of two takes (0 and 1), in the matching-window Cycle layout.
+  - Length: HOLD is capped at .5 on keys (about 6 s at most, against some 85 MB of floats at HOLD 1). Key-up fades over 0.6 s.
+  - Provenance: every sample is bound to its recipe by SHA-256.
+  - Refusals: a strummed recipe makes no keys.
+  - `DrawlKeygroupMakerTest` covers recipes, tiling, phone reload, MPC 3 and MPC 2 read-back, refusals, and all 960 chord-tool voicings on real FLATTOP keys.
+- **Chords** (`DrawlChords`):
+  - Every chord-tool voicing moves by whole octaves into a voice's keys. A voicing too wide for the 25 keys folds tone by tone.
+  - `DrawlChordsTest` covers every voicing on every voice and the 1/n audition sum.
+- **Picker:**
+  - `Engine.DRAWL` closes the ring after CONSORT, in `EngineCatalog` under PLUCKED & STRINGS.
+  - The typed recipe keeps velocity, take and strum through edits, drafts, scramble and SEND. SEND makes a finite one-shot, never a pad loop.
+  - `DrawlPerformanceControls` has TOUCH, TAKE 1 to 4, and STRUM OFF/DOWN/UP with the voice's kept chord and SWEEP.
+  - `HeldSpec.Drawl` serves MAKE INSTRUMENT.
+  - `DrawlSynthScreenTest` checks the screen; the READMEs count 102 picker engines.
+  - The app is not compiled here: CI builds it, and the emulator workflow runs the screen test.
+- **Listening:** `generateDrawlKeysAudition` saves every voice's keys and plays them with the app's `InstrumentEngine`.
+  The packages are 18 to 29 MB each. The clips are a key walk, three touches, a repeated key, and I-IV-V-I from the chord tool.
+
+Locally `DrawlKeygroupMakerTest`, `DrawlChordsTest`, `ConventionTest`, `EngineCatalogTest`, `StarterShelfTest` and the DRAWL
+starter, kit and pin tests pass; CI holds the full suite and the app.

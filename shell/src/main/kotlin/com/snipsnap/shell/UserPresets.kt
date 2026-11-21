@@ -536,6 +536,11 @@ object UserPresets {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "ServoPatch.fromJsonText($recipe),"
         }
+        if (patch is com.snipsnap.synth.DrawlPatch) {
+            // Velocity, take and strum live outside the macro map; promotion keeps the performance saved.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "DrawlPatch.fromJsonText($recipe),"
+        }
         if (patch is com.snipsnap.synth.EmberPatch) {
             // Velocity, take and model version live outside the macro map, as CLUTTER's do.
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")

@@ -20,9 +20,10 @@ import kotlin.random.Random
  *
  * Modal mallets and drums re-strike ([canRestrike]): SKIN's [Skin.STRUCK]
  * voices, every TERRA voice, HALOBAR mallets, BREAKER (whose source is a
- * struck SKIN drum), BACKWASH's model 5, FIRED BRONZE's model 2 and ACCORD, whose takes are its own
- * passage-offset takes ([Accord.renderTake]), kept by ear in accord-rr-1, and CONSORT, whose takes are its
- * players' own ways of playing ([Consort.TAKES]). Every take is deterministic in
+ * struck SKIN drum), BACKWASH's model 5, FIRED BRONZE's model 2, ACCORD, whose takes are its own
+ * passage-offset takes ([Accord.renderTake]), kept by ear in accord-rr-1, CONSORT, whose takes are its
+ * players' own ways of playing ([Consort.TAKES]), and DRAWL, whose takes are its own player variations
+ * ([DrawlPatch.take]; every voice's takes kept by ear in DRAWL rounds 1 and 2). Every take is deterministic in
  * (patch, velocity, seed, take); take 0 is the reference itself.
  */
 object Restrike {
@@ -37,7 +38,10 @@ object Restrike {
         (patch is SkinPatch && patch.voice in Skin.STRUCK) || patch is TerraPatch ||
             patch is DrumlinePatch || patch is HalobarPatch || patch is BreakerPatch || patch is SootPatch || patch is KerfPatch || (patch is BackwashPatch && patch.model == 5) || patch is EtchPatch ||
             (patch is ThumpPatch && patch.voice == ThumpVoice.SUB) ||
-            (patch is FiredBronzePatch && patch.model >= 2) || patch is KindredPatch || patch is AccordPatch || patch is ConsortPatch
+            (patch is FiredBronzePatch && patch.model >= 2) || patch is KindredPatch || patch is AccordPatch || patch is ConsortPatch || patch is DrawlPatch
+
+    /** DRAWL's take for Restrike take [take] on a patch saved at [saved]: 0 is the saved take, later ones cycle through 1 to [Drawl.TAKES] - 1, never back to 0. */
+    internal fun drawlTake(saved: Int, take: Int): Int = if (take == 0) saved else 1 + (saved + take - 1) % (Drawl.TAKES - 1)
 
     /** ACCORD's take for Restrike take [take]: 0 is 0, later takes cycle through 1 until [Accord.TAKES], never back to 0. */
     internal fun accordTake(take: Int): Int = if (take == 0) 0 else 1 + (take - 1) % (Accord.TAKES - 1)
@@ -73,6 +77,10 @@ object Restrike {
         // CONSORT deals its own takes: each is the players again, another way of playing the note (Consort.TAKES)
         // with fresh humanization. Its velocity is breath, so [velocity] scales the saved breath, as ACCORD's does.
         if (patch is ConsortPatch) return patch.copy(velocity = patch.velocity * velocity.coerceIn(0f, 1f), take = patch.take + take).render()
+        // DRAWL deals its own takes (the player's pick, slide and vibrato varied, the note never moved). Its velocity is
+        // the pick's timbre, so as for ACCORD [velocity] scales the saved touch with no force spread on top, and the takes
+        // are deterministic in the patch alone: no seed. A strum keeps its chord on every take.
+        if (patch is DrawlPatch) return patch.copy(velocity = patch.velocity * velocity.coerceIn(0f, 1f), take = drawlTake(patch.take, take)).render()
         val (v, offset) = landing(velocity.coerceIn(0f, 1f), seed, take)
         return when (patch) {
             is HalobarPatch -> Halobar.renderTake(patch.voice, patch.macros, v, seed, take, patch.model)

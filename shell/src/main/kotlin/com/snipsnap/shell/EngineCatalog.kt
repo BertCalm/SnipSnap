@@ -161,6 +161,8 @@ object EngineCatalog {
         "CAIRN" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.DRUMS), "Stones that knock, tumble, grind, sing and roll in a bowl"),
         // CONSORT reached the picker in round K3 (2026-11-20), appended after CAIRN as the enum is.
         "CONSORT" to EngineEntry(listOf(EngineCategory.WINDS), "Woodwinds alone or as a section in octaves and fifths"),
+        // DRAWL reached the picker in its round 4 (2026-11-21), appended after CONSORT as the enum is.
+        "DRAWL" to EngineEntry(listOf(EngineCategory.STRINGS), "Slide, steel and flat-top strings for western country"),
     )
 
     /** The entry for the engine constant [name], or null for a name the catalogue does not know. */

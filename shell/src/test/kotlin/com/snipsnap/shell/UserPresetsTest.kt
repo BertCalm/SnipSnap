@@ -404,6 +404,13 @@ class UserPresetsTest {
                 val promoted = com.snipsnap.synth.RiddimPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
                 assertEquals(preset, promoted, "${preset.name}: velocity, take and model promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
+            } else if (preset is com.snipsnap.synth.DrawlPatch) {
+                val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                assertEquals("DrawlPatch", (call.receiver as KotlinLiteral.Call).name)
+                val promoted = com.snipsnap.synth.DrawlPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: velocity, take and strum promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() })
             } else if (preset is com.snipsnap.synth.EmberPatch) {
                 val call = KotlinLiteral.parse(line.removeSuffix(",")) as KotlinLiteral.Call
                 assertEquals("fromJsonText", call.name)
@@ -1451,6 +1458,13 @@ class UserPresetsTest {
                 assertTrue("private val promoted:" in text, "RIDDIM promotions need a destination beside the accepted kits")
                 val patch = Presets.all().first { it.engine == engine }
                 assertTrue(UserPresets.rosterLine(patch).startsWith("RiddimPatch.fromJsonText("))
+            } else if (engine == com.snipsnap.synth.DrawlPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.DrawlPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.DrawlPatch::class.java, decoder.returnType,
+                    "DRAWL promotion retains velocity, take and strum")
+                assertTrue("private val promoted:" in text, "DRAWL promotions need a destination beside the heard bank")
+                for (patch in Presets.all().filter { it.engine == engine })
+                    assertTrue(UserPresets.rosterLine(patch).startsWith("DrawlPatch.fromJsonText("))
             } else if (engine == com.snipsnap.synth.EmberPatch.ENGINE) {
                 val decoder = com.snipsnap.synth.EmberPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(com.snipsnap.synth.EmberPatch::class.java, decoder.returnType,

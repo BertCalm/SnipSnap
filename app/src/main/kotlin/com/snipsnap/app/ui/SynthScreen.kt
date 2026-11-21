@@ -125,6 +125,7 @@ import com.snipsnap.shell.Breed
 import com.snipsnap.shell.BellowsPadMaker
 import com.snipsnap.shell.BorePadMaker
 import com.snipsnap.shell.ConsortPadMaker
+import com.snipsnap.shell.DrawlPadMaker
 import com.snipsnap.shell.OverlapPadMaker
 import com.snipsnap.shell.FlockPadMaker
 import com.snipsnap.shell.OhmPadMaker
@@ -323,6 +324,11 @@ import com.snipsnap.synth.ConsortChair
 import com.snipsnap.synth.ConsortInterval
 import com.snipsnap.synth.ConsortPatch
 import com.snipsnap.synth.ConsortVoice
+import com.snipsnap.synth.Drawl
+import com.snipsnap.synth.DrawlPatch
+import com.snipsnap.synth.DrawlPresets
+import com.snipsnap.synth.DrawlStrum
+import com.snipsnap.synth.DrawlVoice
 import com.snipsnap.synth.Chitin
 import com.snipsnap.synth.ChitinVoice
 import com.snipsnap.synth.ChitinPatch
@@ -1336,7 +1342,7 @@ fun SynthScreen(
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is CausticPatch) CausticEditing.edited(patch, macros = macrosByVoice.getValue(pair))
         else if (patch is SkinPatch) patch.withMacros(macrosByVoice.getValue(pair))
-        else if (patch is BristlePatch || patch is SambaPatch || patch is EmberPatch || patch is RiddimPatch || patch is DrumlinePatch || patch is TempestPatch || patch is SplayPatch || patch is OsteriaPatch || patch is EtchPatch || patch is ConsortPatch || patch is ScuffPatch || patch is CairnPatch || patch is BackwashPatch || patch is SootPatch || patch is KerfPatch || patch is HiccupPatch || patch is ClutterPatch || patch is CalabashPatch || patch is ServoPatch || patch is KindredPatch || patch is HalobarPatch || patch is ErosionPatch || patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is RivetPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
+        else if (patch is BristlePatch || patch is SambaPatch || patch is EmberPatch || patch is RiddimPatch || patch is DrumlinePatch || patch is TempestPatch || patch is SplayPatch || patch is OsteriaPatch || patch is EtchPatch || patch is ConsortPatch || patch is DrawlPatch || patch is ScuffPatch || patch is CairnPatch || patch is BackwashPatch || patch is SootPatch || patch is KerfPatch || patch is HiccupPatch || patch is ClutterPatch || patch is CalabashPatch || patch is ServoPatch || patch is KindredPatch || patch is HalobarPatch || patch is ErosionPatch || patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is RivetPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
             patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch || patch is ObbligatoPatch || patch is RelayPatch || patch is MurmurPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
@@ -1511,6 +1517,14 @@ fun SynthScreen(
             val controls = macrosByVoice.getValue(engine to voice)
             return current?.let { Patches.edited(it, name, controls) }
                 ?: ConsortPatch(name, voice as ConsortVoice, controls)
+        }
+        if (engine == Engine.DRAWL) {
+            // The pick (TOUCH), the take and the strum live on the recipe, not on a knob:
+            // keep them from the live typed recipe while the knobs edit its macros.
+            val current = loadedPatchesByVoice[engine to voice] as? DrawlPatch
+            val controls = macrosByVoice.getValue(engine to voice)
+            return current?.let { Patches.edited(it, name, controls) }
+                ?: DrawlPatch(name, voice as DrawlVoice, controls)
         }
         if (engine == Engine.OBBLIGATO) {
             val current = loadedPatchesByVoice[engine to voice] as? ObbligatoPatch
@@ -1759,6 +1773,9 @@ fun SynthScreen(
                 Engine.CONSORT -> loadedPatchesByVoice[pair] = ConsortPatch(
                     engine.patchDisplayName(voice), voice as ConsortVoice, macrosByVoice.getValue(pair),
                 )
+                Engine.DRAWL -> loadedPatchesByVoice[pair] = DrawlPatch(
+                    engine.patchDisplayName(voice), voice as DrawlVoice, macrosByVoice.getValue(pair),
+                )
                 Engine.OBBLIGATO -> loadedPatchesByVoice[pair] = ObbligatoPatch(
                     engine.patchDisplayName(voice), macrosByVoice.getValue(pair),
                 )
@@ -1936,6 +1953,15 @@ fun SynthScreen(
     fun updateConsortPatch(expectedVoice: ConsortVoice, change: (ConsortPatch) -> ConsortPatch) {
         if (engine != Engine.CONSORT || voice != expectedVoice) return
         val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? ConsortPatch ?: return
+        currentPresetByVoice.remove(engine to voice)
+        settings.remove(presetSettingsKey(engine, voice))
+        loadedPatchesByVoice[engine to voice] = change(patch)
+        // Navigation can dispose the screen before its composition effects.
+        SynthDrafts.write(settings, currentDrafts())
+    }
+    fun updateDrawlPatch(expectedVoice: DrawlVoice, change: (DrawlPatch) -> DrawlPatch) {
+        if (engine != Engine.DRAWL || voice != expectedVoice) return
+        val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as? DrawlPatch ?: return
         currentPresetByVoice.remove(engine to voice)
         settings.remove(presetSettingsKey(engine, voice))
         loadedPatchesByVoice[engine to voice] = change(patch)
@@ -2176,6 +2202,7 @@ fun SynthScreen(
                         if (editable is FilamentPatch) macrosByVoice[pair] = Filament.defaults(editable.voice) + editable.macros
                         if (editable is AccordPatch) macrosByVoice[pair] = Accord.defaults(editable.voice) + editable.macros
                         if (editable is ConsortPatch) macrosByVoice[pair] = Consort.defaults(editable.voice) + editable.macros
+                        if (editable is DrawlPatch) macrosByVoice[pair] = Drawl.defaults(editable.voice) + editable.macros
                         if (editable is RimePatch) macrosByVoice[pair] = Rime.defaults(editable.voice, editable.model) + editable.macros
                         if (editable is TidalPatch) macrosByVoice[pair] = Tidal.defaults(editable.voice, editable.model) + editable.macros
                         if (editable is TremorPatch) macrosByVoice[pair] = Tremor.defaults(editable.voice) + editable.macros
@@ -2399,7 +2426,7 @@ fun SynthScreen(
             shimmerDelayMillis = RENDER_SHIMMER_DELAY_MS,
             onRendering = { rendering = it },
             render = {
-                val sourcePatch = if (engine == Engine.BRISTLE || loadedPatch != null || engine == Engine.TEMPEST || engine == Engine.SPLAY || engine == Engine.OSTERIA || engine == Engine.ETCH || engine == Engine.CAIRN || engine == Engine.ACCORD || engine == Engine.CONSORT || engine == Engine.WICK || engine == Engine.RIME || engine == Engine.PRISM || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.RELAY || engine == Engine.CHAMBER || engine == Engine.NACRE || engine == Engine.LIBRATION)
+                val sourcePatch = if (engine == Engine.BRISTLE || loadedPatch != null || engine == Engine.TEMPEST || engine == Engine.SPLAY || engine == Engine.OSTERIA || engine == Engine.ETCH || engine == Engine.CAIRN || engine == Engine.ACCORD || engine == Engine.DRAWL || engine == Engine.CONSORT || engine == Engine.WICK || engine == Engine.RIME || engine == Engine.PRISM || engine == Engine.ORIGAMI || engine == Engine.OPENSKY || engine == Engine.FILAMENT || engine == Engine.TIDAL || engine == Engine.TREMOR || engine == Engine.RELAY || engine == Engine.CHAMBER || engine == Engine.NACRE || engine == Engine.LIBRATION)
                     buildCurrentPatch(engine.patchDisplayName(voice)) else null
                 // The bench's hit strength is audition-only. Saving, SEND and
                 // the instrument maker all keep the patch's authored velocity.
@@ -2557,6 +2584,7 @@ fun SynthScreen(
                     is ObbligatoPatch -> patch.midi
                     is AccordPatch -> patch.midi
                     is ConsortPatch -> Consort.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f)
+                    is DrawlPatch -> Drawl.midiFor(patch.voice, patch.macros["TUNE"] ?: .5f)
                     is OtisPatch -> Otis.midiFor(patch)
                     is WickPatch -> patch.midi
                     is EtchPatch -> Etch.midiFor(patch.macros["TUNE"] ?: .5f, patch.midi)
@@ -2651,7 +2679,7 @@ fun SynthScreen(
                                         drumClass = if (meridianLanding != null) deliveredClass else identified.drumClass,
                                         tuneCoarse = knownTune?.first ?: identified.tuneCoarse,
                                         tuneFine = knownTune?.second ?: identified.tuneFine,
-                                        oneShot = meridianLanding?.oneShot ?: if (patch is AccordPatch || patch is OrigamiPatch || patch is TidalPatch || patch is LibrationPatch) true else identified.oneShot,
+                                        oneShot = meridianLanding?.oneShot ?: if (patch is AccordPatch || patch is DrawlPatch || patch is OrigamiPatch || patch is TidalPatch || patch is LibrationPatch) true else identified.oneShot,
                                         loop = if (meridianLanding != null) false else identified.loop,
                                         source = when {
                                             patch is FilamentPatch && reopenedHere ->
@@ -2690,6 +2718,10 @@ fun SynthScreen(
                             it.copy(loop = false, oneShot = true,
                                 tuneCoarse = if (reopenedHere) it.tuneCoarse else 0,
                                 tuneFine = if (reopenedHere) it.tuneFine else 0)
+                        }
+                        if (patch is DrawlPatch) model.update(slot) {
+                            // LOOP is duration filing; a DRAWL note rings out and ends (HOLD is finite).
+                            it.copy(loop = false, oneShot = true)
                         }
                         if (patch is RimePatch) model.update(slot) { RimePad.configure(it, patch) }
                         model.save()
@@ -2766,6 +2798,7 @@ fun SynthScreen(
         (engine == Engine.FLOCK && FlockPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch)) ||
         (engine == Engine.BORE && BorePadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as BorePatch)) ||
         (engine == Engine.CONSORT && ConsortPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as ConsortPatch)) ||
+        (engine == Engine.DRAWL && DrawlPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as DrawlPatch)) ||
         (engine == Engine.OSTERIA && OsteriaPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OsteriaPatch)) ||
         (engine == Engine.TREFOIL && TrefoilPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as TrefoilPatch)) ||
         (engine == Engine.OBBLIGATO && ObbligatoPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as ObbligatoPatch)) ||
@@ -2894,6 +2927,10 @@ fun SynthScreen(
         Engine.CONSORT -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as ConsortPatch
             if (ConsortPadMaker.supports(patch)) HeldSpec.Consort(ConsortPadMaker.spec(patch, heldSheet.holdRelease)) else null
+        }
+        Engine.DRAWL -> {
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as DrawlPatch
+            if (DrawlPadMaker.supports(patch)) HeldSpec.Drawl(DrawlPadMaker.Spec(patch)) else null
         }
         Engine.BORE -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as BorePatch
@@ -3076,7 +3113,7 @@ fun SynthScreen(
         heldSheet.holdJob = appScope.launch {
             try {
                 // CANCEL cancels this job; the render asks and stops.
-                val heard = if (spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Wick || spec is HeldSpec.Accord || spec is HeldSpec.Bristle || spec is HeldSpec.Etch || spec is HeldSpec.Osteria || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is HeldSpec.MeridianFinite || spec is SplayFiniteHeldSpec || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
+                val heard = if (spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Wick || spec is HeldSpec.Accord || spec is HeldSpec.Drawl || spec is HeldSpec.Bristle || spec is HeldSpec.Etch || spec is HeldSpec.Osteria || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is HeldSpec.MeridianFinite || spec is SplayFiniteHeldSpec || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
                     val renderJob = coroutineContext[Job]
                     offMainInterruptible(Dispatchers.Default) {
                         spec.previewPlayback { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -3120,7 +3157,7 @@ fun SynthScreen(
                 // throws must surface here as an exception this catch sees,
                 // not fail the app's own scope.
                 val notes = coroutineScope {
-                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Wick || spec is HeldSpec.Accord || spec is HeldSpec.Bristle || spec is HeldSpec.Etch || spec is HeldSpec.Osteria || spec is HeldSpec.Trefoil || spec is HeldSpec.Meridian || spec is HeldSpec.MeridianFinite || spec is SplayFiniteHeldSpec || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Consort || spec is HeldSpec.Loop || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
+                    if (spec is HeldSpec.OpenSky || spec is HeldSpec.Bellows || spec is HeldSpec.Crease || spec is HeldSpec.Contour || spec is HeldSpec.Origami || spec is HeldSpec.Flock || spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Tidal || spec is HeldSpec.Ballast || spec is HeldSpec.Overlap || spec is HeldSpec.Wick || spec is HeldSpec.Accord || spec is HeldSpec.Drawl || spec is HeldSpec.Bristle || spec is HeldSpec.Etch || spec is HeldSpec.Osteria || spec is HeldSpec.Trefoil || spec is HeldSpec.Meridian || spec is HeldSpec.MeridianFinite || spec is SplayFiniteHeldSpec || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Consort || spec is HeldSpec.Loop || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
                         // OPENSKY has larger wet state, BELLOWS has three
                         // velocity layers, CREASE evolves its attack and
                         // held control history, CONTOUR spans seventeen zones,
@@ -3137,7 +3174,7 @@ fun SynthScreen(
                         // independent oversampled states at once. CANCEL stays live;
                         // the counter advances after each note's samples finish.
                         midis.map { midi ->
-                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Wick || spec is HeldSpec.Accord || spec is HeldSpec.Bristle || spec is HeldSpec.Etch || spec is HeldSpec.Osteria || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is HeldSpec.MeridianFinite || spec is SplayFiniteHeldSpec || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
+                            val note = if (spec is HeldSpec.Caustic || spec is HeldSpec.Libration || spec is HeldSpec.Ohm || spec is HeldSpec.Tidal || spec is HeldSpec.Flock || spec is HeldSpec.Overlap || spec is HeldSpec.Wick || spec is HeldSpec.Accord || spec is HeldSpec.Drawl || spec is HeldSpec.Bristle || spec is HeldSpec.Etch || spec is HeldSpec.Osteria || spec is HeldSpec.Trefoil || spec is HeldSpec.Filament || spec is HeldSpec.Lattice || spec is HeldSpec.Meridian || spec is HeldSpec.MeridianFinite || spec is SplayFiniteHeldSpec || spec is HeldSpec.Mercury || spec is HeldSpec.Keel || spec is HeldSpec.Arco || spec is HeldSpec.Bore || spec is HeldSpec.Loop || spec is PrismHeldSpec || spec is ObbligatoHeldSpec) {
                                 val renderJob = coroutineContext[Job]
                                 offMainInterruptible(Dispatchers.Default) {
                                     spec.renderZone(midi) { renderJob?.isActive == false || Thread.currentThread().isInterrupted }
@@ -3881,6 +3918,9 @@ fun SynthScreen(
                             engine == Engine.CONSORT ->
                                 Consort.scramble(voice as ConsortVoice, random,
                                     near = buildCurrentPatch(engine.patchDisplayName(voice)))
+                            engine == Engine.DRAWL ->
+                                Drawl.scramble(voice as DrawlVoice, random,
+                                    near = buildCurrentPatch(engine.patchDisplayName(voice)))
                             engine == Engine.TIDAL ->
                                 Tidal.scramble(voice as TidalVoice, random,
                                     near = buildCurrentPatch(engine.patchDisplayName(voice)))
@@ -4128,6 +4168,11 @@ fun SynthScreen(
                 if (engine == Engine.CONSORT) {
                     ConsortSectionControls(buildCurrentPatch(engine.patchDisplayName(voice)) as ConsortPatch,
                         classColor, scheme, ::updateConsortPatch)
+                }
+
+                if (engine == Engine.DRAWL) {
+                    DrawlPerformanceControls(buildCurrentPatch(engine.patchDisplayName(voice)) as DrawlPatch,
+                        classColor, scheme, ::updateDrawlPatch)
                 }
 
                 if (engine == Engine.APSIS) {
@@ -4763,7 +4808,7 @@ private fun SynthSectionHeading(text: String, scheme: Scheme) {
 private fun hasPlayingExtras(engine: Engine, voice: Enum<*>, loadedPatch: Patch?): Boolean =
     when (engine) {
         Engine.PLUCK -> voice == PluckVoice.UPRIGHT
-        Engine.NACRE, Engine.RIME, Engine.CAUSTIC, Engine.CREASE, Engine.MURMUR, Engine.ACCORD,
+        Engine.NACRE, Engine.RIME, Engine.CAUSTIC, Engine.CREASE, Engine.MURMUR, Engine.ACCORD, Engine.DRAWL,
         Engine.APSIS, Engine.OVEN, Engine.FILAMENT, Engine.RELAY, Engine.VENT, Engine.OSPREY,
         Engine.OPENSKY, Engine.REGISTERS, Engine.TRIO, Engine.TREFOIL, Engine.OBBLIGATO,
         Engine.MERIDIAN, Engine.WICK, Engine.RIVET, Engine.TEMPEST, Engine.SPLAY, Engine.OSTERIA, Engine.ETCH, Engine.BRISTLE -> true
@@ -6105,6 +6150,21 @@ internal sealed interface HeldSpec {
             AccordPadMaker.export(name, spec, notes, destRoot)
     }
 
+    /** DRAWL's finite keys ([DrawlPadMaker]): each voice's two octaves, three touches of two takes, no loop; key-up fades. */
+    class Drawl(private val spec: DrawlPadMaker.Spec) : HeldSpec {
+        override val zoneMidis get() = DrawlPadMaker.zoneMidis(spec)
+        override val hasAttack get() = false
+        override val hasRelease get() = false
+        override fun shelfNote(name: String) = if (name.isEmpty()) "" else "Lands in the LIBRARY as $name, playable on keyboard."
+        override val progressPerZone get() = com.snipsnap.shell.DrawlKeygroupMaker.LAYERS
+        override val knobLabel get() = "FINITE NOTES · THREE TOUCH LAYERS · TWO TAKES"
+        override val instrumentNote get() = DrawlPadMaker.instrumentNote(spec)
+        override fun renderZone(midi: Int, cancelled: () -> Boolean) = DrawlPadMaker.renderZone(spec, midi, cancelled)
+        override fun preview(cancelled: () -> Boolean) = DrawlPadMaker.preview(spec, cancelled)
+        override fun export(name: String, notes: List<List<KeyNote>>, destRoot: File) =
+            DrawlPadMaker.export(name, spec, notes, destRoot)
+    }
+
     /** Finite ETCH notes keep their own gate and release, so this sheet has no replacement release knob. */
     class Etch(private val spec: EtchPadMaker.Spec) : HeldSpec {
         override val zoneMidis get() = EtchPadMaker.zoneMidis(spec)
@@ -6665,6 +6725,60 @@ internal fun ConsortSectionControls(
         "Lead ${patch.voice.name} with ${patch.chairs.size} behind · each plays at its interval.", TapeType.lcdSmall, scheme.ink2.tape)
 }
 
+/**
+ * DRAWL's recipe beyond its knobs: how hard the string is picked (TOUCH, the patch's velocity), which of the
+ * player's four takes plays, and STRUM: off for a single note, or the voice's own chord picked DOWN or UP
+ * ([DrawlPresets.STRUMS], the chords the owner kept) with SWEEP setting how long the pick takes across it.
+ */
+@Composable
+internal fun DrawlPerformanceControls(
+    patch: DrawlPatch,
+    fill: Color,
+    scheme: Scheme,
+    onEdit: (DrawlVoice, (DrawlPatch) -> DrawlPatch) -> Unit,
+) {
+    MacroSlider("TOUCH", patch.velocity, fill, scheme,
+        onValueChange = { value -> onEdit(patch.voice) { it.copy(velocity = value.coerceIn(0f, 1f)) } })
+    TapeText("TAKE", TapeType.pixelSmall, scheme.ink2.tape)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        for (take in 0 until Drawl.TAKES) {
+            ActionButton("${take + 1}", scheme, enabled = true, lit = patch.take == take,
+                modifier = Modifier.weight(1f).semantics { selected = patch.take == take },
+                accessibilityLabel = "DRAWL TAKE ${take + 1}",
+            ) { onEdit(patch.voice) { it.copy(take = take) } }
+        }
+    }
+    TapeText("STRUM", TapeType.pixelSmall, scheme.ink2.tape)
+    val chord = DrawlPresets.STRUMS.getValue(patch.voice)
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        val choices = listOf<Pair<String, DrawlStrum.Direction?>>("OFF" to null) + DrawlStrum.Direction.entries.map { it.name to it }
+        for ((title, direction) in choices) {
+            val on = patch.strum?.direction == direction
+            ActionButton(title, scheme, enabled = true, lit = on,
+                modifier = Modifier.weight(1f).semantics { selected = on },
+                accessibilityLabel = "DRAWL STRUM $title",
+            ) {
+                onEdit(patch.voice) { p ->
+                    p.copy(strum = direction?.let { d -> (p.strum ?: chord).copy(direction = d) })
+                }
+            }
+        }
+    }
+    patch.strum?.let { strum ->
+        val span = DrawlStrum.MAX_SWEEP_SECONDS - DrawlStrum.MIN_SWEEP_SECONDS
+        MacroSlider("SWEEP", ((strum.sweepSeconds - DrawlStrum.MIN_SWEEP_SECONDS) / span).toFloat(), fill, scheme,
+            readout = "${(strum.sweepSeconds * 1000).roundToInt()} ms", onValueChange = { value ->
+                val seconds = DrawlStrum.MIN_SWEEP_SECONDS + span * value.coerceIn(0f, 1f)
+                onEdit(patch.voice) { p -> p.copy(strum = p.strum?.copy(sweepSeconds = (seconds * 1000).roundToInt() / 1000.0)) }
+            })
+    }
+    // patch.strum is another module's property, so it cannot smart-cast: read it once.
+    val strummed = patch.strum
+    TapeText(if (strummed == null) "One string · MAKE INSTRUMENT plays chords on keys." else
+        "${strummed.intervals.size} strings picked ${strummed.direction.name.lowercase()} · a chord on one pad.",
+        TapeType.lcdSmall, scheme.ink2.tape)
+}
+
 private fun consortIntervalTitle(interval: ConsortInterval): String = when (interval) {
     ConsortInterval.OCT_DOWN -> "OCTAVE DOWN"
     ConsortInterval.UNISON -> "UNISON"
@@ -6857,7 +6971,7 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE, ACCORD,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED_BRONZE, BACKWASH, DRUMLINE, SOOT, KERF, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, SERVO, EMBER, SAMBA, KINDRED, RIDDIM, CAIRN, CONSORT;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED_BRONZE, BACKWASH, DRUMLINE, SOOT, KERF, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, SERVO, EMBER, SAMBA, KINDRED, RIDDIM, CAIRN, CONSORT, DRAWL;
     val displayName: String get() = name.replace('_', ' ')
 
     /** The engine after this one in the enum's order, wrapping from the last back to the first. */
@@ -6978,6 +7092,7 @@ private enum class Engine {
         // FLUTE and SAX, then HOLLOW, SHAWM, SHAKU, PANPIPE and VESSEL, kept in bore-voices-1 and touch-bore-1 (20 Nov 2026).
         BORE -> Bore.KEPT_VOICES
         CONSORT -> ConsortVoice.entries
+        DRAWL -> DrawlVoice.entries
         // CELLO, ERHU and SARANGI, then WHEEL, BAR, GLASS and VIOL, kept in arco-voices-1 and touch-arco-1 (20 Nov 2026).
         ARCO -> Arco.KEPT_VOICES
         SCOUR -> ScourVoice.entries
@@ -7078,6 +7193,7 @@ private enum class Engine {
         MERCURY -> Mercury.macrosFor(voice as MercuryVoice)
         BORE -> Bore.macrosFor(voice as BoreVoice)
         CONSORT -> Consort.macrosFor(voice as ConsortVoice)
+        DRAWL -> Drawl.macrosFor(voice as DrawlVoice)
         ARCO -> Arco.macrosFor(voice as ArcoVoice)
         SCOUR -> Scour.macrosFor(voice as ScourVoice)
         EROSION -> Erosion.macrosFor(voice as ErosionVoice)
@@ -7183,6 +7299,7 @@ private enum class Engine {
         MERCURY -> Mercury.defaults(voice as MercuryVoice)
         BORE -> Bore.defaults(voice as BoreVoice)
         CONSORT -> Consort.defaults(voice as ConsortVoice)
+        DRAWL -> Drawl.defaults(voice as DrawlVoice)
         ARCO -> Arco.defaults(voice as ArcoVoice)
         SCOUR -> Scour.defaults(voice as ScourVoice)
         EROSION -> Erosion.defaults(voice as ErosionVoice)
@@ -7291,6 +7408,7 @@ private enum class Engine {
         MERCURY -> Mercury.scramble(voice as MercuryVoice, random)
         BORE -> Bore.scramble(voice as BoreVoice, random)
         CONSORT -> Consort.scramble(voice as ConsortVoice, random)
+        DRAWL -> Drawl.scramble(voice as DrawlVoice, random)
         ARCO -> Arco.scramble(voice as ArcoVoice, random)
         SCOUR -> Scour.scramble(voice as ScourVoice, random)
         EROSION -> Erosion.scramble(voice as ErosionVoice, random)
@@ -7405,6 +7523,7 @@ private enum class Engine {
         MERCURY -> Mercury.render(voice as MercuryVoice, macros)
         BORE -> Bore.render(voice as BoreVoice, macros)
         CONSORT -> Consort.render(voice as ConsortVoice, macros)
+        DRAWL -> Drawl.render(voice as DrawlVoice, macros)
         ARCO -> Arco.render(voice as ArcoVoice, macros)
         SCOUR -> Scour.render(voice as ScourVoice, macros)
         EROSION -> Erosion.render(voice as ErosionVoice, macros)
@@ -7516,6 +7635,7 @@ private enum class Engine {
         MERCURY -> Mercury.drumClassFor(voice as MercuryVoice, macros)
         BORE -> Bore.drumClassFor(voice as BoreVoice, macros)
         CONSORT -> Consort.drumClassFor(voice as ConsortVoice, macros)
+        DRAWL -> Drawl.drumClassFor(voice as DrawlVoice, macros)
         ARCO -> Arco.drumClassFor(voice as ArcoVoice, macros)
         SCOUR -> Scour.drumClassFor(voice as ScourVoice, macros)
         EROSION -> Erosion.drumClassFor(voice as ErosionVoice, macros)
@@ -7621,6 +7741,7 @@ private enum class Engine {
         MERCURY -> MercuryPatch(name, voice as MercuryVoice, macros)
         BORE -> BorePatch(name, voice as BoreVoice, macros)
         CONSORT -> ConsortPatch(name, voice as ConsortVoice, macros)
+        DRAWL -> DrawlPatch(name, voice as DrawlVoice, macros)
         ARCO -> ArcoPatch(name, voice as ArcoVoice, macros)
         SCOUR -> ScourPatch(name, voice as ScourVoice, macros)
         EROSION -> ErosionPatch(name, voice as ErosionVoice, macros)

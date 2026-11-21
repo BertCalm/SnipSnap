@@ -24,6 +24,7 @@ from the audio.
 | PLUCK | Karplus-Strong string: nylon, harp, koto, banjo, sitar (jawari fold-back) | TUNE DAMP PICK BODY DOUBLE (+STRIKE) | T |
 | SILK† | KS strings on scale rows: oud, guzheng, santur, shamisen (courses, dispersion, sawari) | TUNE SCALE INFLECT DAMP PICK STRIKE BODY + per voice | T |
 | MAGNET† | electric guitar: KS plus pickup comb and coil resonance, dry for VALVE | TUNE MUTE PICK BLEND | T |
+| DRAWL | bar-stopped Lagrange waveguide whose pitch path (bar, pedal or fret) is the performance; resonator, electric slide, lap and pedal steel, flat-top, nylon; STRUM and four takes | TUNE SLIDE WAVER PICK BODY RING HOLD | T/L by length |
 | ARCO† | bowed string: stick-slip on a waveguide (cello, erhu, sarangi with a 37-string chromatic tarab bank) | TUNE BOW GRIP BODY (WASH on SARANGI) HOLD BUZZ | P/L |
 | GYRE† | 4 strings 1:2:3:4 on one bridge and membrane, 8 sympathetics, internal rotor | TUNE TOUCH SYMPATHY SPIN BODY HOLD | P/L (rosterless) |
 | NACRE | two octave-paired 4-string harps, separate bodies, 8 sympathetics (prototype, HOLD refused) | TOUCH DUET CURRENT VENUE BLOOM HOLD | T |
