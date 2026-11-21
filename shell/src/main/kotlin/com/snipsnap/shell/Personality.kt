@@ -2324,6 +2324,13 @@ object Copy {
     const val SPLICE_KIT_GONE = "This pad isn't there any more."
     /** The slot was reassigned while SPLICE was open: the takes belong to a pad that no longer lives here, so nothing is written. */
     const val SPLICE_PAD_CHANGED = "This slot holds a different pad now. Nothing was touched."
+    /** SPLICE's two nudges (UAT 2026-11 user states, S-8): the cut a step earlier or later, for anyone a drag does not serve. */
+    @field:CopyLabel const val SPLICE_CUT_EARLIER = "CUT EARLIER"
+    @field:CopyLabel const val SPLICE_CUT_LATER = "CUT LATER"
+    /** The waveform's accessible name, as an adjustable control (S-8). */
+    @field:CopyLabel const val SPLICE_CUT = "SPLICE CUT"
+    /** The cut's place, read with [SPLICE_CUT]: seconds into the takes, to the hundredth. */
+    fun spliceCutAt(seconds: Double): String = "at %.2f s".format(java.util.Locale.ROOT, seconds)
     const val SPLICE_TAKE_UNREADABLE = "One of those VERSIONS won't read any more. Pick another pair."
     /** `TapeSplice.join`'s own refusal, said before the needle ever shows: a mutated (stereo) take against its mono original, or two rates. */
     const val SPLICE_FORMATS_DIFFER =
@@ -2907,6 +2914,20 @@ object Copy {
      * a toast is gone in seconds and the decision is not.
      */
     fun putOnCardOver(what: String): String = "Card · replace $what?"
+
+    /**
+     * The phone write landed and the card refused the copy (UAT 2026-11 user states, S-4): pulled,
+     * full, read-only. It read "EXPORT failed. Check your storage", which denied the copy the
+     * phone holds and named the wrong storage. Says *phone* first, as [dubCardWouldReplace] does.
+     */
+    const val DUB_DONE_CARD_REFUSED = "EXPORT done, on the phone. The card refused the copy, so check it and try again."
+    /** [DUB_DONE_CARD_REFUSED]'s door on the completion stage: the card leg again, over the same export. */
+    @field:CopyLabel const val CARD_TRY_AGAIN = "TRY THE CARD AGAIN"
+    /**
+     * The phone write landed and Android no longer lets the app write to the card's folder (S-4):
+     * a retry cannot work, so this names where the folder is picked again.
+     */
+    const val DUB_DONE_CARD_GRANT_GONE = "EXPORT done, on the phone. The card needs picking again on CARD."
 
     /** The card leg went ahead after [dubCardWouldReplace] held it, and the old export is gone. */
     fun dubCardReplacedOne(what: String): String =

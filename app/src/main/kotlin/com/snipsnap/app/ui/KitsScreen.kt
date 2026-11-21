@@ -292,7 +292,7 @@ fun KitsScreen(
             val now = System.currentTimeMillis()
             kits.associate {
                 it.dir.path to Pair<DubStamp.Status, String?>(
-                    DubStamp.status(DubStamp.read(it.dir), card),
+                    DubStamp.status(DubStamp.read(it.dir), card, DubStamp.editedAt(it.dir)),
                     Ages.agoOrNull(File(it.dir, KitStore.FILE_NAME).lastModified(), now),
                 )
             }

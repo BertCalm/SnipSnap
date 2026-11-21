@@ -16,6 +16,31 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class TideTest {
+    @Test
+    fun `the one-pass band limit is the four-pass one to the bit`() {
+        val rng = Random(11)
+        val rate = Dsp.RATE * Dsp.OVERSAMPLE
+        val inputs = listOf(
+            FloatArray(50_000) { rng.nextFloat() * 2f - 1f },
+            FloatArray(50_000) { (rng.nextFloat() * 2f - 1f) * 1e-6f },
+            FloatArray(50_000) { (rng.nextFloat() * 2f - 1f) * 40f },
+            FloatArray(4_000).also { it[0] = 1f; it[1999] = -1f },
+            FloatArray(3_000),
+            FloatArray(20_000) { if ((it / 37) % 2 == 0) 1f else -1f },
+            Consort.blow(ConsortVoice.SAX, Keys.midiHz(52), Consort.plan(ConsortVoice.SAX, 52, 0.7f,
+                Consort.defaults(ConsortVoice.SAX), 0, 200_000, 0)),
+            FloatArray(0),
+        )
+        for ((n, input) in inputs.withIndex()) {
+            val fused = input.copyOf().also { Tide.bandLimit(it, rate) }
+            val passes = input.copyOf().also { Tide.bandLimitByPasses(it, rate) }
+            assertTrue(fused.contentEquals(passes), "input $n differs")
+            val slow = input.copyOf().also { Tide.bandLimit(it, Dsp.RATE) }
+            val slowPasses = input.copyOf().also { Tide.bandLimitByPasses(it, Dsp.RATE) }
+            assertTrue(slow.contentEquals(slowPasses), "input $n differs at the output rate")
+        }
+    }
+
 
     /** A clean note: no fold, no WARP, no WANDER, the longest gate. */
     private val clean = mapOf("FOLD" to 0f, "WARP" to 0f, "WANDER" to 0f, "DECAY" to 1f)

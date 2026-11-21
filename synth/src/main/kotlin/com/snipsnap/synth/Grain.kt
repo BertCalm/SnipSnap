@@ -9,7 +9,9 @@ import kotlin.math.pow
 import kotlin.math.sqrt
 
 /**
- * GRAIN (saved key `grain`): a granular scatter. The characteristic gesture is: the hit plays, then pieces of it come
+ * GRANULAR (saved key `granular`): a granular scatter. Named GRANULAR, not GRAIN, because "grain" is a word in
+ * owner-kept preset names (MERIDIAN's CLOSE GRAIN, HARD GRAIN and GRAIN THREAD: the wood's grain), and every preset
+ * test keeps rack section names out of preset names. The characteristic gesture is: the hit plays, then pieces of it come
  * back as a cloud of short grains, scattered over the moment after it, thinning out as they go.
  *
  * The owner's Japanese references include granular versions of the rim clicks and the hand gong, and nothing in the

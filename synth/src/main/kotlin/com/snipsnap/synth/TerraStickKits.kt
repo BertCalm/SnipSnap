@@ -20,7 +20,7 @@ import com.snipsnap.kit.ArrangedPad
  *   instruments, so this kit is built around the rack ([FxChain]). The odaiko rewound and in a large room,
  *   echoes timed near the references' 90 BPM (TIME 0.66, about 250 ms, a dotted sixteenth; TIME 0.94, about
  *   333 ms, an eighth), the shime smeared into a spring, the rim through tape, the fan ghosted, the water drum
- *   dubbed. Since round 8 three pads run GRAIN, the rack's granular scatter, for the references'
+ *   dubbed. Since round 8 three pads run GRANULAR, the rack's granular scatter, for the references'
  *   granular versions of the shime, the rim and the gong's edge.
  *
  * Every pad carries three touches (a third, two thirds and all of a full strike: [TOUCHES]) and
@@ -141,11 +141,11 @@ object TerraStickKits {
         pad("Don Echo", NAGADO, HIT, "TUNE" to .45f, "DECAY" to .4f) to FxChain(echo = echo(.66f, .5f, .6f, .4f)),
         pad("Don Ghost", NAGADO, HIT, "TUNE" to .3f, "DECAY" to .6f) to FxChain(ghost = mapOf("AMOUNT" to .7f), room = mapOf("SIZE" to .6f, "WALLS" to .5f, "DISTANCE" to .7f)),
         pad("Ten Echo", SHIME, HIT, "STROKE" to 0f, "DECAY" to .4f) to FxChain(echo = echo(.66f, .35f, .55f, .35f)),
-        pad("Ten Grains", SHIME, HIT, "STROKE" to 1f, "TUNE" to .4f) to FxChain(grain = mapOf("MIX" to .7f, "SIZE" to .35f, "DENSITY" to .6f, "SCATTER" to .55f), spring = mapOf("SIZE" to .5f, "TONE" to .5f, "MIX" to .3f)),
+        pad("Ten Grains", SHIME, HIT, "STROKE" to 1f, "TUNE" to .4f) to FxChain(granular = mapOf("MIX" to .7f, "SIZE" to .35f, "DENSITY" to .6f, "SCATTER" to .55f), spring = mapOf("SIZE" to .5f, "TONE" to .5f, "MIX" to .3f)),
         pad("Ka Echo", KA, HIT, "DECAY" to .3f, "ATTACK" to .7f) to FxChain(echo = echo(.3f, .6f, .7f, .45f)),
-        pad("Ka Grains", KA, HIT, "TUNE" to .3f, "DECAY" to .6f) to FxChain(grain = mapOf("MIX" to .8f, "SIZE" to .2f, "DENSITY" to .75f, "SCATTER" to .5f)),
+        pad("Ka Grains", KA, HIT, "TUNE" to .3f, "DECAY" to .6f) to FxChain(granular = mapOf("MIX" to .8f, "SIZE" to .2f, "DENSITY" to .75f, "SCATTER" to .5f)),
         pad("Chan Echo", KANE, HIT, "EDGE" to 0f, "DECAY" to .6f) to FxChain(echo = echo(.94f, .55f, .4f, .45f)),
-        pad("Chiki Grains", KANE, HIT, "EDGE" to 1f, "DECAY" to .4f) to FxChain(grain = mapOf("MIX" to .7f, "SIZE" to .45f, "DENSITY" to .5f, "SCATTER" to .75f), room = mapOf("SIZE" to .5f, "WALLS" to .4f, "DISTANCE" to .7f)),
+        pad("Chiki Grains", KANE, HIT, "EDGE" to 1f, "DECAY" to .4f) to FxChain(granular = mapOf("MIX" to .7f, "SIZE" to .45f, "DENSITY" to .5f, "SCATTER" to .75f), room = mapOf("SIZE" to .5f, "WALLS" to .4f, "DISTANCE" to .7f)),
         pad("Cymbal Spring", CHAPPA, HIT, "DECAY" to .6f, "FORCE" to .4f) to FxChain(spring = mapOf("SIZE" to .7f, "TONE" to .45f, "MIX" to .5f)),
         pad("Fan Ghost", FAN, HIT, "SWEEP" to 1f, "DECAY" to .7f) to FxChain(ghost = mapOf("AMOUNT" to .6f), room = mapOf("SIZE" to .7f, "WALLS" to .3f, "DISTANCE" to .8f)),
         pad("Bell Echo", BELL, HIT, "SHAKE" to 0f, "DECAY" to .4f) to FxChain(echo = echo(.66f, .45f, .5f, .35f)),

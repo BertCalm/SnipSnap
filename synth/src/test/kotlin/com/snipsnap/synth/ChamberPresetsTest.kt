@@ -18,8 +18,12 @@ class ChamberPresetsTest {
             Triple("High Water", ChamberVoice.AQUARIUM, listOf(1f, .85f, 1f, 0f, .85f)),
         )
         val controls = listOf("STRIKE", "BALANCE", "MATERIAL", "DIVIDE", "PLACEMENT")
-        val all = ChamberPresets.all()
+        // The voices kept on 21 Nov 2026 follow the six, one recipe each, after them.
+        val all = ChamberPresets.all().filter { it.voice in Chamber.ORIGINAL_VOICES }
+        assertEquals(all, ChamberPresets.all().take(expected.size))
         assertEquals(expected.size, all.size)
+        for (patch in ChamberPresets.all().drop(expected.size))
+            assertFalse(PresetTestSupport.trademarkBlocklist.containsMatchIn(patch.name), patch.name)
         assertEquals(expected.map { it.first }, all.map { it.name })
         for ((patch, identity) in all.zip(expected)) {
             assertEquals(identity.second, patch.voice)
@@ -59,7 +63,7 @@ class ChamberPresetsTest {
     @Test
     fun `factory discovery serves both room voices and lands every recipe dry`() {
         assertEquals(ChamberPresets.all(), Presets.all().filterIsInstance<ChamberPatch>())
-        for (voice in ChamberVoice.entries) {
+        for (voice in Chamber.ORIGINAL_VOICES) {
             val bank = ChamberPresets.forVoice(voice)
             assertEquals(3, bank.size)
             assertEquals(bank, Presets.forVoice("CHAMBER", voice.name))
@@ -69,7 +73,8 @@ class ChamberPresetsTest {
             }
             assertNull(Presets.byName("CHAMBER", voice.name, "Missing"))
         }
-        assertTrue(Presets.forVoice("CHAMBER", "TIMBER").isEmpty())
+        assertEquals(ChamberPresets.forVoice(ChamberVoice.TIMBER), Presets.forVoice("CHAMBER", "TIMBER"))
+        assertEquals(1, Presets.forVoice("CHAMBER", "TIMBER").size)
         assertTrue(Presets.forVoice("CHAMBER", "UNKNOWN").isEmpty())
     }
 }
