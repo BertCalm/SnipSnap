@@ -22,7 +22,8 @@ import kotlin.random.Random
  * voices, every TERRA voice, HALOBAR mallets, BREAKER (whose source is a
  * struck SKIN drum), BACKWASH's model 5, FIRED BRONZE's model 2 and ACCORD, whose takes are its own
  * passage-offset takes ([Accord.renderTake]), kept by ear in accord-rr-1, and CONSORT, whose takes are its
- * players' own ways of playing ([Consort.TAKES]). Every take is deterministic in
+ * players' own ways of playing ([Consort.TAKES]), and a SNAP SCAN pad (one with a portrait), whose takes are its
+ * fingerprint drawn again ([SnapScan.Fingerprint]). Every take is deterministic in
  * (patch, velocity, seed, take); take 0 is the reference itself.
  */
 object Restrike {
@@ -37,7 +38,8 @@ object Restrike {
         (patch is SkinPatch && patch.voice in Skin.STRUCK) || patch is TerraPatch ||
             patch is DrumlinePatch || patch is HalobarPatch || patch is BreakerPatch || patch is SootPatch || patch is KerfPatch || (patch is BackwashPatch && patch.model == 5) || patch is EtchPatch ||
             (patch is ThumpPatch && patch.voice == ThumpVoice.SUB) ||
-            (patch is FiredBronzePatch && patch.model >= 2) || patch is KindredPatch || patch is AccordPatch || patch is ConsortPatch
+            (patch is FiredBronzePatch && patch.model >= 2) || patch is KindredPatch || patch is AccordPatch || patch is ConsortPatch ||
+            (patch is SnapPatch && patch.portrait != null)
 
     /** ACCORD's take for Restrike take [take]: 0 is 0, later takes cycle through 1 until [Accord.TAKES], never back to 0. */
     internal fun accordTake(take: Int): Int = if (take == 0) 0 else 1 + (take - 1) % (Accord.TAKES - 1)
@@ -88,6 +90,9 @@ object Restrike {
             is KerfPatch -> patch.render(velocity = v, take = take)
             // KINDRED's takes are fresh strikes: free-running oscillator phases, new noise, a few cents of drift.
             is KindredPatch -> patch.copy(velocity = v, take = (patch.take + take) % (Kindred.MAX_TAKE + 1)).render()
+            // SNAP SCAN: each take is the photo's fingerprint drawn again (SnapScan.Fingerprint: a few cents,
+            // the length feel, where the scan starts, the phase), with velocity on BRIGHT as every SNAP pad has.
+            is SnapPatch -> Velocity.atVelocity(patch.copy(take = patch.take + take), v)
             is TerraPatch -> {
                 // A voice with no POS (DAYAN's finger is always at the rim) keeps where it lands.
                 val pos = Terra.defaults(patch.voice)["POS"]

@@ -94,7 +94,12 @@ object Snap {
         MacroSpec("GRIT", 0.15f),
     )
 
-    fun macrosFor(@Suppress("UNUSED_PARAMETER") voice: SnapVoice): List<MacroSpec> = MACROS
+    /**
+     * The photo lines add SNAP SCAN's SCAN knob ([SnapScan.SCAN_MACRO]); a drawn line has no strips
+     * to scan, so it keeps the four. On a pad saved before SNAP SCAN (no portrait) SCAN moves
+     * nothing, and the screen shows it greyed (owner decision D1).
+     */
+    fun macrosFor(voice: SnapVoice): List<MacroSpec> = if (voice.readsPhoto) MACROS + SnapScan.SCAN_MACRO else MACROS
 
     fun defaults(voice: SnapVoice): Map<String, Float> = macrosFor(voice).associate { it.name to it.default }
 
@@ -353,7 +358,7 @@ object Snap {
      * than each pixel repeated, so the cycle is a curve and not a staircase
      * buzzing at the pixel rate.
      */
-    private fun resample(values: DoubleArray, out: IntArray) {
+    internal fun resample(values: DoubleArray, out: IntArray) {
         val n = values.size
         if (n >= TABLE_SIZE) {
             for (i in 0 until TABLE_SIZE) {

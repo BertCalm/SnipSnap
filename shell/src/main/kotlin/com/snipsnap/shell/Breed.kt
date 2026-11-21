@@ -253,12 +253,14 @@ object Breed {
             val table = crossTable(ap.table, bp.table) { rng.nextInt(3) }
             val envelope = crossEnvelope(ap.envelope, bp.envelope, rng)
             try {
-                return SnapPatch(ap.name, ap.voice, macros, table, envelope)
+                // A's SNAP SCAN portrait rides with A's strips (the crossed line is only the whole-picture
+                // half of the mix); a drawn shape on the child takes its place, as on any SNAP pad.
+                return SnapPatch(ap.name, ap.voice, macros, table, envelope, ap.portrait.takeIf { envelope == null })
             } catch (e: IllegalArgumentException) {
                 // A flat table, or a shape that never opens — the coin spins again.
             }
         }
-        return SnapPatch(ap.name, ap.voice, macros, ap.table, ap.envelope)
+        return SnapPatch(ap.name, ap.voice, macros, ap.table, ap.envelope, ap.portrait)
     }
 
     /** [a]'s and [b]'s drawn envelopes, crossed point by point when both carry one — [crossMacros]'s own rule when only one parent has one at all. */

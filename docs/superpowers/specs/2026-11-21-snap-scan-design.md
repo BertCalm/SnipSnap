@@ -376,18 +376,14 @@ different photos (§2.2). Follow the existing ACCORD path (`AccordRoundRobinKits
 - Fingerprint bounds: over 1,000 seeds, the pitch stays within ±3 cents of the note and the length under 1.45 s.
 - The classifier keeps every render out of the drum set; JSON round trip including strips, seed and `portraitVersion`.
 
-## 11. Open decisions for the owner
+## 11. Owner decisions (2026-11-21: "I take your recommendations")
 
-- **D1.** On an old pad without strips, should SCAN be hidden or shown greyed? Recommendation: greyed, with a note that a new photo enables it.
-- **D2.** Should the default SCAN for a new read be 0.6 (clear movement) or 0.4 (gentler)? Decide by listening to the round-0 set.
-- **D3.** Should the fingerprint strength be fixed at 0.5 or offered as a sixth knob? Recommendation: fixed; six knobs crowds the screen.
-- **D4.** Should the family be shown, and overridable? Recommendation: show its name on the LCD
-  ("PLUCK, from this photo's texture") and let a long-press cycle it. A family the player chose is
-  stored like any other.
-- **D5.** Should the session lock last 2 minutes, or until the player taps "new sound"? Recommendation: 2 minutes, plus the button.
-- **D6.** Four octaves (55 to 831 Hz), or three without the A4 register? Recommendation: four; A1
-  serves the kit's bass slot. Listen to `breath_sign` and `tone_mural` in the round 0c set, which
-  sit near the two ends.
+- **D1. Settled:** on an old pad without strips, the SCAN knob is shown greyed, with a note that a new photo enables it.
+- **D2. Superseded:** round 0c sets SCAN from each photo's own vchange (§6.5), so there is no fixed default.
+- **D3. Settled:** the fingerprint strength is fixed at 0.5. There is no sixth knob.
+- **D4. Settled (round 1b):** the LCD shows the family's name and why it was chosen ("PLUCK, from this photo's texture"), and a long-press cycles it. A family the player chose is stored like any other.
+- **D5. Settled (round 1b):** the session lock lasts 2 minutes, and a "new sound" button breaks it.
+- **D6. Settled:** four octaves, A1 to G#5.
 
 ## 12. Ledger
 
@@ -403,3 +399,62 @@ different photos (§2.2). Follow the existing ACCORD path (`AccordRoundRobinKits
 3. **Rank mapping before mapping.** Phone photos cluster; ranking each reading against real photos spreads them over the whole knob. Without it, most pads would sound alike again even with more readings.
 4. **The risky decision is the blend.** Unaligned strips cancel mid-blend (−10.9 dB worst). Aligning each strip to its neighbour once, at read time, holds the worst case to −2.3 dB at no render cost.
 5. **The fingerprint is small on purpose.** It can change how a note is played, never which note or how long the pad is, so it can add variety without breaking a kit.
+
+## As built: round 1a (2026-11-21)
+
+**What landed.**
+
+- `synth/SnapScan.kt` is new. It holds `SnapPortrait`, the stored strips, ranks, register and seed with
+  their JSON, and `SnapScan`, the read, calibration v1 and v1b, border crop, alignment, spectral
+  contrast, fingerprint and the TONE render.
+- `Snap.macrosFor` adds SCAN on the photo lines; DRAWN keeps four knobs. `Snap.resample` is now internal.
+- `SnapPatch` gains `portrait` and `take`. Both are written only when present, so an old pad's JSON
+  is unchanged.
+- `Restrike` re-strikes a SNAP pad that has a portrait: take *k* draws the fingerprint at seed + *k*,
+  and velocity stays on BRIGHT.
+- `shell/Breed` carries the first parent's portrait into a bred child.
+- `shell/SynthRoot` names the root note with the register's octave.
+- `app/SnapScreen` reads the portrait at TAKE PHOTO and at LIVE's FREEZE, with the phone clock as the
+  capture time. AS SHOT restores the portrait's knobs.
+- SCAN is greyed, with `Copy.SNAP_SCAN_OFF` under it, when the line has no portrait (D1).
+  `LiveSnapScreen` shows SNAP's own four knobs.
+
+**Changed against the design.**
+
+- **SCAN 0 is not byte-identical to an old pad.** A portrait pad always applies its PORTRAIT finish
+  (envelope family, drift, tilt, grain, clipping). SCAN 0 instead plays only the whole-picture line:
+  the test swaps the strips and gets the same bytes. Old pads, with no portrait, are byte-identical,
+  pinned by hashes taken before any SNAP SCAN code existed (`SnapLegacyGoldenTest`:
+  `bc27b9c48c381177`, `ee2fbc6cc6e8eff9`).
+- **A drawn volume shape wins over the portrait.** With a drawn shape on, the pad is sent without a
+  portrait and SCAN is greyed. `SnapPatch` refuses a portrait together with an envelope.
+- **Grain level is a shape value.** The breath noise is a low-passed LCG scaled by 4 × the grain rank × 0.12.
+- **There is no gallery import or EXIF yet** (round 2). Every read today comes from the camera, so
+  clipping always applies.
+
+**Measured (Kotlin tests).** `SnapScanTest` (20 tests) and `SnapScanShellTest` (2) pass. They cover:
+
+- determinism, and the JSON round trip bit for bit;
+- the refusal of a broken portrait in words, and a non-finite knob falling back to its default;
+- every knob and every portrait reading changing the render;
+- SCAN 0 ignoring the strips;
+- aligned strips not dipping below −3 dB, where an unaligned shifted set does;
+- flat strips staying finite;
+- the border crop;
+- the register landing on its octave (pitch within 6% at all four registers);
+- fingerprint bounds over 1,000 takes (±3 cents, ±6% length, scan start ≤ 0.5 strip);
+- the render staying under 1.5 s and classed TONAL or PERC;
+- takes being distinct and deterministic, with take 0 being the pad, and spectral centroid within 25% between takes;
+- `Restrike` agreeing with `Velocity.atVelocity` at take 0, and refusing old pads;
+- velocity raising the centroid by more than 10%;
+- a bred child keeping its portrait, and the root following the register.
+
+**Gate status** ([engine acceptance gates](../../ENGINE_ACCEPTANCE_GATES.md)).
+
+| Gate | Status |
+|---|---|
+| Velocity | Render passes (BRIGHT moves with velocity, measured as a centroid rise) |
+| Round robin | Distinct, deterministic re-strikes at render, and save/load of `take` and the seed, pass |
+| Round robin through playback and export | Not yet verified. `Robin`'s chain path should now re-strike SNAP pads, but no end-to-end kit or export test was written this round |
+| Melodic (six voices with presets, keygroups, a premade kit) | Not applicable as built: SNAP is rosterless (`PatchTypes.ROSTERLESS`), because its voices come from the player's photos |
+| Heard | Nothing. The Kotlin render has not been auditioned; the Python listening sets were |

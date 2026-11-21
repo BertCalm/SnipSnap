@@ -254,10 +254,11 @@ fun LiveSnapScreen(
             // One label for the group: these four show what the camera
             // reads and are not inputs (onValueChange below does nothing).
             TapeText(Copy.LIVE_READING_LABEL, TapeType.pixelSmall, scheme.lcdInk2)
-            for (spec in Snap.macrosFor(SnapVoice.HORIZON)) {
+            // SNAP's own four: LIVE reads a cycle a frame, with no strips for SNAP SCAN's SCAN to move.
+            for (spec in Snap.MACROS) {
                 MacroSlider(
                     label = spec.name,
-                    value = latestMacros.getValue(spec.name),
+                    value = latestMacros[spec.name] ?: spec.default,
                     fillColor = scheme.accent.tape,
                     scheme = scheme,
                     // Read, not played: LIVE's own reading drives every
