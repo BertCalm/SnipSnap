@@ -17,6 +17,7 @@ TUBES (open air columns slapped with a paddle, in a bundle).
 | TUBES v5 (`tubes_v5.py`) | approved: "Is better both ways" over v4, high and low |
 | TUBES register | a key names the tube's loudest partial (render with `midi = key - 12`) |
 | HANDPAN, DING, TONGUE, TANK | "decent", on the first phrases; not yet compared closely with the references |
+| HANDPAN, DING, TONGUE, TANK, steel v2 (`steel_v2.py`) | **not heard yet**; measured closer to the loops (below) |
 
 ## Running it
 
@@ -55,6 +56,13 @@ audio = cp.finish(raw)                           # the house output stage, 44.1 
   `ltas.py`: the measurements (single-hit anatomy, envelopes, a port of
   `CalabashTest.distanceDb`, whole-loop spectra).
 - `refs.py`: where references and output live.
+- `steel_v2.py`: the steel voices' second version, not heard yet. Each note field gains its own
+  higher shell modes (ratios from the owner's notes) and a fingertip tick, driven by the same
+  strike; hand contacts are shorter; the tongue's tuned partials and the tank's air are quieter.
+- `transcribe.py`, `resynth.py`, `fit_steel.py`, `steel_ab.py`: the resynthesis A/B. CUPOLA plays
+  the notes, rhythm and accents transcribed from a reference loop (tuning offset kept, notes
+  snapped to the file's scale), and both are measured the same way. Third-octave spectral error,
+  round 3 against steel v2: handpan 28 -> 8 dB, tongue 22 -> 8 dB, tank 20 -> 8 dB.
 
 ## What this round taught
 

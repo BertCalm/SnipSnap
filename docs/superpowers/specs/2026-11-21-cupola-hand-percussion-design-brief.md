@@ -218,6 +218,8 @@ on the kit grid. It is not the same thing: it cannot keep one shell ringing acro
 | **TUBES v4 sounds right (open, coherent)** | **heard** | owner, 2026-11-21, on the session's `listen/tubes_ab3/`: "Yes. That's it" |
 | v2 and v3 tubes sound closed | heard | owner: "The tube is open ended, but those sound like it's not" |
 | Steel voices (HANDPAN, DING, TONGUE, TANK) are decent | heard | owner, 2026-11-21: "other voices and decent", on the round-3 phrases; a first verdict, not a close comparison with the references |
+| Steel v2 closer to the loops by resynthesis: third-octave spectral error handpan 28 -> 8 dB, tongue 22 -> 8 dB, tank 20 -> 8 dB; ring 300 ms after a hit within 2 dB of the references; pitch within 2.1 cents, takes 1.4 to 2.5 dB apart (dealt), velocity 2.8 to 5.1 dB, never grows | measured | `prototype/cupola/fit_steel.py`, `steel_ab.py`; the transcription snaps notes to each file's scale, so a few notes differ |
+| Steel v2 sounds closer to the references | not heard | owner listen pending |
 | Tube register: a key names the loudest partial (mapping B) | heard | owner, 2026-11-21: "I guess b", on the session's `listen/tubes_register_ab_long/` |
 | v4 tubes do not sound tubular in the higher notes | heard | owner, 2026-11-21; measured cause: above the fitted 66 Hz note v4 lost the octave-down fundamental and its odd partials, and its attack got sharp (contact time shrank with the period) |
 | **TUBES v5 is better than v4, high and low** | **heard** | owner, 2026-11-21: "Is better both ways", on the session's `listen/tubes_v4_vs_v5/` |

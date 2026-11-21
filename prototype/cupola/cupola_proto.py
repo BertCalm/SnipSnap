@@ -272,7 +272,7 @@ def render_steel(voice: str, m: dict, midi: int, vel: float, take: int, seconds:
     base = hz(midi) if voice == "DING" else hz(key_midi(voice, m["TUNE"]))
     cts = ct * ring_scale ** .5
     cav = ring(cg * drive_scale(cts) * 6 * p3["out"], base * cr, 1.0, cts)
-    out = p3["out"] + cav + .02 * impulse * skin
+    out = p3["out"] + cav + v.get("skin", .02) * impulse * skin        # contact noise, per voice
     diag = {"width_ms": round(width, 3), "pos": round(pos, 3), "beta": round(beta, 3), "kappa": round(kappa, 5),
             "modes": nm, "springs": len(pairs) if kappa > 0 else 0,
             "peak_struck": float(np.max(np.abs(struck))), "peak_answer": float(np.max(np.abs(answer))),
