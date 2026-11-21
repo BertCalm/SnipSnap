@@ -1346,7 +1346,7 @@ presets were kept by the owner the same day ("Ok, they are good") and are pinned
 in `TerraPresetsTest`.
 
 Round 8 (2026-11-21): six pads ring past the hit's cut, three DUSK pads run the new
-GRAIN section, and every roll and riser is locked to its kit's tempo. The owner heard
+GRANULAR section, and every roll and riser is locked to its kit's tempo. The owner heard
 each beside the approved pad and took all of them ("Everything sounds great"); the
 kits are re-pinned as heard. The gates above stand.
 
