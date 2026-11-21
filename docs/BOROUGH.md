@@ -632,6 +632,19 @@ Listening page (private until shared): https://claude.ai/artifact/6y32yHPUszWK58
     balance (kick within 0.1 dB below 120 Hz). Fixed by reading each file at its own sample width, with a check that no pad
     peaks past the 0.89 level law. The page now carries the Python pad runs beside the app's. The grooves were
     unaffected (the glue sets its level from each groove's own peak). Awaiting the owner's re-listen.
+  - round 3, the same page: "I feel like the sound needs to be a bit fuller and vibrant. It feels sluggish and
+    muddled" (2026-11-21). Measured (`fuller.py`, the app's own pads, 10 s of each groove against its loop): the
+    space between hits sits 26-33 dB under the peak against the loops' 43-69 dB. The drums alone sit 51-138 dB
+    under (RIDE & RIMS 32: its ride rings 1.4 s), so the default perc stack fills the gaps and the glue lifts them
+    a further 4-7 dB. The stack also takes 2-7 dB off the bottom (under 150 Hz against 150 Hz-5 kHz). Cause: the
+    stack pads carry no level trim (each peaks at 0.89 against the kit's trimmed snare and hats at 0.28-0.54),
+    and THUD, BONGO LO, LOG, STICKS, BELL LO and the TOPS ride ring 0.5-1.4 s in the low and low mid. The top
+    is not missing: the grooves reach 10-15 kHz, the loops 1.2-4.5 kHz. Round 3 was also the first page to play
+    every groove with its stack through the glue; round 2's glued grooves were drums only. On the page as
+    round 3.1, level-matched: A now; B the stack at the kit's rest trim with tails -30 dB by 250 ms (bells and
+    rides 600 ms) and RIDE & RIMS' ride at 600 ms; C B plus tape-style saturation before the glue, driven to the
+    loop's crest (at most 6 dB). A lighter, faster glue was tried and dropped: it raised every crest 2-4 dB.
+    Awaiting the owner's pick.
   Heard as better is not accepted for the shelf: no kit has been approved yet.
 
 ## Why it is built this way
