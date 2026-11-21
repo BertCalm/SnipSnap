@@ -6005,6 +6005,7 @@ class ConventionTest {
         "LAYERS AND TAKES ▸", "TRIM AND SPLICE ▸", "MAKE FROM THIS PAD ▸", "HEAR IT IN THE BEAT ▸", // the short pad page's doors (2026-11-16)
         "COMBINE KITS · MIX TWO KITS ▸", // lands on the shelf to pick the partner kit
         "LIBRARY ▸", "SAMPLE ▸", "SAVED SAMPLES ▸", // the empty-state routes
+        "SYNTH ▸", // the empty INSTRUMENTS list's way to SYNTH (D-6)
         "MIDI DEVICES ▸", // SETTINGS' door to the MIDI devices screen
         "${'$'}{bench.label} ▸", "MY VOICE ▸", "KEYBOARD ▸", // MAKE's rows
         "ORBIT ▸", "LOOP ▸", "SONG ▸", // GROOVE's doors to the other beat benches

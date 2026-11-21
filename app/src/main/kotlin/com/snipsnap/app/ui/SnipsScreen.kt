@@ -128,6 +128,8 @@ fun SnipsScreen(
     onPickPadFor: (File) -> Unit,
     /** → LOOP: this snip becomes one track of the six-track grid. The screen stays open. */
     onSendToLoop: (SnipStore.Info) -> Unit,
+    /** LISTEN · MIC on the empty list (D-6); null while a session is already listening. */
+    onListen: (() -> Unit)? = null,
     /**
      * SHARE: the snip leaves the app, through the system chooser.
      *
@@ -361,7 +363,7 @@ fun SnipsScreen(
             if (!snipsRead) {
                 LoadingPanel(Copy.SNIPS_LOADING, Modifier.fillMaxWidth())
             } else if (snips.isEmpty()) {
-                SnipsEmpty(scheme)
+                SnipsEmpty(scheme, onListen)
             } else {
                 LazyColumn(
                     Modifier
@@ -510,11 +512,16 @@ private fun SnipRow(
  * Nothing saved: one plain sentence in a lit panel sized to it, not a panel the
  * height of the screen. Its own composable so [SnipsScreen]'s method does not
  * grow. Plain, not the tape-metaphor voice (`Copy`'s own quips): this screen's
- * own locked tone. SAVED SAMPLES has no door of its own to a sample being made
- * (LISTEN · MIC is the dock's, on every screen), so there is no button here.
+ * own locked tone.
+ *
+ * [onListen] is LISTEN · MIC, drawn under the line (UAT 2026-11 user states, D-6, ruled
+ * 2026-11-21). This panel used to have no button, on the ruling that LISTEN · MIC is the dock's;
+ * but SAMPLE's one button sends a new user here, and the screen they landed on offered nothing.
+ * The ruling gives way: the way forward is drawn where they are looking. Null (already listening,
+ * or a caller with nothing to arm) draws the line alone.
  */
 @Composable
-private fun SnipsEmpty(scheme: Scheme) {
+private fun SnipsEmpty(scheme: Scheme, onListen: (() -> Unit)?) {
     Box(
         Modifier
             .fillMaxWidth()
@@ -522,7 +529,12 @@ private fun SnipsEmpty(scheme: Scheme) {
             .padding(14.dp),
         contentAlignment = Alignment.Center,
     ) {
-        TapeText(Copy.SNIPS_EMPTY, TapeType.lcdSmall, scheme.lcdInk.tape)
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            TapeText(Copy.SNIPS_EMPTY, TapeType.lcdSmall, scheme.lcdInk.tape)
+            if (onListen != null) {
+                ActionButton(Copy.LISTEN_MIC, scheme, enabled = true, modifier = Modifier.fillMaxWidth(), onClick = onListen)
+            }
+        }
     }
 }
 
