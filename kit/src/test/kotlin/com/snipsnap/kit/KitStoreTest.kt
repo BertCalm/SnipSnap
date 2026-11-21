@@ -244,4 +244,65 @@ class KitStoreTest {
         assertFailsWith<IllegalArgumentException> { RobinSettings(1.5f, 4) }
         assertFailsWith<IllegalArgumentException> { RobinSettings(-0.1f, 4) }
     }
+
+    // ---- the live glue (round 3.1, BOROUGH): optional, backward compatible
+
+    private val stoopGlue = KitGlue(inputTrimDb = 0.79f, saturationDb = 2.7f, limiterDriveDb = 7.13f)
+
+    @Test fun `a kit's glue round-trips, with and without a saturator`() {
+        for (glue in listOf(stoopGlue, KitGlue(-2.37f, null, -10f, 4f, 0f, 7f, -1f), KitGlue(-24f, 12f, -40f, 20f, 24f, 24f, -12f))) {
+            val kit = sampleKit().copy(glue = glue)
+            val dir = File(temp, "glue-${glue.hashCode()}")
+            KitStore.save(kit, dir)
+            assertEquals(kit, KitStore.load(dir))
+            // and it is stable on disk across a second save
+            val first = File(dir, KitStore.FILE_NAME).readText()
+            KitStore.save(KitStore.load(dir), dir)
+            assertEquals(first, File(dir, KitStore.FILE_NAME).readText())
+        }
+    }
+
+    @Test fun `the glue is written as short numbers and an explicit null saturator`() {
+        val json = Json.write(KitStore.toJson(sampleKit().copy(glue = KitGlue(-2.37f, null, limiterDriveDb = 7f))))
+        assertTrue("\"inputTrimDb\": -2.37" in json, json)
+        assertTrue("\"saturationDb\": null" in json, json)
+        assertTrue("\"limiterDriveDb\": 7" in json, json)
+    }
+
+    @Test fun `a kit without glue writes no glue key and an old kit file loads unglued`() {
+        assertFalse("\"glue\"" in Json.write(KitStore.toJson(sampleKit())))
+        val dir = File(temp, "old-glue").apply { mkdirs() }
+        File(dir, KitStore.FILE_NAME).writeText("""{"version":1,"name":"Old Kit","pads":[{"slot":1,"sample":"A01_Kick_01.wav"}]}""")
+        assertNull(KitStore.load(dir).glue)
+    }
+
+    @Test fun `a damaged glue loads as no glue and the kit's pads still load`() {
+        for (bad in listOf(
+            "\"glue\": 3",
+            "\"glue\": {\"inputTrimDb\": 1}",
+            "\"glue\": {\"inputTrimDb\": 40, \"saturationDb\": null, \"thresholdDbfs\": -10, \"ratio\": 4, \"makeupDb\": 0, \"limiterDriveDb\": 7, \"ceilingDbfs\": -1}",
+            "\"glue\": {\"inputTrimDb\": \"loud\", \"saturationDb\": 3, \"thresholdDbfs\": -10, \"ratio\": 4, \"makeupDb\": 0, \"limiterDriveDb\": 7, \"ceilingDbfs\": -1}",
+        )) {
+            val kit = KitStore.fromJsonText("""{"version":1,"name":"K",$bad,"pads":[{"slot":1,"sample":"a.wav"}]}""")
+            assertNull(kit.glue, bad)
+            assertEquals("a.wav", kit.pad(1)?.sampleFile)
+        }
+        // A missing saturationDb key reads as no saturator, like an explicit null.
+        val noSat = KitStore.fromJsonText("""{"version":1,"name":"K","glue":{"inputTrimDb":1,"thresholdDbfs":-10,"ratio":4,"makeupDb":0,"limiterDriveDb":7,"ceilingDbfs":-1},"pads":[]}""")
+        assertEquals(KitGlue(1f, null, limiterDriveDb = 7f), noSat.glue)
+    }
+
+    @Test fun `the glue survives an ordinary kit edit`() {
+        val kit = sampleKit().copy(glue = stoopGlue)
+        val edited = kit.copy(pads = kit.pads.map { if (it.slot == 1) it.copy(level = 0.5f) else it })
+        assertEquals(stoopGlue, roundTrip(edited).glue)
+    }
+
+    @Test fun `glue values out of the bus's range are refused in the model`() {
+        assertFailsWith<IllegalArgumentException> { KitGlue(25f, null) }
+        assertFailsWith<IllegalArgumentException> { KitGlue(0f, 12.5f) }
+        assertFailsWith<IllegalArgumentException> { KitGlue(0f, -0.5f) }
+        assertFailsWith<IllegalArgumentException> { KitGlue(0f, null, limiterDriveDb = Float.NaN) }
+        assertFailsWith<IllegalArgumentException> { KitGlue(0f, null, ceilingDbfs = 1f) }
+    }
 }

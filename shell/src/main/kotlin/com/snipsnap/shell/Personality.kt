@@ -2386,6 +2386,27 @@ object Copy {
     const val ROBIN_KIT_DIDNT_RUN = "ROUND ROBIN didn't run. The kit is as it was."
     const val ROBIN_FOREIGN = "This pad already chains its own takes."
 
+    // ---- PERC STACK (a BOROUGH kit's A13-A16, docs/BOROUGH.md round 3.2) ----
+    /** The row's heading on the KIT screen, over a BOROUGH kit's four stacks. */
+    @field:CopyLabel const val PERC_STACK = "PERC STACK"
+    /**
+     * The ask before a swap replaces stack pads that are no longer the stack as it was made: the owner's words
+     * (2026-11-21), then the way back (Reversal's law: a line that destroys says whether it can be got back). The
+     * replaced files go to the trash, as [com.snipsnap.shell.BoroughStackSwap.swap] bins them.
+     */
+    const val PERC_STACK_ASK = "Replace your changes on A13–A16? The trash keeps them ${Reversal.DAYS} days."
+    @field:CopyLabel const val PERC_STACK_REPLACE = "REPLACE"
+    /** Under the ask: the pads that changed, and where what is on them now goes. */
+    fun percStackChanged(slots: List<Int>): String {
+        val tags = slots.map { PadBanks.tag(it) }
+        val named = if (tags.size <= 1) tags.joinToString() else tags.dropLast(1).joinToString(", ") + " and " + tags.last()
+        return "$named changed. What is there now goes in the trash, and VERSIONS rolls the kit back."
+    }
+    fun percStackBusy(stack: String): String = "Swapping in $stack…"
+    fun percStackSwapped(stack: String): String = "$stack on A13–A16. The drums didn't move."
+    const val PERC_STACK_FAILED = "PERC STACK swap failed. The kit is as it was."
+    const val PERC_STACK_NONE = "This kit has no PERC STACK to swap."
+
     // ---- ROUND ROBIN, ONE PAD ----
     const val ROBIN_ON = "ROUND ROBIN on. Turn it off to get the original back."
     const val ROBIN_OFF = "ROUND ROBIN off. The original is back."

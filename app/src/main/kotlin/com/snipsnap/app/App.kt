@@ -81,6 +81,7 @@ import com.snipsnap.app.ui.GrooveScreen
 import com.snipsnap.app.ui.HelpScreen
 import com.snipsnap.app.ui.KitLoading
 import com.snipsnap.app.ui.KitScreen
+import com.snipsnap.app.ui.PercStackAsk
 import com.snipsnap.app.ui.KeysScreen
 import com.snipsnap.app.ui.MurmurRoundRobinKeysScreen
 import com.snipsnap.app.ui.KitsScreen
@@ -510,6 +511,9 @@ fun App(shelf: KitShelf) {
     // KIT FROM ANYTHING's result sheet: the kit just written and the words about it, up until
     // it is closed or the kit is opened. Null otherwise.
     var kitFromMade by remember { mutableStateOf<KitFromMade?>(null) }
+    // PERC STACK's confirm: the kit folder a swap asked about and what it asked, until REPLACE or CANCEL. Shown
+    // only while that kit is the open one.
+    var percStackAsk by remember { mutableStateOf<Pair<File, PercStackAsk>?>(null) }
     // The job a screen is carrying on its own (Split, and a recording being
     // read in TAPE and CHOP), reported through `LocalBusySink` and gone when
     // the screen is. Work that outlives its screen is not reported here: the
@@ -3176,6 +3180,48 @@ fun App(shelf: KitShelf) {
 
     fun robinKitOff() = robinKit({ com.snipsnap.shell.RobinKit.offSaving(it) }) { Copy.ROBIN_KIT_OFF }
 
+    /**
+     * PERC STACK (docs/BOROUGH.md, round 3.2): [stack] onto A13-A16 of the open BOROUGH kit through
+     * `BoroughStackSwap.swap`, off the main thread under the kit write lock, with App's own busy line up for the
+     * render, which takes seconds (the same busy-then-land shape as EVIL TWINS). Stack pads the player changed are
+     * not replaced unasked: the swap writes nothing and names the changed slots, the row's confirm shows, and REPLACE
+     * comes back here with [replaceChanges]. A swap that lands refreshes `open`, and the pads' host reloads the bank
+     * from it as after any kit edit.
+     */
+    fun percStack(stack: com.snipsnap.synth.BoroughKits.Stack, replaceChanges: Boolean) {
+        val source = open ?: return
+        if (busy != null) return
+        percStackAsk = null
+        busy = Busy(Copy.percStackBusy(com.snipsnap.shell.BoroughStackSwap.label(stack)))
+        scope.launch {
+            try {
+                val result = try {
+                    withContext(Dispatchers.IO) {
+                        KitWrites.mutex.withLock { com.snipsnap.shell.BoroughStackSwap.swap(source.dir, stack, replaceChanges) }
+                    }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.e(TAG, "percStack: failed", e)
+                    dock.say(Copy.PERC_STACK_FAILED)
+                    return@launch
+                }
+                when (result) {
+                    is com.snipsnap.shell.BoroughStackSwap.Result.NeedsConfirm ->
+                        if (open?.dir == source.dir) percStackAsk = source.dir to PercStackAsk(result.stack, result.changedSlots)
+                    is com.snipsnap.shell.BoroughStackSwap.Result.Swapped -> {
+                        if (open?.dir == source.dir) open = KitShelf.Entry(source.dir, result.kit)
+                        kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                    }
+                    else -> Unit
+                }
+                com.snipsnap.shell.BoroughStackSwap.line(result)?.let { dock.say(it) }
+            } finally {
+                busy = null
+            }
+        }
+    }
+
     // Shared by the place and stage rows, the dock's door and the system
     // Back fallback below — one reset, one navigation, so they can never
     // drift apart on which overlay/hand-off state a departure must clear.
@@ -4454,6 +4500,9 @@ fun App(shelf: KitShelf) {
                                 onRobinOn = ::robinKitOn,
                                 onRobinSet = ::robinKitSet,
                                 onRobinOff = ::robinKitOff,
+                                onPercStack = ::percStack,
+                                percStackAsk = percStackAsk?.takeIf { it.first == open?.dir }?.second,
+                                onPercStackKeep = { percStackAsk = null },
                                 onTwins = ::evilTwins,
                                 onBankEmpty = { dock.say(Copy.bankEmpty(PadBanks.letter(it))) },
                                 bankRequest = kitBankRequest,

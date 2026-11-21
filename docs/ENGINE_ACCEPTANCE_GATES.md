@@ -1363,3 +1363,40 @@ sounds good now" (2026-11-20); the Kotlin port matches it within the prototype's
 | Percussion: roll/riser | Built and heard | An accelerating snare roll landing on kick and snare on pad 17 of every kit, so no heard pad is given up |
 | Velocity and round robin: rendering | Pass in software | Soft zones are different strikes and, over their four takes, never brighter; four different strikes per zone; a groove's soft zone is a softer performance |
 | Velocity and round robin: saving, playback, export | Pass | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 68 pads in software; the owner played the kits on a phone and an MPC ("Phone and MPC are good", 2026-11-20). MPC 2 not written (format limit) |
+
+## BOROUGH kits (rounds 3 to 3.2: generated in Kotlin, on the shelf, with their own glue and a stack picker; accepted by ear 2026-11-21)
+
+Six boom-bap drum kits (A01-A12) and four perc stacks (A13-A16), generated in the app from the recipes of the round-2
+Python kits the owner accepted ("I think they are all ready", 2026-11-20), on top of EMBER. See [BOROUGH](BOROUGH.md),
+"Round 3: Kotlin port". Evidence: `BoroughParityTest`, `BoroughKitsTest`, `BoroughDspTest`, `BoroughKitTest`,
+`:shell:generateBoroughKits`.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic, keygroups, chord tools, STRUM | Not applicable | Drum kits |
+| Drums: multiple distinct genre kits on the shelf | Built and accepted by ear ("Ready", 2026-11-21: the app's own pads through the native glue) | Six FRESH TAPE starters under SKINS, each with its default stack; 81 of 88 pads inside the spread of Python's own realisations, the rest within 0.45 dB of it |
+| Percussion: roll/riser | Built, finite | A snare roll (EMBER's press roll) on A12 of every kit |
+| Velocity and round robin: rendering | Pass in software | Three zones are different strikes on all 88 pads (gain-matched residual above -20 dB); three distinct takes per zone |
+| Velocity and round robin: saving, playback, export | Pass in software | Save, reload, the pad resolver at all 127 velocities, SFZ round trip and MPC 3 for a shelf kit; every kit by the generator (864 slices); a stack swapped in by the picker through save, reload, the resolver and MPC 3 (`BoroughStackSwapTest`, round 3.2); MPC 2 keeps each zone's first take (format limit). No phone or MPC playback yet |
+
+Round 3.1 (2026-11-21), the live glue: each kit's kit.json carries the chain the owner picked ("C for all except
+rides and rims"). The app's native bus (`GlueBus.h`: input trim, saturator, compressor, limiter) plays it when the kit
+loads and switches it off for every other kit. On each kit's demo groove the native bus matches the Python
+`model()` to -148 dB. The live trim adds +3.0 dB for a default pad's level. The glue changes no velocity or
+round-robin gate: it is a whole-kit bus after the pads, the pads on disk are not glued, and no export (MPC 3, MPC 2,
+SFZ, DecentSampler) applies it. The owner heard each kit's groove from the app's exported pads through the native
+glue (`glue_render`), beside the picks, level-matched, and answered "Ready" (2026-11-21). CI's android-build ran the
+app-side mapping test and `:app:assembleDebug`. No phone or MPC has played the kits.
+
+Round 3.2 (2026-11-21), the stack picker: the KIT screen's PERC STACK row (HANDS, TAMBOURINE, BELLS, TOPS) on an
+open BOROUGH kit re-renders only A13-A16 with `BoroughKits.stackPads(kit, stack)` for that kit, through the starter's
+own writer (`KitAssembler`: three zones of three takes as a chain). A01-A12, the glue and the rest of kit.json are
+kept. If A13-A16 differ from the stack as rendered (in kit.json or in the WAV), the app asks "Replace your changes on
+A13–A16?" before replacing them. The replaced files go to the trash, and VERSIONS rolls the swap back.
+`BoroughStackSwapTest` carries the velocity and round-robin gate through the swap for each other stack on STOOP DUST:
+PCM take for take, save and reload, the pad resolver's zones and take order, and an MPC 3 track read back. A01-A12
+stay byte-identical. The refusals (not a BOROUGH kit, the same stack, unconfirmed changes) write nothing. The row and
+its confirm are verified only by CI (android-build, and `PercStackRowTest` on the emulator); this session has no
+Android SDK. Nothing has been heard on a phone.
+
+Open: phone and MPC hardware; the picker heard and used on a phone.

@@ -89,6 +89,7 @@ object KitStore {
                     ),
                 )
             }
+            kit.glue?.let { root["glue"] = glueToJson(it) }
             kit.wear?.let {
                 // The ledger only - w is derived from it, never stored.
                 root["wear"] = JsonValue.Obj(
@@ -211,8 +212,44 @@ object KitStore {
             )
         }
         return Kit(name, pads, key, tempoBpm = obj["tempoBpm"]?.num()?.toFloat(), wear = wear, robin = robin,
-            aquariumPerformance = obj["aquariumPerformance"], id = (obj["id"] as? JsonValue.Str)?.value)
+            aquariumPerformance = obj["aquariumPerformance"], id = (obj["id"] as? JsonValue.Str)?.value,
+            glue = obj["glue"]?.let { glueFromJson(it) })
     }
+
+    /** A float as the short decimal it prints as, so kit.json reads 3.79 rather than 3.7899999618530273; exact back. */
+    private fun num(v: Float) = JsonValue.Num(v.toString().toDouble())
+
+    private fun glueToJson(g: KitGlue) = JsonValue.Obj(
+        linkedMapOf(
+            "inputTrimDb" to num(g.inputTrimDb),
+            "saturationDb" to (g.saturationDb?.let { num(it) } ?: JsonValue.Null),
+            "thresholdDbfs" to num(g.thresholdDbfs),
+            "ratio" to num(g.ratio),
+            "makeupDb" to num(g.makeupDb),
+            "limiterDriveDb" to num(g.limiterDriveDb),
+            "ceilingDbfs" to num(g.ceilingDbfs),
+        ),
+    )
+
+    /**
+     * A kit's glue, or null when the field is damaged (not an object, a value
+     * missing, the wrong type, out of the bus's range). The kit still loads and
+     * plays, unglued, which is what every kit without the field does; a glue
+     * nobody can play is not worth refusing the kit's pads over.
+     */
+    private fun glueFromJson(v: JsonValue): KitGlue? = runCatching {
+        val g = v.obj()
+        fun f(key: String) = g.getValue(key).num().toFloat()
+        KitGlue(
+            inputTrimDb = f("inputTrimDb"),
+            saturationDb = g["saturationDb"]?.takeUnless { it is JsonValue.Null }?.num()?.toFloat(),
+            thresholdDbfs = f("thresholdDbfs"),
+            ratio = f("ratio"),
+            makeupDb = f("makeupDb"),
+            limiterDriveDb = f("limiterDriveDb"),
+            ceilingDbfs = f("ceilingDbfs"),
+        )
+    }.getOrNull()
 
     /** One pad, the inverse of [padToJson] — shared by [fromJson] and, standalone, by a bin tombstone's read-back. */
     fun padFromJson(json: JsonValue): KitPad {

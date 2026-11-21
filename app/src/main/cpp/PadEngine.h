@@ -178,9 +178,9 @@ public:
     uint64_t aquariumLimitedFrames() const { return aquarium_.limitedFrames(); }
 
     /**
-     * The whole-kit glue (GlueBus.h): a compressor and lookahead limiter
-     * across the pads' mix, after the voices and before the Aquarium bus and
-     * the master gain. Serialized control thread, as [configureAquarium];
+     * The whole-kit glue (GlueBus.h): input trim, optional saturator, a
+     * compressor and lookahead limiter across the pads' mix, after the
+     * voices and before the Aquarium bus and the master gain. Serialized control thread, as [configureAquarium];
      * false means nothing was queued. Off is the default and bit-exact.
      */
     bool configureGlue(const GlueSettings& settings);
