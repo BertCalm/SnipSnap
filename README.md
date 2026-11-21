@@ -16,7 +16,7 @@ PLAY / KEYS / SURFACE on the native engine, synth, and export). What still
 needs a phone or the Live III is [`docs/BENCH.md`](docs/BENCH.md). Where
 the docs disagree with each other, start at [`docs/README.md`](docs/README.md).
 
-HYDROFORM now has a registered two-voice native prototype: [DOME and BULKHEAD](docs/HYDROFORM.md), with DOME HOLD and native/Python audition comparisons. Factory presets, kits and the Android picker await the native listening gate.
+HYDROFORM now has a registered two-voice native prototype: [DOME and BULKHEAD](docs/HYDROFORM.md), with DOME HOLD and native/Python audition comparisons. Its twelve factory presets, a sixteen-pad starter and its SYNTH picker entry shipped on 21 Nov 2026, kept by ear (promote-hydroform-1).
 
 [PATIO](docs/PATIO.md) supplies three Latin-inspired percussion starter kits: Cumbia,
 Samba and Latin dub. Each has eighteen pads, including an authored hand-drum roll
@@ -472,7 +472,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 248 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 251 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -1177,8 +1177,8 @@ render-time limits. Build its MPC program and replay files with:
 ```
 
 ONSET, SCANNED CHAIN, VOX, FORK, HALOBAR, AEROSTAT, TREMOR, BALLAST, FLOTILLA, CISTERN, CIRCUIT, OBBLIGATO, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE,
-TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, SERVO, EMBER, CAIRN, SAMBA, KINDRED, CONSORT and GRAINS round out the lineup —
-101 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
+TESSERA, PITCHWHEEL, REVEL, PRISM, ALLOY, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, CREASE, LATTICE, ACCORD, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, REGISTERS, OSPREY, OPENSKY, OVEN, FLOCK, VENT, OVERLAP, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, OTIS, WICK, BORE, ARCO, SCOUR, KEEL, CHITIN, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, SERVO, EMBER, CAIRN, SAMBA, KINDRED, CONSORT, FILL, HYDROFORM, LORENTZ and GRAINS round out the lineup —
+104 engines in the `Engine` picker; GRAINS is a separate processor, outside the picker's scope
 since it has no voice enum and works on a source snip instead of picking
 one. VOX is formant vocal synthesis — the shopping-mall-keyboard choir,
 proudly: a VOWEL knob morphs
@@ -1434,9 +1434,9 @@ TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA
 UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL,
 SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP,
 OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS,
-TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, SOOT, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, SERVO, EMBER, CAIRN, SAMBA, KINDRED, RIDDIM, KERF, CONSORT, plus GRAINS, SNAP and DRAW,
+TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED BRONZE, BACKWASH, DRUMLINE, SOOT, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, SERVO, EMBER, CAIRN, SAMBA, KINDRED, RIDDIM, KERF, CONSORT, FILL, HYDROFORM, LORENTZ, plus GRAINS, SNAP and DRAW,
 which sit beside the picker. `:synth` also holds engines that picker does not show.
-LORENTZ has a preset roster, so `snipsnap synth` renders it.
+None of them has a preset roster yet.
 
 SPLAY offers one finite TONGUE voice with five accepted population settings
 (1, 2, 4, 8 and 16 mechanisms), not five voices. Its original model-1 and model-2

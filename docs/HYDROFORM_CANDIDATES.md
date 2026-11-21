@@ -1,10 +1,11 @@
 # HYDROFORM candidate bank / R7
 
 Twelve proposed recipes and a sixteen-pad dry kit make the native port auditionable in
-musical context. They are candidates, not factory presets. The twelve recipes now live in
-`HydroformPresets` (main source, unchanged values) and the kit layout in `HydroformKits`, so the
-factory roster, the SYNTH picker and a HYDROFORM starter can serve them; all three stay off while
-`HeldPromotions` holds HYDROFORM, until the owner's picks (round promote-fhl-1). The DSP and model version remain the
+musical context. They began as candidates. The twelve recipes now live in
+`HydroformPresets` (main source, unchanged values) and the kit layout in `HydroformKits`, and they
+shipped on 21 Nov 2026 as HYDROFORM's factory roster, with its SYNTH picker entry and a HYDROFORM starter.
+The owner kept the twelve presets in the catch-up round and fix-hydroform-1 (#1250), and in round
+promote-hydroform-1 (21 Nov 2026, no notes) LA6 KEEP (the starter kit) and LA7 KEEP (touch). The DSP and model version remain the
 merged native implementation, byte-identical to the port on commit `26207f5`.
 
 This round was prepared against `22a6b40055192504f91a5a58f78e0ab01b53871e`.

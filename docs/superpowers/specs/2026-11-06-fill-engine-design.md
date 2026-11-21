@@ -119,8 +119,10 @@ HUMANIZE 0 is unchanged.
 
 Factory presets, a kit (fills cut for 90 and 120 BPM beside a SKIN kit), and the picker entry. Then flams and drags (the owner's pick for the next fill).
 
-## Promotion (prepared, held)
+## Promotion (shipped 21 Nov 2026)
 
-The factory roster entry for the eight `FillPresets`, the SYNTH picker entry and a FILL starter (`FillKits`:
-the eight fills, then the same eight with HUMANIZE at full, each with soft, medium and hard native zones) are
-written but held by `HeldPromotions` until the owner keeps them in round promote-fhl-1.
+The owner kept all three questions of round promote-fill-1 on 21 Nov 2026, with no notes: LA1 KEEP (the
+stronger HUMANIZE, the loose row), LA2 KEEP (the FILL starter: the eight fills, then the same eight with
+HUMANIZE at full on pads 9 to 16, each with soft, medium and hard native zones), LA3 KEEP (touch). The eight
+`FillPresets` are on the factory roster, FILL is on the SYNTH picker and the FILL starter (`FillKits`) is on
+the shelf under SKINS.

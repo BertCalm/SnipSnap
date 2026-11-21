@@ -1253,7 +1253,9 @@ class ConventionTest {
         if (complement == null) {
             problems += "README.md no longer names the rostered engines the picker does not show; move this law with the sentence"
         } else {
-            compare("README.md's rostered-but-not-shown list", names(complement.groupValues[1]), rosteredNotShown)
+            // "None of them has a preset roster yet." once every rostered engine is on the picker.
+            val stated = complement.groupValues[1].let { if (it.endsWith("None of them")) emptySet() else names(it) }
+            compare("README.md's rostered-but-not-shown list", stated, rosteredNotShown)
         }
 
         assertTrue(
