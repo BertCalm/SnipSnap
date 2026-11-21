@@ -48,7 +48,10 @@ object DrawlPresets {
         DrawlVoice.GUT to voice(DrawlVoice.GUT, "WESTERN NYLON", "NYLON SLIDE", "NYLON STRUM"),
     )
 
-    fun forVoice(voice: DrawlVoice): List<DrawlPatch> = bank.getValue(voice)
+    /** Paste complete UserPresets roster lines here; the heard bank stays fixed. */
+    private val promoted: List<DrawlPatch> = listOf()
+
+    fun forVoice(voice: DrawlVoice): List<DrawlPatch> = bank.getValue(voice) + promoted.filter { it.voice == voice }
 
     fun all(): List<DrawlPatch> = DrawlVoice.entries.flatMap { forVoice(it) }
 
