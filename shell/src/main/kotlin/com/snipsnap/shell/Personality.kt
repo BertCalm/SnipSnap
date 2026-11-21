@@ -1168,6 +1168,11 @@ object Copy {
      * play. Names both ways out, since either one fixes it.
      */
     const val SNAP_FLAT = "That line through the photo is one flat colour. Try another line, or another photo."
+    /**
+     * Under SNAP's knobs when SCAN is greyed: the line on screen has no strips behind it (a drawn
+     * volume shape is on, or no photo has been read since SNAP SCAN). Names the way to turn it on.
+     */
+    const val SNAP_SCAN_OFF = "SCAN plays the picture top to bottom. Take a new photo, with no drawn shape, to use it."
     /** TAKE PHOTO asks the system camera; a phone with no camera app to answer says so instead of crashing. */
     const val SNAP_NO_CAMERA = "No camera app answered. Nothing was taken."
     /**

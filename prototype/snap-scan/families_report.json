@@ -1,0 +1,72 @@
+{
+ "same_scene_pairs (thumbnail correlation > 0.6)": 4,
+ "same_scene_family_weight_change_median_max": [
+  0.1,
+  0.3
+ ],
+ "same_scene_timbre_db_median": 10.89,
+ "tau": 0.03,
+ "images": 99,
+ "calibration_v1b_extra": {
+  "contrast": [
+   0.0867929657681511,
+   0.17684073008144657,
+   0.19663207040773706,
+   0.2136850533913586,
+   0.22969755427968408,
+   0.23910362923522366,
+   0.2577796949154123,
+   0.28510317740875074,
+   0.38155937775819687
+  ],
+  "vchange": [
+   4.268826126515458,
+   6.893178267518101,
+   7.283741090656257,
+   7.50563889242471,
+   7.728488255039973,
+   7.994621499493386,
+   8.31191128295064,
+   9.508927229684284,
+   26.934429948006184
+  ]
+ },
+ "family_share_dominant": {
+  "BREATH": 0.28,
+  "PLUCK": 0.24,
+  "STRIKE": 0.23,
+  "TONE": 0.24
+ },
+ "blended_images_share": 0.2,
+ "different_photos_timbre_db": 17.66,
+ "different_photos_shape_db": 14.39,
+ "round_robin_timbre_db": 4.01,
+ "round_robin_shape_db": 2.04,
+ "within_2min_pairs": 14,
+ "within_2min_pairs_changing_dominant_family": 7,
+ "centroid_hz_10_50_90": [
+  232,
+  487,
+  1273
+ ],
+ "pitch": {
+  "today": {
+   "span_semitones": 24,
+   "notes_used": 19,
+   "top_note_share": 0.27
+  },
+  "new": {
+   "span_semitones": 45,
+   "notes_used": 31,
+   "top_note_share": 0.13
+  },
+  "new_pitch_held_share": 1.0,
+  "new_pitch_failures_by_family": {
+   "BREATH": 0,
+   "PLUCK": 0,
+   "STRIKE": 0,
+   "TONE": 0
+  }
+ },
+ "note": "Python harness. Timbre and shape distances use the centre note (A3) so pitch cannot inflate them; pitch rows use each photo's own note."
+}

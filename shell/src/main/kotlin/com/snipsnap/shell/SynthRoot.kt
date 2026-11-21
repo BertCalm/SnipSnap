@@ -368,7 +368,8 @@ object SynthRoot {
         is GlintPatch -> tune(patch, { nearestMidi(Glint.frequencyFor(patch.voice, it)) })
         is PluckPatch -> tune(patch, { nearestMidi(Pluck.frequencyFor(patch.voice, it)) })
         is ResinPatch -> tune(patch, { nearestMidi(Resin.frequencyFor(patch.voice, it)) })
-        is SnapPatch -> tune(patch, { nearestMidi(Snap.frequencyFor(it)) })
+        // A SNAP SCAN pad's note also carries its portrait's register (octaves from brightness).
+        is SnapPatch -> tune(patch, { nearestMidi(patch.portrait?.let { p -> com.snipsnap.synth.SnapScan.frequencyFor(it, p) } ?: Snap.frequencyFor(it)) })
         is TonewheelPatch -> tune(patch, { nearestMidi(Tonewheel.frequencyFor(it)) })
         is VelvetPatch -> tune(patch, { nearestMidi(Velvet.frequencyFor(patch.voice, it)) })
         // Only KALIMBA snaps TUNE to semitones; the bells and blocks sweep a continuous carrier.

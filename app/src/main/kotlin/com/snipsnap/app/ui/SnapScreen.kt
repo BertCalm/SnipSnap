@@ -86,6 +86,8 @@ import com.snipsnap.synth.PhotoKit
 import com.snipsnap.synth.PhotoPath
 import com.snipsnap.synth.Snap
 import com.snipsnap.synth.SnapPatch
+import com.snipsnap.synth.SnapPortrait
+import com.snipsnap.synth.SnapScan
 import com.snipsnap.synth.SnapVoice
 import com.snipsnap.synth.Spectrogram
 import com.snipsnap.synth.Telephone
@@ -149,9 +151,37 @@ private const val MAX_PHOTO_SIDE = 512
  * current chip's name (a tap on PLUMB followed by SEND before the read
  * lands used to do exactly that).
  */
-private class Line(val photo: Photo?, val voice: SnapVoice, val table: IntArray, val flat: Boolean)
+/**
+ * The line as read: a photo's line also carries SNAP SCAN's [portrait] (strips, readings, register,
+ * fingerprint; `SnapScan.readPortrait`), or null for a drawn line or a flat one.
+ */
+private class Line(val photo: Photo?, val voice: SnapVoice, val table: IntArray, val flat: Boolean, val portrait: SnapPortrait? = null)
 
 private fun padTag(slot: Int): String = PadBanks.tag(slot)
+
+/**
+ * The knobs a new photo sets: SNAP SCAN's (TUNE from the note name, BRIGHT, DECAY and GRIT
+ * rank-mapped, SCAN from how much the picture changes top to bottom). A photo whose line is flat
+ * along [voice] has no portrait, and falls back to SNAP's own four over the defaults.
+ */
+private fun shotKnobs(photo: Photo, voice: SnapVoice, capturedAt: Long, reading: Snap.Reading): Map<String, Float> {
+    val v = if (voice.readsPhoto) voice else SnapVoice.HORIZON
+    return try {
+        SnapScan.readPortrait(photo, v, capturedAt).macros
+    } catch (e: IllegalArgumentException) {
+        Snap.defaults(v) + Snap.macrosFrom(reading)
+    }
+}
+
+/** [photo]'s line along [voice] with its portrait; a flat line has none and is marked flat, as before. */
+private fun readLine(photo: Photo, voice: SnapVoice, capturedAt: Long): Line =
+    try {
+        val r = SnapScan.readPortrait(photo, voice, capturedAt)
+        Line(photo, voice, r.table, false, r.portrait)
+    } catch (e: IllegalArgumentException) {
+        val t = Snap.table(photo, voice)
+        Line(photo, voice, t, Snap.isFlat(t))
+    }
 
 /** The real CAMERA grant: TAKE PHOTO's default for `cameraGranted`. */
 private fun hasCameraGrant(context: Context): Boolean =
@@ -251,6 +281,10 @@ fun SnapScreen(
     var photo by remember { mutableStateOf<Photo?>(null) }
     var thumb by remember { mutableStateOf<Bitmap?>(null) }
     var reading by remember { mutableStateOf<Snap.Reading?>(null) }
+    // When the shutter fired (the phone clock): half of SNAP SCAN's fingerprint seed.
+    var capturedAt by remember { mutableStateOf(0L) }
+    // The knobs SNAP SCAN read off this photo (TUNE, BRIGHT, DECAY, GRIT, SCAN): what AS SHOT restores.
+    var shotMacros by remember { mutableStateOf<Map<String, Float>?>(null) }
     var voice by remember {
         val saved = settings[KEY_VOICE]?.let { name -> SnapVoice.values().firstOrNull { it.name == name } }
         mutableStateOf(if (saved == null || (saved == SnapVoice.DRAWN && seededDrawn == null)) SnapVoice.HORIZON else saved)
@@ -384,11 +418,15 @@ fun SnapScreen(
         looking = true
         scope.launch {
             try {
+                val at = System.currentTimeMillis()
                 val (small, p, r) = offMain(Dispatchers.Default) {
                     val small = bitmap.shrunk()
                     val p = small.toPhoto()
                     Triple(small, p, Snap.look(p))
                 }
+                val scanMacros = offMain(Dispatchers.Default) { shotKnobs(p, voice, at, r) }
+                capturedAt = at
+                shotMacros = scanMacros
                 thumb = small
                 photo = p
                 // The old picture's field is not this picture's: drop it
@@ -399,7 +437,7 @@ fun SnapScreen(
                 field = null
                 showField = false
                 reading = r
-                macros = Snap.macrosFrom(r)
+                macros = scanMacros
                 // A new photo is a new line: its knobs would otherwise
                 // land on a drawn line the photo has nothing to do with,
                 // with the picture on the LCD and its line unheard. The
@@ -482,9 +520,10 @@ fun SnapScreen(
         // toast. Same handler as the render loop's: a failure here is a
         // named logcat line and a toast, not a silent death.
         try {
-            val t = offMain(Dispatchers.Default) { Snap.table(p, v) }
-            val isFlat = Snap.isFlat(t)
-            line = Line(p, v, t, isFlat)
+            val at = capturedAt
+            val read = offMain(Dispatchers.Default) { readLine(p, v, at) }
+            val isFlat = read.flat
+            line = read
             if (isFlat) onToast(Copy.SNAP_FLAT)
         } catch (e: CancellationException) {
             throw e
@@ -513,7 +552,10 @@ fun SnapScreen(
         delay(MACRO_DEBOUNCE_MS)
         val shimmerJob = launch { delay(RENDER_SHIMMER_DELAY_MS); rendering = true }
         try {
-            val rendered = offMain(Dispatchers.Default) { Snap.render(l.table, macros, envelope) }
+            val scan = l.portrait.takeIf { envelope == null }
+            val rendered = offMain(Dispatchers.Default) {
+                if (scan != null) SnapScan.render(l.table, macros, scan) else Snap.render(l.table, macros, envelope)
+            }
             snip = rendered
             if (touched && !quietResume) audition(rendered)
             quietResume = false
@@ -548,7 +590,9 @@ fun SnapScreen(
         sendBusy = true
         appScope.launch {
             try {
-                val patch = SnapPatch(patchName, l.voice, macros, l.table, envelope)
+                // A drawn volume shape wins over the photo's own envelope: the pad keeps the shape and no portrait.
+                val portrait = l.portrait.takeIf { envelope == null }
+                val patch = SnapPatch(patchName, l.voice, macros.filterKeys { k -> Snap.macrosFor(l.voice).any { it.name == k } }, l.table, envelope, portrait)
                 val recipe = PadRecipe(patch = patch).toJsonValue()
                 val (existed, updatedKit) = offMain {
                     KitWrites.mutex.withLock {
@@ -962,14 +1006,20 @@ fun SnapScreen(
                 )
 
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    // SCAN is greyed where it would move nothing (owner decision D1): no strips behind the line.
+                    val scanLive = current?.portrait != null && envelope == null
                     for (spec in Snap.macrosFor(voice)) {
                         MacroSlider(
                             label = spec.name,
-                            value = macros.getValue(spec.name),
+                            value = macros[spec.name] ?: spec.default,
                             fillColor = classColor,
                             scheme = scheme,
                             onValueChange = { v -> updateMacro(spec.name, v) },
+                            enabled = spec.name != SnapScan.SCAN_MACRO.name || scanLive,
                         )
+                    }
+                    if (voice.readsPhoto && !scanLive) {
+                        TapeText(Copy.SNAP_SCAN_OFF, TapeType.lcdSmall, scheme.lcdInk.tape.copy(alpha = 0.7f))
                     }
                 }
 
@@ -980,7 +1030,7 @@ fun SnapScreen(
                         enabled = reading != null,
                         modifier = Modifier.weight(1f),
                     ) {
-                        reading?.let { touched = true; macros = Snap.macrosFrom(it) }
+                        reading?.let { touched = true; macros = shotMacros ?: (macros + Snap.macrosFrom(it)) }
                     }
                 }
 
@@ -1148,7 +1198,26 @@ fun SnapScreen(
                     field = null
                     showField = false
                     reading = r
-                    macros = Snap.macrosFrom(r)
+                    val at = System.currentTimeMillis()
+                    capturedAt = at
+                    // SNAP's own four land at once; SNAP SCAN's read (strips and all) follows off the
+                    // main thread, as TAKE PHOTO's does, and replaces them if this photo is still up.
+                    macros = Snap.defaults(SnapVoice.HORIZON) + Snap.macrosFrom(r)
+                    shotMacros = null
+                    val readVoice = voice
+                    scope.launch {
+                        try {
+                            val knobs = offMain(Dispatchers.Default) { shotKnobs(p, readVoice, at, r) }
+                            if (photo === p) {
+                                shotMacros = knobs
+                                macros = knobs
+                            }
+                        } catch (e: CancellationException) {
+                            throw e
+                        } catch (e: Exception) {
+                            Log.e("SnapScreen", "freeze: portrait read failed", e)
+                        }
+                    }
                     if (voice == SnapVoice.DRAWN) voice = SnapVoice.HORIZON
                     touched = true
                     showLive = false

@@ -1,0 +1,76 @@
+{
+ "images": 99,
+ "note": "Python harness; TUNE held at centre; timbre = third-octave dB rms, shape = loudness contour dB rms, first 600 ms",
+ "L0_today": {
+  "different_photos_timbre_db": 8.12,
+  "different_photos_shape_db": 8.43,
+  "round_robin_timbre_db": 0.18,
+  "round_robin_shape_db": 1.36,
+  "centroid_hz_10_50_90": [
+   297,
+   449,
+   737
+  ],
+  "pitch_held_share": 1.0
+ },
+ "L1_scan": {
+  "different_photos_timbre_db": 8.32,
+  "different_photos_shape_db": 8.68,
+  "round_robin_timbre_db": 0.6,
+  "round_robin_shape_db": 1.39,
+  "centroid_hz_10_50_90": [
+   304,
+   450,
+   743
+  ],
+  "pitch_held_share": 1.0
+ },
+ "L2_rank": {
+  "different_photos_timbre_db": 11.2,
+  "different_photos_shape_db": 10.61,
+  "round_robin_timbre_db": 0.64,
+  "round_robin_shape_db": 1.38,
+  "centroid_hz_10_50_90": [
+   278,
+   434,
+   891
+  ],
+  "pitch_held_share": 1.0
+ },
+ "L3_portrait": {
+  "different_photos_timbre_db": 11.72,
+  "different_photos_shape_db": 13.06,
+  "round_robin_timbre_db": 1.4,
+  "round_robin_shape_db": 1.72,
+  "centroid_hz_10_50_90": [
+   311,
+   482,
+   1002
+  ],
+  "pitch_held_share": 1.0
+ },
+ "L4_contrast": {
+  "different_photos_timbre_db": 12.25,
+  "different_photos_shape_db": 13.29,
+  "round_robin_timbre_db": 1.42,
+  "round_robin_shape_db": 1.7,
+  "centroid_hz_10_50_90": [
+   308,
+   540,
+   1018
+  ],
+  "pitch_held_share": 1.0
+ },
+ "L5_voicing": {
+  "different_photos_timbre_db": 12.0,
+  "different_photos_shape_db": 14.04,
+  "round_robin_timbre_db": 1.34,
+  "round_robin_shape_db": 1.65,
+  "centroid_hz_10_50_90": [
+   308,
+   474,
+   1030
+  ],
+  "pitch_held_share": 1.0
+ }
+}

@@ -440,6 +440,10 @@ class SnapPatch(
     override val macros: Map<String, Float>,
     table: IntArray,
     envelope: IntArray? = null,
+    /** SNAP SCAN's portrait (strips, readings, register, fingerprint); null on a pad saved before it. */
+    val portrait: SnapPortrait? = null,
+    /** Which round-robin take of a portrait pad this is (the fingerprint's seed + [take]); 0 is the pad as read. */
+    val take: Int = 0,
 ) : Patch {
     /** [Snap.TABLE_SIZE] brightness values, 0..255, exactly as [Snap.table] read them or [Draw] drew them. */
     val table: IntArray = table.copyOf()
@@ -464,11 +468,14 @@ class SnapPatch(
             for ((i, v) in envelope.withIndex()) require(v in 0..255) { "envelope[$i] is not a level 0..255: $v" }
             require(Draw.opens(envelope)) { "a drawn shape that never opens is silence" }
         }
+        require(take >= 0) { "a take is 0 or more, got $take" }
+        require(portrait == null || voice.readsPhoto) { "a ${voice.name} line has no photo to keep a portrait of" }
+        require(portrait == null || envelope == null) { "a portrait pad shapes its own envelope from the photo" }
     }
 
     override val engine get() = ENGINE
     override val voiceName get() = voice.name
-    override fun render() = Snap.render(table, macros, envelope)
+    override fun render() = portrait?.let { SnapScan.render(table, macros, it, take) } ?: Snap.render(table, macros, envelope)
     override fun withMacros(macros: Map<String, Float>) = copy(macros = macros)
 
     override fun toJsonValue(): JsonValue.Obj {
@@ -476,6 +483,9 @@ class SnapPatch(
         val obj = LinkedHashMap(base.entries)
         obj["table"] = JsonValue.Arr(table.map { JsonValue.Num(it.toDouble()) })
         envelope?.let { obj["envelope"] = JsonValue.Arr(it.map { v -> JsonValue.Num(v.toDouble()) }) }
+        // Written only when present, so a pad saved before SNAP SCAN writes exactly what it always did.
+        portrait?.let { obj["portrait"] = it.toJsonValue() }
+        if (take != 0) obj["take"] = JsonValue.Num(take.toDouble())
         return JsonValue.Obj(obj)
     }
 
@@ -485,22 +495,26 @@ class SnapPatch(
         macros: Map<String, Float> = this.macros,
         table: IntArray = this.table,
         envelope: IntArray? = this.envelope,
-    ): SnapPatch = SnapPatch(name, voice, macros, table, envelope)
+        portrait: SnapPortrait? = this.portrait,
+        take: Int = this.take,
+    ): SnapPatch = SnapPatch(name, voice, macros, table, envelope, portrait, take)
 
     // Not a data class: an array member would compare by identity there,
     // and a recipe round-trip test has to compare the numbers.
     override fun equals(other: Any?): Boolean =
         other is SnapPatch && name == other.name && voice == other.voice &&
             macros == other.macros && table.contentEquals(other.table) &&
-            (envelope?.contentEquals(other.envelope ?: IntArray(0)) ?: (other.envelope == null))
+            (envelope?.contentEquals(other.envelope ?: IntArray(0)) ?: (other.envelope == null)) &&
+            portrait == other.portrait && take == other.take
 
     override fun hashCode(): Int =
         (((name.hashCode() * 31 + voice.hashCode()) * 31 + macros.hashCode()) * 31 + table.contentHashCode()) * 31 +
-            (envelope?.contentHashCode() ?: 0)
+            (envelope?.contentHashCode() ?: 0) + 31 * (portrait?.hashCode() ?: 0) + take
 
     override fun toString(): String =
         "SnapPatch(name=$name, voice=$voice, macros=$macros, table=[${table.size} points]" +
-            (envelope?.let { ", envelope=[${it.size} points]" } ?: "") + ")"
+            (envelope?.let { ", envelope=[${it.size} points]" } ?: "") +
+            (portrait?.let { ", portrait=$it" } ?: "") + (if (take != 0) ", take=$take" else "") + ")"
 
     companion object {
         const val ENGINE = "SNAP"
@@ -537,7 +551,9 @@ class SnapPatch(
                     if (!Draw.opens(env)) throw JsonException("SNAP envelope never opens: silence")
                     env
                 }
-                SnapPatch(name, voice, macros, table, envelope)
+                val portrait = value.obj()["portrait"]?.takeUnless { it is JsonValue.Null }?.let { SnapPortrait.fromJsonValue(it) }
+                val take = value.obj()["take"]?.takeUnless { it is JsonValue.Null }?.int() ?: 0
+                SnapPatch(name, voice, macros, table, envelope, portrait, take)
             }
         fun fromJsonText(text: String): Patch = fromJsonValue(Json.parse(text))
     }

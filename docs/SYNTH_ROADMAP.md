@@ -2244,6 +2244,18 @@ and whatever 8-bit pixels round away. Deterministic per seed.
 Not done: the screen. The portraits want showing in a row as the
 generations drift, with any generation's sound one tap from a pad.
 
+### S7.13 — SNAP SCAN: the photo read as movement, a portrait and a fingerprint
+
+Round 1a built (2026-11-21; design and prototype in
+`docs/superpowers/specs/2026-11-21-snap-scan-design.md`, `prototype/snap-scan/`). A new photo pad
+keeps a `SnapPortrait`: 16 aligned, contrast-treated strip cycles; readings ranked against the
+owner's 99-image calibration (light, symmetry, warmth, grain, clipping); a register (A1 to A4
+octave base, from brightness); and a fingerprint seed (capture time and pixels). The new SCAN knob
+travels the strips over the note. Round robin re-strikes through `Restrike` (take = seed + k). A
+pad saved before this renders bit for bit as it did (`SnapLegacyGoldenTest`). The TONE family
+only; BREATH, PLUCK, STRIKE and the session lock are round 1b, and EXIF and gallery import are
+round 2. Not heard yet.
+
 ## S9 — TIDE: the West Coast engine
 
 **Status:** S9 built (engine, presets, tests, SYNTH picker, testkit
