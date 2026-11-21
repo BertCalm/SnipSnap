@@ -232,6 +232,41 @@ object Copy {
     const val NO_KIT_FOR_EXPORT = "Add a kit to this project first, because EXPORT dubs it for the MPC."
     /** A kit folder that won't parse (torn `kit.json`, missing file, etc.) — distinct from EMPTY_SHELF, which claims no kit exists at all. */
     const val KIT_WONT_OPEN = "This kit won't open. The file may be damaged."
+
+    /**
+     * The LIBRARY's line for kit folders whose `kit.json` will not load (UAT 2026-11 user
+     * states, S-15). They used to vanish with no row and no line, which reads as lost work;
+     * this names them, by folder, two at most and then a count. Nothing offers to delete or
+     * repair them here: the folder is still on the phone, and a damaged file may be recoverable.
+     */
+    fun kitsWontOpen(names: List<String>): String {
+        val who = when (names.size) {
+            1 -> names[0]
+            2 -> "${names[0]} and ${names[1]}"
+            else -> "${names[0]}, ${names[1]} and ${names.size - 2} more"
+        }
+        return if (names.size == 1) {
+            "$who won't open, and its kit file may be damaged."
+        } else {
+            "$who won't open, and their kit files may be damaged."
+        }
+    }
+
+    /**
+     * Said once when a kit opens with pads whose sound file is gone (UAT 2026-11 user states,
+     * S-15): such a pad was silent and said nothing until export's preflight. Pads are named
+     * by their on-screen tag, three at most and then a count; [slots] in slot order.
+     */
+    fun padsMissingFiles(slots: List<Int>): String {
+        val tags = slots.map { PadBanks.tag(it) }
+        val who = if (tags.size <= 3) {
+            if (tags.size == 1) tags[0] else tags.dropLast(1).joinToString(", ") + " and " + tags.last()
+        } else {
+            "${tags.take(3).joinToString(", ")} and ${tags.size - 3} more"
+        }
+        val noun = if (tags.size == 1) "Pad $who has no sound file, so it plays" else "Pads $who have no sound file, so they play"
+        return "$noun nothing. Record or load a sound onto ${if (tags.size == 1) "it" else "them"}."
+    }
     /**
      * CHOP SHOP's own empty face when TAPE's last commit exists but nothing
      * readable came back — its source file is gone or won't decode, and the

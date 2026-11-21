@@ -35,6 +35,19 @@ fun List<Finding>.blocked(): Boolean = any { it.severity == Severity.FAIL }
  */
 object Preflight {
 
+    /**
+     * The pads that would play nothing because a file they name is not in [kitDir]: the
+     * sample, or a velocity layer's own. The same two file tests [check] makes for its
+     * "missing sample file" and "missing layer file" FAILs, without reading any WAV, so the
+     * app can ask it every time a kit opens (UAT 2026-11 user states, S-15: such a pad was
+     * silent and said nothing until export's preflight). Slot order.
+     */
+    fun missingFileSlots(kit: Kit, kitDir: File): List<Int> =
+        kit.pads.filter { p ->
+            !File(kitDir, p.sampleFile).isFile ||
+                p.velocityLayers.any { it.sampleFile != p.sampleFile && !File(kitDir, it.sampleFile).isFile }
+        }.map { it.slot }.sorted()
+
     fun check(kit: Kit, kitDir: File): List<Finding> {
         val out = mutableListOf<Finding>()
 
