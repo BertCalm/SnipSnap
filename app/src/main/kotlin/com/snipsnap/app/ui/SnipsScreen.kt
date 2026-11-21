@@ -128,8 +128,6 @@ fun SnipsScreen(
     onPickPadFor: (File) -> Unit,
     /** → LOOP: this snip becomes one track of the six-track grid. The screen stays open. */
     onSendToLoop: (SnipStore.Info) -> Unit,
-    /** LISTEN · MIC on the empty list (D-6); null while a session is already listening. */
-    onListen: (() -> Unit)? = null,
     /**
      * SHARE: the snip leaves the app, through the system chooser.
      *
@@ -138,6 +136,11 @@ fun SnipsScreen(
      * what made a bounce that landed in SNIPS a dead end.
      */
     onShare: (SnipStore.Info) -> Unit,
+    /**
+     * LISTEN · MIC on the empty list (D-6); null while a session is already listening. Last, with
+     * a default, so the callers that pass this screen's arguments by position keep their order.
+     */
+    onListen: (() -> Unit)? = null,
 ) {
     val scheme = LocalScheme.current
     val scope = rememberCoroutineScope()
