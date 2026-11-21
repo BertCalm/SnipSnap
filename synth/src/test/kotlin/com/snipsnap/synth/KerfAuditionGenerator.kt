@@ -20,6 +20,13 @@ object KerfAuditionGenerator {
             write(File(out, "clean/Kit $kit/$name.wav"), KerfRender.render(p.patch))
             count++
         }
+        // round 3: velocity and round robin on the first four pads of each kit, as the app writes them
+        for ((kit, pads) in KerfBank.kits) for (p in pads.take(4)) {
+            val r = KerfRecipe(p.patch, p.prev, p.next, p.bleed, p.slop, p.draw)
+            val full = r.render(); val name = "Kit${kit}_%02d_%s".format(p.pad, p.drumClass)
+            for (v in listOf(1.0, 0.7, 0.45, 0.25)) write(File(out, "velocity/Kit $kit/${name}_v%03d.wav".format((v * 100).toInt())), Velocity.peakMatch(full, r.renderAt(v)).samples)
+            for (t in 0 until 4) write(File(out, "takes/Kit $kit/${name}_take$t.wav"), Velocity.peakMatch(full, r.take(t)).samples)
+        }
         println("KERF audition: $count pads to ${out.absolutePath}; chopped render ${"%.1f".format(ms / count)} ms per pad (three patches each, JVM, includes warm-up)")
     }
 
