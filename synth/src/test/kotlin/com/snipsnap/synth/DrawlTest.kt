@@ -224,6 +224,27 @@ class DrawlTest {
     }
 
     @Test
+    fun `the provisional recipes are the kept ones, distinct, plainly named and held out of the factory roster`() {
+        val all = DrawlPresets.all()
+        for (voice in DrawlVoice.entries) {
+            val mine = DrawlPresets.forVoice(voice)
+            assertTrue(mine.size == 2 && mine.all { it.voice == voice }, "$voice has ${mine.size} recipes")
+            assertEquals(Drawl.defaults(voice), mine[0].macros, "$voice's first recipe is its kept default")
+        }
+        assertEquals(all.size, all.map { it.name }.toSet().size, "recipe names repeat")
+        assertEquals(all.size, all.map { it.copy(name = "same") }.toSet().size, "two recipes are the same sound")
+        for (p in all) {
+            assertTrue(!PresetTestSupport.trademarkBlocklist.containsMatchIn(p.name), "${p.name} is on the blocklist")
+            assertEquals(Drawl.defaults(p.voice).keys, p.macros.keys, "${p.name} does not carry every macro")
+            assertEquals(p, Patches.fromJsonText(p.toJsonText()))
+        }
+        assertTrue(Presets.all().none { it.engine == DrawlPatch.ENGINE }, "DRAWL is a prototype: nothing in the factory roster")
+        for (name in listOf("Dobro slide", "GIBSON STEEL", "Rickenbacker lap", "Sho-Bud cry", "Emmons push", "National Reso"))
+            assertTrue(PresetTestSupport.trademarkBlocklist.containsMatchIn(name), "$name passes the blocklist")
+        assertTrue(!PresetTestSupport.trademarkBlocklist.containsMatchIn("NATIONAL ANTHEM"), "plain English is refused")
+    }
+
+    @Test
     fun `a note renders in a playable time`() {
         // the house playability rule is tens of ms per knob turn; a cached sound pays for one render
         for (voice in DrawlVoice.entries) Drawl.render(voice) // warm the JIT and the gain cache
