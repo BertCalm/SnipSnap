@@ -23,6 +23,12 @@ RULES = dict(
     room='EMBER room by distance (to44 / ember_voice DISTANCE)',
     ghost='designed snare at 0.4 x velocity, 0.35 s',
     stack_chain=A.STACK_CHAIN,
+    # Round 3.1 (owner: "C for all except rides and rims", 2026-11-21; fuller.py): a stack sits at its kit's own
+    # level and stops sooner, so it no longer fills the space between hits or masks the kick.
+    stack_trim='the kit\'s rest_trim_db, as on its snare and hats',
+    stack_tail=dict(hold_ms=30.0, tail_ms=250.0, long_tail_ms=600.0, long_labels=['BELL HI', 'BELL LO', 'RIDE', 'RIDE BELL'],
+                    note='after hold_ms an exponential decay reaching -30 dB at the tail (fuller.shorten); cut where it '
+                         'reaches -60 dB with a 10 ms cosine fade'),
     glue=dict(threshold_dbfs=-10.0, ratio=4.0, attack_ms=10.0, release_ms=120.0,
               limiter=dict(lookahead_ms=3.0, release_ms=50.0, ceiling_dbfs=-1.0)),
 )

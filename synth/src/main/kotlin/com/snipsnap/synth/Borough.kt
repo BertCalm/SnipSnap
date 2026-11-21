@@ -9,6 +9,7 @@ import com.snipsnap.synth.EmberDsp.peakNorm
 import com.snipsnap.synth.EmberDsp.peakOf
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.ceil
 import kotlin.math.cos
 import kotlin.math.exp
 import kotlin.math.max
@@ -81,7 +82,16 @@ object Borough {
 
     class StackRecipe(val id: String, val name: String, val pads: List<StackPad>)
 
-    class Recipes(val zones: List<Float>, val takes: Int, val stackChain: Chain, val kits: List<KitRecipe>, val stacks: List<StackRecipe>)
+    /**
+     * How a stack sits in a kit (round 3.1, fuller.py; owner: "C for all except rides and rims", 2026-11-21): after
+     * [holdMs] an exponential decay reaching -30 dB at [tailMs] ([longTailMs] for [longLabels], the bells and rides),
+     * so the stack stops filling the space between hits and masking the kick.
+     */
+    class StackTail(val holdMs: Double, val tailMs: Double, val longTailMs: Double, val longLabels: Set<String>) {
+        fun tailMsOf(label: String): Double = if (label in longLabels) longTailMs else tailMs
+    }
+
+    class Recipes(val zones: List<Float>, val takes: Int, val stackChain: Chain, val stackTail: StackTail, val kits: List<KitRecipe>, val stacks: List<StackRecipe>)
 
     val recipes: Recipes by lazy { parse(checkNotNull(javaClass.getResourceAsStream("/borough/v1/recipes.json")) { "Missing BOROUGH recipes" }.bufferedReader().use { it.readText() }) }
 
@@ -134,7 +144,11 @@ object Borough {
                     p.getValue("resample_ratio").num(), p.getValue("resample").bool())
             })
         }
-        return Recipes(rules.getValue("zones").arr().map { it.num().toFloat() }, rules.getValue("takes").int(), chainOf(rules.getValue("stack_chain").obj()), kits, stacks)
+        val tail = rules.getValue("stack_tail").obj()
+        val stackTail = StackTail(tail.getValue("hold_ms").num(), tail.getValue("tail_ms").num(), tail.getValue("long_tail_ms").num(),
+            tail.getValue("long_labels").arr().map { it.str() }.toSet())
+        return Recipes(rules.getValue("zones").arr().map { it.num().toFloat() }, rules.getValue("takes").int(), chainOf(rules.getValue("stack_chain").obj()),
+            stackTail, kits, stacks)
     }
 
     // ------------------------------------------------------------------ the takes
@@ -169,6 +183,24 @@ object Borough {
         var y = emberRaw(pad.voice, m, velocity, rng)
         if (pad.resample) y = BoroughDsp.resample(y, max(64, (y.size / pad.ratio).toInt()))
         return end(record(y, chain, velocity), y.size / SR)
+    }
+
+    /**
+     * fuller.shorten: [y] untouched for [holdMs], then an added exponential decay reaching -30 dB at [tailMs]. Past
+     * -60 dB (hold + 2 x (tail - hold)) the sound is cut, with a 10 ms cosine fade into the cut. Every stack pad
+     * peaks inside the hold, so the peak, and the level law on it, is unchanged.
+     */
+    internal fun shortenTail(y: DoubleArray, tailMs: Double, holdMs: Double): DoubleArray {
+        require(tailMs > holdMs && holdMs >= 0.0)
+        val dbPerMs = 30.0 / (tailMs - holdMs)
+        val n = min(y.size, ceil((holdMs + 2.0 * (tailMs - holdMs)) * SR / 1000.0).toInt())
+        val fade = min(n, (0.010 * SR).roundToInt())
+        return DoubleArray(n) { i ->
+            val ms = i * 1000.0 / SR
+            var g = 10.0.pow(-max(ms - holdMs, 0.0) * dbPerMs / 20)
+            if (n < y.size && i >= n - fade) g *= 0.5 * (1 + cos(PI * (i - (n - fade) + 1) / fade))
+            y[i] * g
+        }
     }
 
     /** acoustic.ember_voice: any EMBER voice dry of EMBER's warmth, through this collection's record chain, for its whole render. */

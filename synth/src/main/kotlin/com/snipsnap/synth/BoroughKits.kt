@@ -27,14 +27,19 @@ import kotlin.math.pow
  * take 0 is the recipe and takes 1 and 2 retension it (build.jitter) and draw fresh noise. Every strike is seeded by
  * its kit or stack, pad, zone and take. Level is the prototype's: each take's peak at 0.89 x v^0.8 (the SOUL ROCK law),
  * then the kit's balance, [Borough.KitRecipe.kickTrimDb] on KICK and KICK 2 and [Borough.KitRecipe.restTrimDb] on
- * every other drum pad. Stacks take no trim, as the prototype played them.
+ * every other drum pad. A stack sits in its kit at the kit's rest trim, and its tails are shortened
+ * ([Borough.StackTail]): round 3.1, the owner's "C for all except rides and rims" (2026-11-21). Round 3 played the
+ * stacks untrimmed, up to 10 dB over the kit's own snare, and they filled the space between hits ("sluggish and
+ * muddled"). The drums are unchanged, RIDE AND RIMS' ride included: the owner heard a shortened ride as choked.
  *
  * Not here yet (docs/BOROUGH.md): the glue compressor and limiter the owner heard on the kits' grooves
  * ([Borough.KitRecipe.glueLimiterDriveDb]), which belongs to playback when a BOROUGH kit loads; and the stack picker.
  */
 object BoroughKits {
-    /** Bump when a pad's audio changes; saved kits carry the version they were printed with. */
-    const val VERSION = 1
+    /** Bump when a pad's audio changes; saved kits carry the version they were printed with. 2: round 3.1's stacks. */
+    const val VERSION = 2
+    /** The strikes' seeds stay those of version 1, so a version that changes only the stacks keeps every drum's bytes. */
+    private const val SEED_VERSION = 1
 
     enum class Stack(val id: String, val title: String) {
         HANDS("hands", "Hands"), TAMBOURINE("tamb", "Tambourine"), BELLS("bells", "Bells"), TOPS("tops", "Tops");
@@ -66,7 +71,7 @@ object BoroughKits {
 
     // ------------------------------------------------------------------ one strike
 
-    private fun seed(scope: String, label: String, zone: Int, take: Int) = EmberDsp.Rng(Dsp.seedFor("BOROUGH", VERSION, scope, label, zone, take))
+    private fun seed(scope: String, label: String, zone: Int, take: Int) = EmberDsp.Rng(Dsp.seedFor("BOROUGH", SEED_VERSION, scope, label, zone, take))
 
     private fun level(velocity: Float) = 0.89 * velocity.toDouble().pow(0.8)
 
@@ -83,13 +88,28 @@ object BoroughKits {
         return Snip(FloatArray(y.size) { (y[it] * g).toFloat() }, 1, Borough.RATE)
     }
 
-    /** Stack pad [index] (0 to 3, A13 to A16) of [stack] in zone [zone] at take [take]. The same in every kit. */
+    /**
+     * Stack pad [index] (0 to 3, A13 to A16) of [stack] in zone [zone] at take [take], as its recipe strikes it: the
+     * same in every kit, untrimmed and at its full length (what the parity test measures against Python).
+     */
     fun renderStack(stack: Stack, index: Int, zone: Int, take: Int): Snip {
         require(index in 0 until STACK_PADS && zone in velocities.indices && take in 0 until TAKES)
         val pad = stack.recipe.pads[index]
         val v = velocities[zone]
         val y = Borough.renderStack(pad, v.toDouble(), seed(stack.id, pad.label, zone, take))
         val g = level(v)
+        return Snip(FloatArray(y.size) { (y[it] * g).toFloat() }, 1, Borough.RATE)
+    }
+
+    /** The kit's balance on its stack: the rest trim, as on its snare and hats (dB to gain). */
+    fun stackTrimOf(kit: Kit): Double = 10.0.pow(kit.recipe.restTrimDb / 20)
+
+    /** Stack pad [index] of [stack] as it plays in [kit]: [renderStack] with its tail shortened, at [stackTrimOf] the kit. */
+    fun renderStack(kit: Kit, stack: Stack, index: Int, zone: Int, take: Int): Snip {
+        val raw = renderStack(stack, index, zone, take)
+        val tail = Borough.recipes.stackTail
+        val y = Borough.shortenTail(DoubleArray(raw.samples.size) { raw.samples[it].toDouble() }, tail.tailMsOf(stack.recipe.pads[index].label), tail.holdMs)
+        val g = stackTrimOf(kit)
         return Snip(FloatArray(y.size) { (y[it] * g).toFloat() }, 1, Borough.RATE)
     }
 
@@ -139,18 +159,20 @@ object BoroughKits {
         )
     }.toList()
 
-    /** The four pads of [stack] (A13 to A16), the same in every kit. */
-    fun stackPads(stack: Stack): List<ArrangedPad> = (0 until STACK_PADS).toList().parallelStream().map { i ->
-        val g = grid { z, t -> renderStack(stack, i, z, t) }
+    /** The four pads of [stack] (A13 to A16) as they play in [kit]. */
+    fun stackPads(kit: Kit, stack: Stack): List<ArrangedPad> = (0 until STACK_PADS).toList().parallelStream().map { i ->
+        val g = grid { z, t -> renderStack(kit, stack, i, z, t) }
         val pad = stack.recipe.pads[i]
         ArrangedPad(
             g.last().first(), stackClassOf(stack, i), displayName = pad.label.titled(), velocityTakes = g, muteGroup = 0,
-            source = source(stack.id, DRUM_PADS + i + 1, pad.voice.name, mapOf("stack" to stack.name)),
+            source = source(stack.id, DRUM_PADS + i + 1, pad.voice.name,
+                mapOf("stack" to stack.name, "kit" to kit.name, "trimDb" to kit.recipe.restTrimDb.toString(),
+                    "tailMs" to Borough.recipes.stackTail.tailMsOf(pad.label).toString())),
         )
     }.toList()
 
     /** A sixteen-pad bank: [kit]'s drums on A01 to A12 and [stack] on A13 to A16. The stack picker calls this. */
-    fun build(kit: Kit, stack: Stack = kit.defaultStack): List<ArrangedPad> = combine(drumPads(kit), stackPads(stack))
+    fun build(kit: Kit, stack: Stack = kit.defaultStack): List<ArrangedPad> = combine(drumPads(kit), stackPads(kit, stack))
 
     /** Drums and a stack already built, put together: the drums never move when the stack changes. */
     fun combine(drums: List<ArrangedPad>, stack: List<ArrangedPad>): List<ArrangedPad> {

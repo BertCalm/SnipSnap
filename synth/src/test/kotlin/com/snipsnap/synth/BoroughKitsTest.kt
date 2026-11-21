@@ -26,7 +26,9 @@ class BoroughKitsTest {
 
     private companion object {
         val drums: Map<Kit, List<ArrangedPad>> by lazy { Kit.entries.associateWith { BoroughKits.drumPads(it) } }
-        val stacks: Map<Stack, List<ArrangedPad>> by lazy { Stack.entries.associateWith { BoroughKits.stackPads(it) } }
+        /** Each stack built in the kit that plays it by default (a stack's level and tails depend on its kit). */
+        val home = mapOf(Stack.TAMBOURINE to Kit.STOOP, Stack.HANDS to Kit.CELLAR, Stack.TOPS to Kit.CRANKED, Stack.BELLS to Kit.WAX)
+        val stacks: Map<Stack, List<ArrangedPad>> by lazy { Stack.entries.associateWith { BoroughKits.stackPads(home.getValue(it), it) } }
         fun all(): List<Pair<String, ArrangedPad>> =
             drums.flatMap { (k, pads) -> pads.mapIndexed { i, p -> "${k.name} A%02d".format(i + 1) to p } } +
                 stacks.flatMap { (s, pads) -> pads.mapIndexed { i, p -> "${s.name} A%02d".format(13 + i) to p } }
@@ -54,7 +56,7 @@ class BoroughKitsTest {
             }
         }
         for ((st, i) in listOf(Stack.HANDS to 0, Stack.BELLS to 3)) for (t in 0 until BoroughKits.TAKES) {
-            assertContentEquals(BoroughKits.renderStack(st, i, 2, t).samples, stacks.getValue(st)[i].velocityTakes[2][t].samples, "${st.name} pad $i take $t")
+            assertContentEquals(BoroughKits.renderStack(home.getValue(st), st, i, 2, t).samples, stacks.getValue(st)[i].velocityTakes[2][t].samples, "${st.name} pad $i take $t")
         }
     }
 
@@ -82,10 +84,41 @@ class BoroughKitsTest {
             for (s in takes) assertEquals(want, peak(s.samples).toDouble(), 1e-4, "${kit.name} role $role zone $z")
         }
         for ((st, pads) in stacks) for ((i, pad) in pads.withIndex()) for ((z, takes) in pad.velocityTakes.withIndex()) {
-            for (s in takes) assertEquals(0.89 * BoroughKits.velocities[z].toDouble().pow(0.8), peak(s.samples).toDouble(), 1e-4, "${st.name} pad $i zone $z")
+            val want = 0.89 * BoroughKits.velocities[z].toDouble().pow(0.8) * BoroughKits.stackTrimOf(home.getValue(st))
+            for (s in takes) assertEquals(want, peak(s.samples).toDouble(), 1e-4, "${st.name} pad $i zone $z")
         }
         assertEquals(0.0, Kit.STOOP.recipe.kickTrimDb); assertEquals(-4.29, Kit.STOOP.recipe.restTrimDb)
         assertEquals(-10.16, Kit.WAX.recipe.restTrimDb)
+    }
+
+    /**
+     * Round 3.1 (owner: "C for all except rides and rims", 2026-11-21; prototype/borough/fuller.py). Round 3's stacks
+     * were untrimmed (each peaked at 0.89, up to 10 dB over its kit's snare) and rang 0.5 to 1.4 s, filling the space
+     * between hits. Now a stack's hard hit peaks exactly where its kit's snare does, its strike is the recipe's own for
+     * the hold, and it decays to -30 dB by its tail and ends by -60 dB. The drums do not change.
+     */
+    @Test fun `a stack sits at its kit's level and stops sooner`() {
+        val tail = Borough.recipes.stackTail
+        assertEquals(30.0, tail.holdMs); assertEquals(250.0, tail.tailMs); assertEquals(600.0, tail.longTailMs)
+        assertEquals(setOf("BELL HI", "BELL LO", "RIDE", "RIDE BELL"), tail.longLabels)
+        for ((kit, st, i) in listOf(Triple(Kit.WAX, Stack.BELLS, 3), Triple(Kit.STOOP, Stack.TOPS, 1), Triple(Kit.DRY, Stack.HANDS, 1),
+            Triple(Kit.RIMS, Stack.BELLS, 1), Triple(Kit.CELLAR, Stack.TAMBOURINE, 2))) {
+            val label = BoroughKits.stackName(st, i)
+            val tailMs = tail.tailMsOf(label)
+            val w = "${kit.name} ${st.name} $label"
+            for (z in 0 until 3) {
+                val raw = BoroughKits.renderStack(st, i, z, 0).samples
+                val y = BoroughKits.renderStack(kit, st, i, z, 0).samples
+                val g = BoroughKits.stackTrimOf(kit)
+                val hold = (tail.holdMs * 44.1).toInt()
+                for (n in 0 until hold) assertEquals(raw[n] * g, y[n].toDouble(), 1e-6, "$w zone $z: the strike is the recipe's own")
+                assertTrue(y.size <= ((tail.holdMs + 2 * (tailMs - tail.holdMs)) * 44.1).toInt() + 1, "$w zone $z ends by -60 dB: ${y.size}")
+                val after = (tailMs * 44.1).toInt()
+                if (after < y.size) assertTrue(peak(y.copyOfRange(after, y.size)) <= peak(y) * 10.0.pow(-30.0 / 20) + 1e-6, "$w zone $z: -30 dB by $tailMs ms")
+            }
+            val snare = BoroughKits.renderDrum(kit, 1, 2, 0).samples
+            assertEquals(peak(snare).toDouble(), peak(BoroughKits.renderStack(kit, st, i, 2, 0).samples).toDouble(), 1e-4, "$w: as loud as the kit's snare")
+        }
     }
 
     /**
@@ -133,7 +166,7 @@ class BoroughKitsTest {
         }
         // A whole build, a kit with a stack it does not default to, is the same bytes as the parts.
         val whole = BoroughKits.build(Kit.RIMS, Stack.HANDS)
-        val parts = BoroughKits.combine(drums.getValue(Kit.RIMS), stacks.getValue(Stack.HANDS))
+        val parts = BoroughKits.combine(drums.getValue(Kit.RIMS), BoroughKits.stackPads(Kit.RIMS, Stack.HANDS))
         for ((a, b) in whole.zip(parts)) {
             assertEquals(a.displayName, b.displayName)
             for ((za, zb) in a.velocityTakes.zip(b.velocityTakes)) for ((ta, tb) in za.zip(zb)) assertContentEquals(ta.samples, tb.samples)
@@ -170,7 +203,10 @@ class BoroughKitsTest {
         }
         for ((st, pads) in stacks) {
             assertEquals(BoroughKits.STACK_PADS, pads.size)
-            for (pad in pads) { assertEquals("BOROUGH", pad.source["engine"]); assertEquals(st.name, pad.source["stack"]); assertEquals(0, pad.muteGroup) }
+            for (pad in pads) {
+                assertEquals("BOROUGH", pad.source["engine"]); assertEquals(st.name, pad.source["stack"]); assertEquals(0, pad.muteGroup)
+                assertEquals(home.getValue(st).name, pad.source["kit"]); assertEquals(BoroughKits.VERSION.toString(), pad.source["kitVersion"])
+            }
         }
         assertEquals(DrumClass.CLAP, stacks.getValue(Stack.TOPS)[0].drumClass)
     }
