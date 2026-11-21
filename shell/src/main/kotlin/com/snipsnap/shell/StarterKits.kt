@@ -826,6 +826,21 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.LooseCrateKits.Kit.RITUAL.bpm.toFloat(),
         ) { com.snipsnap.synth.LooseCrateKits.build(com.snipsnap.synth.LooseCrateKits.Kit.RITUAL) },
         Starter(
+            "loose-crate-blue", "LOOSE CRATE BLUE",
+            "Jazz breaks off a record: a felt kick, brushes, a bright stick ride with a light ring that fades quickly, a foot hat and a shaker, on a fresher tape. Three touch zones, four takes; a tap roll and a swung four-bar break.",
+            seeded = false, tempoBpm = com.snipsnap.synth.LooseCrateKits.Kit.BLUE.bpm.toFloat(),
+        ) { com.snipsnap.synth.LooseCrateKits.build(com.snipsnap.synth.LooseCrateKits.Kit.BLUE) },
+        Starter(
+            "loose-crate-speed", "LOOSE CRATE SPEED",
+            "HUMMIN's record played at 45: every drum shorter, tighter and higher, the humming kick lifted. Three touch zones, four takes; a sped roll and a four-bar groove at 108.",
+            seeded = false, tempoBpm = com.snipsnap.synth.LooseCrateKits.Kit.SPEED.bpm.toFloat(),
+        ) { com.snipsnap.synth.LooseCrateKits.build(com.snipsnap.synth.LooseCrateKits.Kit.SPEED) },
+        Starter(
+            "loose-crate-raga", "LOOSE CRATE RAGA",
+            "Indian-record percussion with the tabla leading: dayan strokes, a bending bayan, dholak under them, a thud kick and a slap snare. Three touch zones, four takes; a tabla roll and a four-bar groove.",
+            seeded = false, tempoBpm = com.snipsnap.synth.LooseCrateKits.Kit.RAGA.bpm.toFloat(),
+        ) { com.snipsnap.synth.LooseCrateKits.build(com.snipsnap.synth.LooseCrateKits.Kit.RAGA) },
+        Starter(
             "stagger-cardboard", "STAGGER CARDBOARD",
             "A muffled, click-free kick against a dry crack and a hat at a whisper, timpani, gong, zap and punch pitched down through a 12-bit converter. Three touch zones, four takes; a timpani roll and a two-bar groove whose clock drags and catches up.",
             seeded = false, tempoBpm = com.snipsnap.synth.StaggerKits.Kit.CARDBOARD.bpm.toFloat(),
@@ -947,6 +962,26 @@ object StarterKits {
             "Straight and hard: a driven kick, bench snares, struck plates and rods, the dictaphone pushed. Three touch zones, four takes; a snare roll and four bars.",
             seeded = false, tempoBpm = com.snipsnap.synth.SootGenreKits.Genre.INDUSTRIAL.bpm.toFloat(),
         ) { com.snipsnap.synth.SootGenreKits.build(com.snipsnap.synth.SootGenreKits.Genre.INDUSTRIAL) },
+        Starter(
+            "kerf-dust", "KERF DUST",
+            "Synthetic chops for boom bap: short kicks and snares rebuilt from fitted numbers, heavy bleed, a loose knife. Three touch zones, four takes; a ghost roll and a stack riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.DUST.bpm.toFloat(),
+        ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.DUST) },
+        Starter(
+            "kerf-soul", "KERF SOUL",
+            "Synthetic chops from a soul break: round kicks, a roomy snare and long hats, the bleed and knife as measured. Three touch zones, four takes; a snare roll and a hat riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.SOUL.bpm.toFloat(),
+        ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.SOUL) },
+        Starter(
+            "kerf-funk", "KERF FUNK",
+            "Synthetic chops for a tight funk break: quick kicks, crisp snares, open cymbals, a clean knife and little bleed. Three touch zones, four takes; a hat roll and a cymbal riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.FUNK.bpm.toFloat(),
+        ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.FUNK) },
+        Starter(
+            "kerf-stomp", "KERF STOMP",
+            "Synthetic chops, hard and dirty: big kicks, a fat snare and a crash stack, the wash pushed and the knife sloppiest. Three touch zones, four takes; a snare roll and a crash riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.STOMP.bpm.toFloat(),
+        ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.STOMP) },
         Starter(
             MurmurKeptBank.ID, "MURMUR KEPT",
             "Kept plucks, vowel keys and lower-air choir. Held pads have a short delivery fade.",

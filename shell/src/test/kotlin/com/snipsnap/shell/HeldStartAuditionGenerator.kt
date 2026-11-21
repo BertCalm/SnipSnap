@@ -57,7 +57,7 @@ object HeldStartAuditionGenerator {
 
     private fun zones(): List<Zone> {
         val list = ArrayList<Zone>()
-        for (voice in ArcoVoice.entries) {
+        for (voice in ArcoPadMaker.VOICES) {
             val macros = Arco.defaults(voice)
             val roots = ArcoKeys.zoneMidis(voice)
             for (midi in listOf(roots.first(), roots[roots.size / 2], roots.last()))

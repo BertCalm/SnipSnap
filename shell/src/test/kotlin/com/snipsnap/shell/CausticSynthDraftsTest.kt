@@ -12,7 +12,7 @@ import kotlin.test.assertEquals
 class CausticSynthDraftsTest {
     @Test
     fun `character voice drafts retain independent roots strikes and sparse controls`() {
-        val voices = CausticVoice.entries.filter { it != CausticVoice.ALLOY }
+        val voices = CausticInstrument.KEPT_VOICES.filter { it != CausticVoice.ALLOY }
         val patches = voices.mapIndexed { index, voice ->
             CausticPatch("Saved direction", voice, mapOf("FOCUS" to (.2f + index * .1f)),
                 midi = 48 + index * 7, velocity = .3f + index * .1f, model = 1)

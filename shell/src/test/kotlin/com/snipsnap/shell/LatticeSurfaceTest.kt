@@ -61,9 +61,9 @@ class LatticeSurfaceTest {
         val upperMode = Snip(FloatArray(4096) { i ->
             (.2 * kotlin.math.sin(2 * Math.PI * 880 * i / 44_100)).toFloat()
         }, channels = 1, sampleRate = 44_100)
-        for (voice in LatticeVoice.entries) {
+        for (voice in Lattice.KEPT_VOICES) {
             val patch = LatticePatch("Saved Path", voice,
-                Lattice.defaults(voice) + if (voice == LatticeVoice.TRACE) {
+                Lattice.defaults(voice) + if ("SPEED" in Lattice.defaults(voice)) {
                     mapOf("TUNE" to .625f, "SPEED" to .8f)
                 } else mapOf("TUNE" to .625f, "REJECT" to 1f),
                 midi = 60, velocity = .35f)

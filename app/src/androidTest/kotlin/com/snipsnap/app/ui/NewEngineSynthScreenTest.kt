@@ -22,6 +22,8 @@ import com.snipsnap.synth.BallastPatch
 import com.snipsnap.synth.BallastVoice
 import com.snipsnap.synth.Hiccup
 import com.snipsnap.synth.HiccupPatch
+import com.snipsnap.synth.Kerf
+import com.snipsnap.synth.KerfPatch
 import com.snipsnap.synth.Soot
 import com.snipsnap.synth.SootPatch
 import com.snipsnap.synth.Scuff
@@ -184,6 +186,29 @@ class NewEngineSynthScreenTest : ComposeScreenTest() {
         val draft = SynthDrafts.read(settings).single { it.engine == "SOOT" && it.voiceName == "SNARE" } as SootPatch
         assertEquals(Soot.MODEL_VERSION, draft.model)
         assertEquals(.8f, draft.macros.getValue("COIL"), .0001f)
+    }
+
+    /**
+     * KERF on the picker (round 4, 2026-11-20): a prototype outside the factory presets, so its six controls with no
+     * preset chips. The snare opens on the first hit of its pool at the bank's own settings, an edit to the knife
+     * survives a rebuild, and the saved draft keeps its engine model.
+     */
+    @Test
+    fun kerfOpensItsSnareAtTheBankSettingsAndKeepsAnEditAndItsModel() {
+        show("KERF", "SNARE")
+        button("SNARE").assertIsSelected()
+        for (label in listOf("HIT", "TUNE", "DECAY", "FLOOR", "BLEED", "SLOP")) control(label).assertExists()
+        assertEquals(0f, progress("HIT"), .0001f)
+        assertEquals(.5f, progress("SLOP"), .0001f)
+        adjust("SLOP", .8f)
+        compose.runOnIdle { generation++ }
+        pump()
+        assertEquals("KERF", settings["engine"])
+        assertEquals(.8f, progress("SLOP"), .0001f)
+        assertFalse(showsLoop())
+        val draft = SynthDrafts.read(settings).single { it.engine == "KERF" && it.voiceName == "SNARE" } as KerfPatch
+        assertEquals(Kerf.MODEL_VERSION, draft.model)
+        assertEquals(.8f, draft.macros.getValue("SLOP"), .0001f)
     }
 
     /**
