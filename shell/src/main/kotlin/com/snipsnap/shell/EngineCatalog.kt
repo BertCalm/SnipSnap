@@ -159,6 +159,8 @@ object EngineCatalog {
         "KINDRED" to EngineEntry(listOf(EngineCategory.DRUMS), "One analog voice re-struck: diving kicks, zaps, FM toms"),
         "RIDDIM" to EngineEntry(listOf(EngineCategory.DRUMS), "Dancehall drums: booms, ratchet, ting, woods and bronze"),
         "CAIRN" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.DRUMS), "Stones that knock, tumble, grind, sing and roll in a bowl"),
+        // CONSORT reached the picker in round K3 (2026-11-20), appended after CAIRN as the enum is.
+        "CONSORT" to EngineEntry(listOf(EngineCategory.WINDS), "Woodwinds alone or as a section in octaves and fifths"),
     )
 
     /** The entry for the engine constant [name], or null for a name the catalogue does not know. */
