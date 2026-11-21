@@ -5,7 +5,7 @@ Version 1.0 · 2026-11-19
 Status: rounds 1 to 3 built (the renderer and fitter, the kit action and its command, the pad
 sheet's SYNTH TWIN, SYNTH TWIN ALL with BLEED and SLOP, and velocity and round robin; see "As
 built" at the end, and KERF's row in docs/ENGINE_ACCEPTANCE_GATES.md). The engine and its four
-genre kits (round 4) are built, not yet heard. Heard by the owner: the Python prototype, the
+genre kits (round 4) are built, heard and played on phone and MPC (2026-11-21). Heard by the owner: the Python prototype, the
 round-1 Kotlin page ("Sounds good, continue", 2026-11-19), the round-2 loop-to-kit page
 ("Audition is fine", 2026-11-20), and the round-3 velocity layers and takes, also on phone and
 MPC ("Audition is good, phone/mpc is good", 2026-11-20). KERF is a
@@ -422,8 +422,8 @@ a layer is not always a separate drum.
   the kit's round robin). Gate, met: the owner heard the layers at depth 3 and the takes, and
   played them on phone and MPC ("Audition is good, phone/mpc is good", 2026-11-20).
 - **R4.** Built: engine registration, six voices, 27 presets, four genre kits with a roll and a
-  riser, the audition, docs. Gate, open: the owner hears the kits and presets (the drum gate:
-  multiple distinct genre kits on the shelf).
+  riser, the audition, docs. Gate, met: the owner heard the kits and presets and played the kits
+  on phone and MPC (2026-11-21).
 
 ## 18. Sonic risks
 
@@ -871,7 +871,7 @@ a pad made from a capture keeps its own numbers in the pad recipe, as before.
   `PadRecipeTest` and `DeterminismTest`. It sits after SOOT on the SYNTH picker (CAIRN still closes the ring) with an on-device test
   (`NewEngineSynthScreenTest`), and `EngineCatalog` lists it under DRUMS. The picker now has 100
   engines.
-- **Presets (27, not yet heard).** Each is one pool hit, named for what it measures. A preset
+- **Presets (27, heard 2026-11-21).** Each is one pool hit, named for what it measures. A preset
   is only a hit that KERF's own labeller (`KerfFit.label`) files as its kind when the engine
   renders it. The loops' hats are dark, so about half the hat pool labels as SNARE. Kit A's loud
   open hats are cymbals over a kick or snare. Those hits stay on HIT and are not presets. The app's
@@ -895,7 +895,8 @@ a pad made from a capture keeps its own numbers in the pad recipe, as before.
   velocity, takes in order, then repeat) and MPC 3 export. `:shell:generateKerfKits` verifies all
   64 pads (768 slices) the same way and writes the listening pack. `:synth:generateKerfEngineAudition`
   renders the presets.
-- **Not yet.** The owner has not heard the engine's presets, the four kits, the roll or the
-  riser. The audition page went to the owner on 2026-11-20. Hardware playback of these kits is
-  open.
+- **Heard and played.** The owner heard the round-4 page (each kit's sixteen pads, a two-bar
+  groove per kit, and the 27 presets soft to hard): "Sounds good", confirmed as a listen ("1 yes
+  I listen"). They played the kits on phone and MPC: "2 is complete" (2026-11-21). The round-4
+  gate is met, and KERF is complete under the owner's gates.
 

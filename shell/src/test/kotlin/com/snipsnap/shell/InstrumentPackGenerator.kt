@@ -74,7 +74,7 @@ object InstrumentPackGenerator {
                 KeelPadMaker.export("KEEL ${voice.name}", spec, KeelPadMaker.zoneMidis(spec).map { KeelPadMaker.renderZone(spec, it) }, instruments)
             }
         }
-        if (wanted("ARCO")) for (voice in ArcoVoice.entries) {
+        if (wanted("ARCO")) for (voice in ArcoPadMaker.VOICES) {
             val spec = ArcoPadMaker.spec(ArcoPatch("ARCO ${voice.name}", voice, Arco.defaults(voice)), RELEASE)
             make("ARCO ${voice.name}") {
                 ArcoPadMaker.export("ARCO ${voice.name}", spec, ArcoPadMaker.zoneMidis(spec).map { ArcoPadMaker.renderZone(spec, it) }, instruments)

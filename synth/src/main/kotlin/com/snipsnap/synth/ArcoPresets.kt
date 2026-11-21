@@ -1,7 +1,7 @@
 package com.snipsnap.synth
 
 /**
- * ARCO's factory roster: eight for CELLO and for ERHU, six for SARANGI (R2), authored from the measurements in [Arco]'s KDoc and from what the
+ * ARCO's factory roster: eight for CELLO and for ERHU, six for SARANGI (R2), one each for WHEEL, BAR, GLASS and VIOL (kept 2026-11-20, [heard]), authored from the measurements in [Arco]'s KDoc and from what the
  * real classifier says of each render - and **provisional**: nothing here was listened to. The audition gate is
  * where a human decides which of these is a bowed string and which is only a tone that measures like one; a name
  * that does not survive it is renamed or dropped, not defended.
@@ -40,7 +40,23 @@ object ArcoPresets {
         ArcoVoice.CELLO -> celloPresets
         ArcoVoice.ERHU -> erhuPresets
         ArcoVoice.SARANGI -> sarangiPresets
+        ArcoVoice.WHEEL -> listOf(heard(ArcoVoice.WHEEL, "TURNING DRONE"))
+        ArcoVoice.BAR -> listOf(heard(ArcoVoice.BAR, "BOWED METAL"))
+        ArcoVoice.GLASS -> listOf(heard(ArcoVoice.GLASS, "WET RIM"))
+        ArcoVoice.VIOL -> listOf(heard(ArcoVoice.VIOL, "GUT CONSORT"))
     }
+
+    /**
+     * The one preset of each voice kept on 2026-11-20 (WHEEL, BAR, GLASS, VIOL: rounds arco-voices-1 and touch-arco-1): the note the owner
+     * heard as touch-arco-1's hard note, which is the kept sound. Every macro at the voice's default, TUNE 0.5 (an octave over the root: WHEEL
+     * D4, BAR F4, GLASS C5, VIOL C4) and HOLD at two and a half seconds of bow. Over the classifier's 1.5 s line, so it reads and is filed LOOP
+     * by length, as every note that long is; it is a one-shot, not a HOLD 1 loop. HoldHumanizePinsTest pins each render.
+     */
+    private fun heard(voice: ArcoVoice, name: String) =
+        ArcoPatch(name, voice, Arco.defaults(voice) + mapOf("TUNE" to HEARD_TUNE, "HOLD" to Arco.holdFor(HEARD_SECONDS)))
+
+    private const val HEARD_TUNE = 0.5f
+    private const val HEARD_SECONDS = 2.5f
 
     fun all(): List<ArcoPatch> = ArcoVoice.entries.flatMap { forVoice(it) }
 

@@ -20,8 +20,8 @@ internal data class ChitinRender(val snip: Snip, val raw: FloatArray, val before
  * step is reserved. No random modulation, samples or extra rack processing. */
 object Chitin {
     const val MODEL_VERSION=1
-    /** The voices players are offered. GLINT is a candidate: no preset, kit or picker entry. */
-    val KEPT_VOICES=listOf(ChitinVoice.SHELL,ChitinVoice.WING,ChitinVoice.HUSK,ChitinVoice.STING,ChitinVoice.HUM,ChitinVoice.PINCER)
+    /** The voices players are offered: all seven (GLINT kept in fix-glint-1 and touch-glint-1). */
+    val KEPT_VOICES=listOf(ChitinVoice.SHELL,ChitinVoice.WING,ChitinVoice.HUSK,ChitinVoice.STING,ChitinVoice.GLINT,ChitinVoice.HUM,ChitinVoice.PINCER)
     /** The voices that mix the synced pair (the original renderer and its twelve colours); the others are
      * rendered by ChitinCandidates.kt. */
     val MIXED_VOICES=listOf(ChitinVoice.SHELL,ChitinVoice.WING)

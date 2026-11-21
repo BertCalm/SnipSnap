@@ -6,8 +6,8 @@ package com.snipsnap.synth
  * Each preset is one hit of its voice's pool ([Kerf.pool]), named for what it measures (2026-11-20, the prototype's
  * clean renders: length, spectral centroid, the share below 150 Hz). A preset is only a hit that KERF's own labeller
  * ([KerfFit.label]) files as its kind when rendered by the engine (2026-11-20). The rest stay on HIT: the loops' hats are
- * dark, so half the hat pool labels as SNARE, and kit A's loud open hats are cymbals over a kick or snare. These names
- * have not been heard by the owner yet.
+ * dark, so half the hat pool labels as SNARE, and kit A's loud open hats are cymbals over a kick or snare. The owner
+ * heard all 27 on 2026-11-21 ("Sounds good").
  */
 object KerfPresets {
     /** A preset on pool hit [index] of [voice], with the other macros at their defaults unless [over] moves them. */
