@@ -126,7 +126,7 @@ shime smeared into a spring, the rim through tape, the fan ghosted, the water dr
 dubbed, a shime roll echoed and an odaiko riser in a room. The chain is baked into
 all twelve zone samples of each pad, after the strike is softened, so a soft touch
 is a softer strike through the same chain. Each pad's chain is saved in its source
-beside its recipe. Round 8 replaced the granular stand-ins with GRAIN.
+beside its recipe. Round 8 replaced the granular stand-ins with GRANULAR.
 
 ## Round 8: ring, grain and tempo
 
@@ -141,7 +141,7 @@ are byte for byte the round-7 renders.
   At DECAY's default the odaiko's ring runs 3.1 s, 41 to 47 dB under its loudest
   100 ms just past the hit's cut. Six pads ring: THUNDER's Odaiko Long, Odaiko
   Deep, Cymbal Wash (6 s) and Gong Low, MATSURI's Chan, BON's Bell Single.
-- **GRAIN** (`Grain.kt`), a new rack section after REWIND and before SPRING:
+- **GRANULAR** (`Grain.kt`, saved key `granular`), a new rack section after REWIND and before SPRING:
   Hann-windowed grains of 10 to 120 ms cut from the hit's first 150 ms, scattered
   over 0.1 to 1 s after it, a quarter backwards, later ones quieter, from one fixed
   seed per setting. DUSK's three stand-ins became Ten Grains, Ka Grains and Chiki
@@ -241,9 +241,9 @@ The listening page for this round is
   is fitted as part of the whole gesture.
 - **The soft edge stroke is an analogy:** it borrows the centre stroke's notes as
   the plate's low modes. The owner approved how it sounds.
-- **GRAIN is reached only through a saved chain** until it has a pedal chip and
+- **GRANULAR is reached only through a saved chain** until it has a pedal chip and
   that chip's own listening gate. An older build reading a DUSK pad's chain ignores
-  the section it does not know: it keeps the printed audio and drops GRAIN from the
+  the section it does not know: it keeps the printed audio and drops GRANULAR from the
   editable chain.
 - **The presets are provisional.** They were written from the prototype's
   rounds. Nobody has heard them from the app, so none is pinned.

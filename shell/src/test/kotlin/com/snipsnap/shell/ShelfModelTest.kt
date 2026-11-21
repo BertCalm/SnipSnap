@@ -59,6 +59,38 @@ class ShelfModelTest {
         assertEquals(ShelfModel.EMPTY, model.projects().first().subtitle)
     }
 
+    /** UAT 2026-11 user states, S-3: a pad or beat edit is an edit to the project that holds the kit. */
+    @Test
+    fun `a pad edit to a project's kit, or a beat edit, makes the project the most recently edited`() {
+        kitOnShelf("Kitchen")
+        ProjectStore.save(shelf, Project("Late Set", listOf("Kitchen"), activeKit = "Kitchen"))
+        ProjectStore.save(shelf, Project("Other"))
+        val dayAgo = System.currentTimeMillis() - 86_400_000L
+        val late = ProjectStore.dir(shelf, "Late Set")
+        File(late, ProjectStore.FILE_NAME).setLastModified(dayAgo)
+        File(File(shelf, "Kitchen"), KitStore.FILE_NAME).setLastModified(dayAgo)
+        // Before the edit, Other was saved last and leads.
+        assertEquals(listOf("Other", "Late Set"), model.projects().map { it.name })
+
+        // A pad edit rewrites the kit's kit.json, and nothing in the project folder.
+        kitOnShelf("Kitchen")
+        assertEquals(listOf("Late Set", "Other"), model.projects().map { it.name })
+        val row = model.projects().first()
+        assertEquals(File(File(shelf, "Kitchen"), KitStore.FILE_NAME).lastModified(), row.editedAtMillis)
+    }
+
+    @Test
+    fun `the project's own beat counts as an edit, and a kit gone from the shelf adds nothing`() {
+        ProjectStore.save(shelf, Project("Beats", listOf("Gone Kit")))
+        ProjectStore.save(shelf, Project("Other"))
+        val dayAgo = System.currentTimeMillis() - 86_400_000L
+        val dir = ProjectStore.dir(shelf, "Beats")
+        File(dir, ProjectStore.FILE_NAME).setLastModified(dayAgo)
+        assertEquals(dayAgo / 1000, model.editedAt(dir, ProjectStore.load(dir)) / 1000, "a missing kit's files count as 0")
+        ProjectStore.saveBeat(dir, listOf(com.snipsnap.mpc3.Mpc3Clip("A", bars = 1, notes = emptyList())))
+        assertEquals("Beats", model.projects().first().name)
+    }
+
     @Test
     fun `a new project takes a fresh name and starts empty`() {
         val a = model.newProject()

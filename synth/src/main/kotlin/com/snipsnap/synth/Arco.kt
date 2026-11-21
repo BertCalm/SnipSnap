@@ -1868,7 +1868,10 @@ object Arco {
             period = if (law.loopTable) loopRaw else 0, phase = warm * over, law = law,
         )
         val body = bodyOf(voice, m)
-        val conditioned = conditionedFor(strung, voice, body, washOf(voice, m), rate)
+        val plain = conditionedFor(strung, voice, body, washOf(voice, m), rate)
+        // A candidate bowed lighter than its default BOW is darker and slower to speak on a held key too ([ArcoCandidates.heldTouched]);
+        // its level is the player's velocity. A kept voice is not touched.
+        val conditioned = if (ArcoCandidates.of(voice) != null) ArcoCandidates.heldTouched(plain, target, m.getValue("BOW")) else plain
         stopIfCancelled()
         return heldFrom(conditioned, voice, body, warm, plan.frames, r)
     }

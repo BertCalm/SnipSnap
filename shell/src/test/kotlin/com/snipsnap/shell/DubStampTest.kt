@@ -54,6 +54,34 @@ class DubStampTest {
      * also means a kit shared in from elsewhere can arrive carrying one. It
      * must not be able to claim this phone's card.
      */
+    /** UAT 2026-11 user states, S-2: what is on the card is the version that was stamped, not one made since. */
+    @Test
+    fun `a kit changed after its dub to this card reads DUBBED, not ON CARD`() {
+        val stamp = DubStamp.Stamp(atMillis = 10_000L, cardTree = "content://card/A")
+        assertEquals(DubStamp.Status.ON_CARD, DubStamp.status(stamp, "content://card/A", editedAtMillis = 9_000L))
+        assertEquals(DubStamp.Status.ON_CARD, DubStamp.status(stamp, "content://card/A", editedAtMillis = 10_000L))
+        assertEquals(DubStamp.Status.DUBBED, DubStamp.status(stamp, "content://card/A", editedAtMillis = 10_001L))
+        // Not known is no change: the claim stands on the card alone, as before.
+        assertEquals(DubStamp.Status.ON_CARD, DubStamp.status(stamp, "content://card/A"))
+    }
+
+    @Test
+    fun `a kit's edited time is the newer of its kit and its beat`() {
+        val dir = java.nio.file.Files.createTempDirectory("dub-edited").toFile()
+        try {
+            assertEquals(0L, DubStamp.editedAt(dir))
+            val kitFile = java.io.File(dir, com.snipsnap.kit.KitStore.FILE_NAME).apply { writeText("{}") }
+            val beat = java.io.File(dir, com.snipsnap.kit.GrooveStore.FILE_NAME).apply { writeText("{}") }
+            kitFile.setLastModified(1_000_000L)
+            beat.setLastModified(2_000_000L)
+            assertEquals(2_000_000L, DubStamp.editedAt(dir))
+            kitFile.setLastModified(3_000_000L)
+            assertEquals(3_000_000L, DubStamp.editedAt(dir))
+        } finally {
+            dir.deleteRecursively()
+        }
+    }
+
     @Test
     fun `a stamp from someone else's phone cannot claim this phone's card`() {
         val theirs = DubStamp.Stamp(atMillis = 1L, cardTree = "content://com.other.provider/tree/1234")

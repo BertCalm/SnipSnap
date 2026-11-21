@@ -173,6 +173,7 @@ data class ChamberConfig(
         fun forVoice(voice: ChamberVoice): ChamberConfig = when (voice) {
             ChamberVoice.HYBRID -> hybrid()
             ChamberVoice.AQUARIUM -> aquarium()
+            else -> ChamberCandidates.config(voice)
         }
 
         fun fromJsonValue(value: JsonValue): ChamberConfig {

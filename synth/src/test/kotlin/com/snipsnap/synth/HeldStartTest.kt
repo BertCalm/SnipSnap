@@ -35,6 +35,14 @@ import kotlin.test.assertTrue
  */
 class HeldStartTest {
 
+    /**
+     * How far under the whole start's -3 dB the shaped start may cross and still count as arrived with it. The handover may run up to 2 dB
+     * under the whole start (the dip bar below), so a start whose level hovers at the threshold reads a lag that is not one: WHEEL D4's
+     * hard layer, whose whole start sits at -2.9 to -3.4 dB from 90 to 150 ms while the shaped one runs 0.2 dB under it, read 60 ms late
+     * at a bare -3 dB, with no level more than 0.23 dB apart over those frames (2026-11-21).
+     */
+    private val ARRIVAL_SLACK_DB = 0.5
+
     /** The most a played loop's level stands over its own mean: ARCO's swell and hand together ([Arco.PLAYER_SWELL_DB], [Arco.PLAYER_HAND_DB]). */
     private val PLAYED_LEVEL_DB = Arco.PLAYER_SWELL_DB + Arco.PLAYER_HAND_DB
 
@@ -45,12 +53,12 @@ class HeldStartTest {
             val shaped: KeyNote = HeldStart.shape(full, HeldStart.SHORT)
         }
 
-        /** Every zone of ARCO and BORE that is offered on held keys (the first voices: ArcoPadMaker.VOICES, BorePadMaker.VOICES), both layers, at the defaults: the zone as first built, and shaped. */
+        /** Every zone of ARCO and BORE that is offered on held keys (every kept voice: ArcoPadMaker.VOICES, BorePadMaker.VOICES), both layers, at the defaults: the zone as first built, and shaped. */
         val cases: List<Case> by lazy {
             val jobs = ArrayList<() -> Case>()
-            for (voice in ArcoMeasure.FIRST_VOICES) for (midi in ArcoKeys.zoneMidis(voice)) for (layer in ArcoKeys.Layer.entries)
+            for (voice in Arco.KEPT_VOICES) for (midi in ArcoKeys.zoneMidis(voice)) for (layer in ArcoKeys.Layer.entries)
                 jobs += { Case("ARCO $voice ${Scales.nameOf(midi)} ${layer.name.lowercase()}", ArcoKeys.padMeasured(voice, Arco.defaults(voice), midi, layer).note) }
-            for (voice in BoreMeasure.FIRST_VOICES) for (midi in BoreKeys.padMidis(voice))
+            for (voice in Bore.KEPT_VOICES) for (midi in BoreKeys.padMidis(voice))
                 BoreKeys.layerBreaths(voice, Bore.defaults(voice)).forEachIndexed { layer, breath ->
                     jobs += { Case("BORE $voice ${Scales.nameOf(midi)} ${if (layer == 0) "soft" else "hard"}", BoreKeys.padMeasured(voice, Bore.defaults(voice), midi, breath).note) }
                 }
@@ -159,9 +167,9 @@ class HeldStartTest {
             val f = c.full.snip.samples
             val ls = c.full.loopStartFrame.toInt()
             val loop = rms(f, ls, f.size - ls)
-            fun arrives(x: FloatArray, limit: Int): Double {
+            fun arrives(x: FloatArray, limit: Int, at: Double): Double {
                 var t = 0
-                while (t + w < limit && db(rms(x, t, w) / loop) < -3.0) t += w / 2
+                while (t + w < limit && db(rms(x, t, w) / loop) < at) t += w / 2
                 return t.toDouble() / RATE
             }
             val e = c.shaped.loopStartFrame.toInt()
@@ -177,7 +185,7 @@ class HeldStartTest {
                 if (fl > -20) dip = minOf(dip, sl - fl)
                 t += w / 2
             }
-            rows += Row(c.label, arrives(s, e) - arrives(f, ls), over, fullOver, dip)
+            rows += Row(c.label, arrives(s, e, -3.0 - ARRIVAL_SLACK_DB) - arrives(f, ls, -3.0), over, fullOver, dip)
         }
         for (r in rows.sortedByDescending { abs(it.lag) }.take(4)) println("HeldStart swell, lag: ${r.label} %+.0f ms".format(Locale.ROOT, 1000 * r.lag))
         for (r in rows.sortedByDescending { it.over }.take(4)) println("HeldStart swell, over: ${r.label} %.2f dB over max(full, loop); the full start's own loudest %.2f dB re the loop".format(Locale.ROOT, r.over, r.fullOver))

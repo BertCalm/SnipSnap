@@ -41,7 +41,7 @@ class ChamberTimpaniTest {
 
     @Test
     fun `mix lift is three dB on membrane pickup with identical voicing and room state`() {
-        for (voice in ChamberVoice.entries) {
+        for (voice in Chamber.ORIGINAL_VOICES) {
             val options = Chamber.ProbeOptions(seconds = .6f)
             val accepted = Chamber.probe(voice, model = 2, options = options)
             val lifted = Chamber.probe(voice, model = 3, options = options)
@@ -68,7 +68,7 @@ class ChamberTimpaniTest {
 
     @Test
     fun `revised timpani has an audible pitched body beside the bar`() {
-        for (voice in ChamberVoice.entries) for (midi in listOf(48, 60)) {
+        for (voice in Chamber.ORIGINAL_VOICES) for (midi in listOf(48, 60)) {
             val p = Chamber.probe(voice, midi = midi, model = 2,
                 options = Chamber.ProbeOptions(seconds = .8f, roomEnabled = false))
             val membrane = p.instrumentStems[0]
