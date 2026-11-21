@@ -18,8 +18,12 @@ class ChamberPresetsTest {
             Triple("High Water", ChamberVoice.AQUARIUM, listOf(1f, .85f, 1f, 0f, .85f)),
         )
         val controls = listOf("STRIKE", "BALANCE", "MATERIAL", "DIVIDE", "PLACEMENT")
-        val all = ChamberPresets.all()
+        // The voices kept on 21 Nov 2026 follow the six, one recipe each, after them.
+        val all = ChamberPresets.all().filter { it.voice in Chamber.ORIGINAL_VOICES }
+        assertEquals(all, ChamberPresets.all().take(expected.size))
         assertEquals(expected.size, all.size)
+        for (patch in ChamberPresets.all().drop(expected.size))
+            assertFalse(PresetTestSupport.trademarkBlocklist.containsMatchIn(patch.name), patch.name)
         assertEquals(expected.map { it.first }, all.map { it.name })
         for ((patch, identity) in all.zip(expected)) {
             assertEquals(identity.second, patch.voice)
