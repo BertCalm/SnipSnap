@@ -45,7 +45,7 @@ object Chamber {
     const val MAX_SECONDS = 6f
 
     /**
-     * The voices players are offered: presets and pickers read this. GLAZE was kept in round chamber-voices-1 and TIMBER,
+     * The voices players are offered: presets and pickers read this. GLAZE was kept in round voices-chamber-1 and TIMBER,
      * MASS, ALLOY and BOUNCE, reworked, in fix-chamber-voices-1 (both 21 Nov 2026). They render on the register model only.
      */
     val KEPT_VOICES: List<ChamberVoice> = listOf(ChamberVoice.HYBRID, ChamberVoice.AQUARIUM, ChamberVoice.GLAZE,

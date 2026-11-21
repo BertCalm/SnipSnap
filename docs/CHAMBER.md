@@ -582,7 +582,7 @@ layer is mixed by one call from `renderProbe`, whose bytecode grows by 24 bytes 
 
 | Round | Clips | Verdict |
 |---|---|---|
-| chamber-voices-1 | FD1 GLAZE range, FD2 GLAZE touch | KEEP, no notes |
+| voices-chamber-1 (the desk round this file calls chamber-voices-1) | FD1 GLAZE range, FD2 GLAZE touch | KEEP, no notes |
 | fix-chamber-voices-1 | GE1/GE2 TIMBER, GF1/GF2 MASS, GG1/GG2 ALLOY, GH1/GH2 BOUNCE (before/after range, then the new soft/medium/hard) | KEEP, no notes |
 
 CHAMBER now offers seven voices: `Chamber.KEPT_VOICES` is HYBRID, AQUARIUM, GLAZE, TIMBER, MASS, ALLOY, BOUNCE, and the

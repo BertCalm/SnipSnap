@@ -547,7 +547,7 @@ upper partials falls from 6.7 to 4.9), PEAL's waver (3.4 dB), VANE's tremolo (12
 
 | Round | Clips | Verdict |
 |---|---|---|
-| ferry-voices-1 | FL1 TINE range, FL2 TINE touch | KEEP, no notes |
+| voices-ferry-1 (the desk round this file calls ferry-voices-1) | FL1 TINE range, FL2 TINE touch | KEEP, no notes |
 | fix-ferry-voices-1 | GJ TWIN, GK SWELL, GL TARAB, GM PEAL, GN BATON (before/after range, then touch); GO1/GO2 VANE (range, touch) | KEEP, no notes |
 
 FERRY now has eight voices: `Ferry.KEPT_VOICES` is PASSAGE, TINE, TWIN, SWELL, TARAB, PEAL, BATON, VANE;

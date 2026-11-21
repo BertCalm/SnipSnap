@@ -36,7 +36,7 @@ object Ferry {
     const val INTERNAL_RATE = Dsp.RATE * Dsp.OVERSAMPLE
 
     /**
-     * The voices players are offered: presets read this. TINE was kept in round ferry-voices-1 and TWIN, SWELL, TARAB, PEAL,
+     * The voices players are offered: presets read this. TINE was kept in round voices-ferry-1 and TWIN, SWELL, TARAB, PEAL,
      * BATON and VANE, reworked or new, in fix-ferry-voices-1 (both 21 Nov 2026). They render on model 4 only.
      */
     val KEPT_VOICES: List<FerryVoice> = listOf(FerryVoice.PASSAGE, FerryVoice.TINE, FerryVoice.TWIN, FerryVoice.SWELL,
