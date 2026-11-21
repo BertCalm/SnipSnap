@@ -163,9 +163,11 @@ object EngineCatalog {
         "KINDRED" to EngineEntry(listOf(EngineCategory.DRUMS), "One analog voice re-struck: diving kicks, zaps, FM toms"),
         "RIDDIM" to EngineEntry(listOf(EngineCategory.DRUMS), "Dancehall drums: booms, ratchet, ting, woods and bronze"),
         "CAIRN" to EngineEntry(listOf(EngineCategory.BELLS, EngineCategory.DRUMS), "Stones that knock, tumble, grind, sing and roll in a bowl"),
+        // CONSORT reached the picker in round K3 (2026-11-20), appended after CAIRN as the enum is.
+        "CONSORT" to EngineEntry(listOf(EngineCategory.WINDS), "Woodwinds alone or as a section in octaves and fifths"),
         "FILL" to EngineEntry(listOf(EngineCategory.DRUMS), "Snare rolls and tom runs that land on the downbeat"),
         "HYDROFORM" to EngineEntry(listOf(EngineCategory.DRUMS), "Pressure bursts slammed into metal: booms and clangs"),
-        "LORENTZ" to EngineEntry(listOf(EngineCategory.DRUMS, EngineCategory.BASS), "Falling zaps that collide into a deep sub kick"),
+        "LORENTZ" to EngineEntry(listOf(EngineCategory.DRUMS), "Falling zaps that collide into a deep sub kick"),
     )
 
     /** Every engine the picker offers, in its order: [PREPARED] without the held ones. */

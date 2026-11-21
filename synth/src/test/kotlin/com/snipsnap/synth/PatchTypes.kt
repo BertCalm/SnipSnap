@@ -72,11 +72,11 @@ internal object PatchTypes {
      * accepting the engine means filing its recipes in [Presets] and taking it off this list. ETCH sat here from
      * its Kotlin port (K1) to round K2 (2026-11-14), when its heard round-3 settings became the factory bank. KINDRED sat
      * here from its port (K1, 2026-11-15) until the owner approved its Kotlin kits (2026-11-18). CONSORT joined at its
-     * Kotlin port (K1, 2026-11-19): the owner heard its Python prototype, and nobody has heard the Kotlin render.
+     * Kotlin port (K1, 2026-11-19) until the owner heard and kept all of round K3 (2026-11-20, "All sounds good").
      * DRAWL joined at its Kotlin port (round 1, 2026-11-21): the owner kept all six voices of its Python prototype
      * (rounds 0 to 0d), and nobody has heard the Kotlin render; presets wait for that listen.
      */
-    val PROTOTYPES: Set<String> = setOf(SecondlinePatch.ENGINE, ChitinPatch.ENGINE, FerryPatch.ENGINE, BreakerPatch.ENGINE, SootPatch.ENGINE, ConsortPatch.ENGINE, KerfPatch.ENGINE, DrawlPatch.ENGINE) +
+    val PROTOTYPES: Set<String> = setOf(SecondlinePatch.ENGINE, ChitinPatch.ENGINE, FerryPatch.ENGINE, BreakerPatch.ENGINE, SootPatch.ENGINE, KerfPatch.ENGINE, DrawlPatch.ENGINE) +
         // FILL and HYDROFORM (whose R7 candidates moved into HydroformPresets) stay here while HeldPromotions holds them.
         setOf(FillPatch.ENGINE, HydroformPatch.ENGINE).filterNot(HeldPromotions::shipped)
 

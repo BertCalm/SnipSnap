@@ -56,6 +56,8 @@ object Presets {
             val v = AccordVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
             AccordPresets.forVoice(v)
         }
+        // CONSORT's 27 recipes, all heard and kept by the owner in round K3 (2026-11-20, "All sounds good").
+        ConsortPatch.ENGINE -> ConsortVoice.entries.firstOrNull { it.name == voice }?.let(ConsortPresets::forVoice) ?: emptyList()
         OtisPatch.ENGINE -> OtisVoice.entries.firstOrNull { it.name == voice }?.let(OtisPresets::forVoice) ?: emptyList()
         LorentzPatch.ENGINE -> {
             val v = LorentzVoice.entries.firstOrNull { it.name == voice } ?: return emptyList()
@@ -409,7 +411,7 @@ object Presets {
         BristlePresets.all() + BackwashPresets.all() + HalobarPresets.all() + FiredBronzePresets.all() + RivetPresets.all() + OsteriaPresets.all() + ScuffPresets.all() + HiccupPresets.all() + ClutterPresets.all() + CalabashPresets.all() + RiddimPresets.all() + ServoPresets.all() + EmberPresets.all() + SambaPresets.all() + KindredPresets.all() + DrumlinePresets.all() + EtchPresets.all() + TerraPresets.all() + ErosionPresets.all() + WickPresets.all() +
         OtisPresets.all() +
         LorentzPresets.all() +
-        AccordPresets.all() +
+        AccordPresets.all() + ConsortPresets.all() +
         TrefoilPresets.all() + TidalPresets.all() + ApsisPresets.all() + LatticePresets.all() + NacrePresets.all() +
         ThumpPresets.all() + OnsetPresets.all() + TinesPresets.all() + PluckPresets.all() + VelvetPresets.all() +
             FathomPresets.all() + TonewheelPresets.all() + VoxPresets.all() + SkinPresets.all() + MeridianPresets.all() +
