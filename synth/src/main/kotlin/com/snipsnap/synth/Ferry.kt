@@ -2,6 +2,9 @@ package com.snipsnap.synth
 
 import com.snipsnap.audio.DrumClass
 import com.snipsnap.audio.Snip
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
@@ -118,17 +121,30 @@ object Ferry {
         velocity: Float = 1f,
         seed: Long = DEFAULT_SEED,
         model: Int = MODEL_VERSION,
-    ): Snip {
+    ): Snip = Snip(easeOnset(body(voice, macros, midi, velocity, seed, model)), channels = 1, sampleRate = Dsp.RATE)
+
+    /**
+     * The note before its onset ease: the sound the accepted goldens hash.
+     * [render] is this with its first [ONSET_SECONDS] eased in and nothing else.
+     */
+    internal fun body(
+        voice: FerryVoice = FerryVoice.PASSAGE,
+        macros: Map<String, Float> = emptyMap(),
+        midi: Int = DEFAULT_MIDI,
+        velocity: Float = 1f,
+        seed: Long = DEFAULT_SEED,
+        model: Int = MODEL_VERSION,
+    ): FloatArray {
         require(midi in MIN_MIDI..MAX_MIDI) { "FERRY MIDI must be $MIN_MIDI..$MAX_MIDI" }
         require(velocity.isFinite() && velocity in 0f..1f) { "FERRY velocity must be finite and in 0..1" }
         require(voice == FerryVoice.PASSAGE)
         val m = settled(macros, model)
         val loss = m["LOSS"] ?: .5f
         val frames = outputFrames(loss, model)
-        if (velocity == 0f) return Snip(FloatArray(frames), channels = 1, sampleRate = Dsp.RATE)
+        if (velocity == 0f) return FloatArray(frames)
         val raw = plan(midi, m.getValue("HANDOFF"), m["MATCH"] ?: 1f, loss)
             .render(initial(velocity, seed), frames * Dsp.OVERSAMPLE)
-        return Snip(finish(raw, releaseSeconds(loss, model)), channels = 1, sampleRate = Dsp.RATE)
+        return finish(raw, releaseSeconds(loss, model))
     }
 
     /** Normal SnipSnap output stage; no limiter is used to hide internal growth. */
@@ -147,6 +163,22 @@ object Ferry {
         Dsp.fadeTailCosine(out, releaseSeconds)
         Dsp.levelTo(out, Dsp.RATE, Dsp.MELODIC_LOUDNESS_TARGET)
         Dsp.fadeTail(out)
+        return out
+    }
+
+    /** The onset ease: long enough to remove the step, short enough to stay a strike. */
+    const val ONSET_SECONDS = .003f
+
+    /**
+     * Every mode starts at its largest displacement, so the readout used to
+     * jump from silence to the note's peak within two samples: a click ahead of
+     * the strike. The readout now rises over [ONSET_SECONDS] on a raised
+     * cosine. It runs last, after leveling, so every sample after the ease is
+     * the accepted note bit for bit.
+     */
+    internal fun easeOnset(out: FloatArray): FloatArray {
+        val n = min((ONSET_SECONDS * Dsp.RATE).toInt(), out.size)
+        for (i in 0 until n) out[i] *= (.5 - .5 * cos(PI * i / n)).toFloat()
         return out
     }
 }

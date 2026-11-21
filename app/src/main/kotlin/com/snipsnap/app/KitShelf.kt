@@ -162,9 +162,20 @@ class KitShelf(val root: File) {
     }
 
     /**
+     * The kit folders the last [list] could not load (a torn or hand-edited `kit.json`), by
+     * folder name. [list] skips them, since a kit that will not load cannot be opened, but
+     * the LIBRARY names them so they are reported, not hidden (UAT 2026-11 user states, S-15:
+     * such a kit used to disappear with no row and no line). Written by [list] on whatever
+     * thread runs it and read after it returns, hence volatile.
+     */
+    @Volatile
+    var unreadable: List<String> = emptyList()
+        private set
+
+    /**
      * Every readable kit on the shelf, ordered by [sort]. A folder whose
      * `kit.json` is broken is skipped, not fatal — one damaged kit must
-     * never blank the shelf.
+     * never blank the shelf — and named in [unreadable].
      *
      * [ShelfSort.RECENT] sorts by `kit.json`'s OWN file `lastModified()`,
      * deliberately not the kit directory's: [KitStore.save] is the ONLY
@@ -208,13 +219,16 @@ class KitShelf(val root: File) {
      * (already-alphabetical) relative order rather than shuffling.
      */
     fun list(sort: ShelfSort = ShelfSort.RECENT): List<Entry> {
+        val failed = ArrayList<String>()
         val entries = KitStore.list(root).mapNotNull { dir ->
             try {
                 Entry(dir, KitStore.load(dir))
             } catch (_: Exception) {
+                failed += dir.name
                 null
             }
         }
+        unreadable = failed
         return when (sort) {
             // KitStore.list's own base order is already A-Z by folder name
             // — nothing left to do.

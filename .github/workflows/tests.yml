@@ -57,11 +57,17 @@ permissions:
   contents: read
 
 jobs:
-  # The JVM tests run on four runners at once: jvm-other takes every module
-  # but :synth, and jvm-synth takes :synth in three shards (a class-hash
-  # split, see "Sharding by test class" in the root build.gradle.kts). One
-  # job used to run them all in turn and took 2 h, 88.6 min of it :synth.
-  # jvm-tests, at the end, is the one check that says all of them passed.
+  # The JVM tests run on many runners at once: jvm-other takes every module
+  # but :synth and :shell, jvm-shell takes :shell in four shards and
+  # jvm-synth takes :synth in five (class-hash splits, see "Sharding by test
+  # class" in the root build.gradle.kts). One job used to run them all in
+  # turn and took 2 h, 88.6 min of it :synth; after :synth was split,
+  # jvm-other still ran :shell, whose time is 82% three tests (JCardTest,
+  # KitArtTest, StarterKitsTest, each rendering every starter) and took 100
+  # to 170 min. The four :shell shards put those three on three different
+  # runners (the hash of their class paths separates them at 4, 6, 7 and 8
+  # shards, and not at 2, 3 or 5). jvm-tests, at the end, is the one check
+  # that says all of them passed.
   jvm-other:
     runs-on: ubuntu-latest
     steps:
@@ -91,16 +97,17 @@ jobs:
       - uses: android-actions/setup-android@v3
         with:
           packages: ""
-      # Everything except :app and :synth, by exclusion rather than by list —
-      # a module added later must not be silently untested because nobody
-      # updated this line. :synth runs in jvm-synth.
+      # Everything except :app, :synth and :shell, by exclusion rather than by
+      # list - a module added later must not be silently untested because
+      # nobody updated this line. :synth runs in jvm-synth, :shell in
+      # jvm-shell.
       - name: Run JVM test suites except :synth
         # Release the Kotlin compiler once it is idle, so its heap does not
         # sit beside the test JVMs (one per CPU). Busy compilation stays alive.
         run: >-
           ./gradlew --no-daemon
           -Dkotlin.daemon.options=autoshutdownIdleSeconds=30
-          test -x :app:test -x :synth:test
+          test -x :app:test -x :synth:test -x :shell:test
       # A worker/framework failure can leave only a skipped method and a
       # generic Gradle error in the console. Retain the actual failure.
       - name: Keep JVM failure reports
@@ -136,6 +143,101 @@ jobs:
           find . -path '*/build/test-results/test/*.xml' -print0 \
             | xargs -0 -r grep -h -B1 -A4 -E '<(failure|error)' | head -80
           echo "::endgroup::"
+          # A worker that dies leaves "failed to execute tests" with the real
+          # exception several lines further down than the four above show.
+          echo "::group::Causes named in those reports"
+          find . -path '*/build/test-results/test/*.xml' -print0 \
+            | xargs -0 -r grep -h -E 'Caused by|OutOfMemoryError|StackOverflowError|NoSpaceLeft|No space left|Could not complete|worker|Gradle Test Executor' \
+            | cut -c1-300 | sort | uniq -c | sort -rn | head -40
+          echo "::endgroup::"
+          echo "::group::Kernel kills, memory and disk"
+          sudo dmesg 2>/dev/null | grep -i -E 'killed process|out of memory|oom' | tail -20
+          free -m
+          df -h / /tmp
+          echo "::endgroup::"
+
+  # :shell's tests in four shards, one runner each. Three of its tests
+  # (JCardTest, KitArtTest, StarterKitsTest) render every starter kit and run
+  # for 20 to 45 minutes each; the shards are chosen so that those three land
+  # on different runners (shard 0, 3 and 2), which also gives each its own
+  # heap: the one JVM that ran them side by side was what ran out of memory
+  # on 2026-11-20. To run one shard locally:
+  # ./gradlew --no-daemon :shell:test -PtestShards=4 -PtestShard=<index>
+  jvm-shell:
+    name: jvm-shell (shard ${{ strategy.job-index }} of ${{ strategy.job-total }})
+    runs-on: ubuntu-latest
+    strategy:
+      # Every shard reports, so one red shard does not hide another.
+      fail-fast: false
+      matrix:
+        # The number of entries is the number of shards. The build reads the
+        # count and the index from strategy.job-total and strategy.job-index
+        # below, never from this list. Changing the count moves the three
+        # heavy tests: check where they land first (the hash of
+        # com/snipsnap/shell/JCardTest, KitArtTest and StarterKitsTest
+        # modulo the count) before adding or removing an entry.
+        shard: [0, 1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Run one shard of :shell's tests
+        # No Android SDK, as in jvm-synth: :shell needs nothing from :app
+        # (its tests read :app's sources as text), so the runner image's
+        # variables are blanked, settings.gradle.kts leaves :app out, and the
+        # shard does not install the NDK at configuration time.
+        env:
+          ANDROID_HOME: ""
+          ANDROID_SDK_ROOT: ""
+        run: >-
+          ./gradlew --no-daemon
+          -Dkotlin.daemon.options=autoshutdownIdleSeconds=30
+          :shell:test
+          -PtestShards=${{ strategy.job-total }}
+          -PtestShard=${{ strategy.job-index }}
+      - name: Keep JVM failure reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          # Each JVM job names its own, so two failing jobs do not collide.
+          name: jvm-test-reports-shell-${{ strategy.job-index }}-${{ github.sha }}
+          path: |
+            **/build/test-results/test/**
+            **/build/reports/tests/test/**
+            **/build/reports/problems/**
+          if-no-files-found: warn
+          retention-days: 3
+      # The artifact above has to be downloaded to be read. When the test JVM
+      # itself dies (a JIT crash, the kernel's OOM killer, a full disk), the
+      # console shows only the method that was running, marked SKIPPED, and
+      # "There were failing tests". This prints what separates those causes
+      # into the job log, where it can be read straight away. It runs only
+      # on failure and changes nothing about a green run.
+      - name: Print JVM failure evidence
+        if: failure()
+        run: |
+          set +e
+          echo "::group::JVM crash reports (hs_err_pid*.log)"
+          find . -name 'hs_err_pid*.log' | head -5 | while read -r f; do
+            echo "== $f"; head -60 "$f"
+          done
+          echo "::endgroup::"
+          echo "::group::Test reports that hold a failure or an error"
+          find . -path '*/build/test-results/test/*.xml' -print0 \
+            | xargs -0 -r grep -l -E '<(failure|error)' | head -20
+          find . -path '*/build/test-results/test/*.xml' -print0 \
+            | xargs -0 -r grep -h -B1 -A4 -E '<(failure|error)' | head -80
+          echo "::endgroup::"
+          # A worker that dies leaves "failed to execute tests" with the real
+          # exception several lines further down than the four above show.
+          echo "::group::Causes named in those reports"
+          find . -path '*/build/test-results/test/*.xml' -print0 \
+            | xargs -0 -r grep -h -E 'Caused by|OutOfMemoryError|StackOverflowError|NoSpaceLeft|No space left|Could not complete|worker|Gradle Test Executor' \
+            | cut -c1-300 | sort | uniq -c | sort -rn | head -40
+          echo "::endgroup::"
           echo "::group::Kernel kills, memory and disk"
           sudo dmesg 2>/dev/null | grep -i -E 'killed process|out of memory|oom' | tail -20
           free -m
@@ -152,7 +254,7 @@ jobs:
         # The number of entries is the number of shards. The build reads the
         # count and the index from strategy.job-total and strategy.job-index
         # below, never from this list, so adding a shard is adding an entry.
-        shard: [0, 1, 2]
+        shard: [0, 1, 2, 3, 4]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -161,7 +263,7 @@ jobs:
           java-version: "17"
       - uses: gradle/actions/setup-gradle@v4
       # One shard of :synth's test classes. To run the same shard locally:
-      # ./gradlew --no-daemon :synth:test -PtestShards=3 -PtestShard=<index>
+      # ./gradlew --no-daemon :synth:test -PtestShards=5 -PtestShard=<index>
       - name: Run one shard of :synth's tests
         # No Android SDK here, unlike jvm-other: nothing excludes :app, and
         # :synth needs nothing from it. The runner image presets both
@@ -169,12 +271,25 @@ jobs:
         # unset. settings.gradle.kts then leaves :app out, as in a cloud
         # session, and the shard does not install the NDK at configuration
         # time (about 14 s, and a dl.google.com fetch that could fail it).
+        #
+        # The Kotlin compiler gets 5g here, not gradle.properties' 3g, as
+        # android-build does. Every shard compiles all of :synth's test
+        # sources, and on 2026-11-20 that compile ran out of heap in one
+        # shard of two different PRs (#1256 and #1258): ":synth:compileTestKotlin
+        # FAILED ... OutOfMemoryError: GC overhead limit exceeded" after about
+        # six and a half minutes, while the PRs' other shards compiled the
+        # same sources. A limit the build sits on the edge of fails some shards
+        # and not others, which reads as a flake and is not one. This only
+        # raises the compiler's ceiling; the daemon still exits 30 s after
+        # its last compile (autoshutdownIdleSeconds). Whether 5g is enough
+        # is not measured: if this fails again the log's "Caused by" names it.
         env:
           ANDROID_HOME: ""
           ANDROID_SDK_ROOT: ""
         run: >-
           ./gradlew --no-daemon
           -Dkotlin.daemon.options=autoshutdownIdleSeconds=30
+          -Pkotlin.daemon.jvmargs=-Xmx5g
           :synth:test
           -PtestShards=${{ strategy.job-total }}
           -PtestShard=${{ strategy.job-index }}
@@ -192,9 +307,9 @@ jobs:
 
   # The one check that says every JVM test passed, under the name the single
   # job had, so anything that waits on `jvm-tests` still waits on all of them.
-  # Its check appears only once all four jobs have ended.
+  # Its check appears only once every job above has ended.
   jvm-tests:
-    needs: [jvm-other, jvm-synth]
+    needs: [jvm-other, jvm-shell, jvm-synth]
     # always(), so this job is never skipped: GitHub counts a skipped check as
     # passing. With no `if`, a failed test job would skip it. With
     # !cancelled(), a cancelled run would: one cancelled by hand, or by a
@@ -208,10 +323,10 @@ jobs:
     steps:
       - name: Every JVM test job passed
         env:
-          # One result per job named in `needs`; jvm-synth's is all its shards.
+          # One result per job named in `needs`; a sharded job's is all its shards.
           RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
-          echo "jvm-other, jvm-synth: $RESULTS"
+          echo "jvm-other, jvm-shell, jvm-synth: $RESULTS"
           for result in $RESULTS; do
             if [ "$result" != "success" ]; then
               echo "A JVM test job ended '$result', so not every JVM test passed."

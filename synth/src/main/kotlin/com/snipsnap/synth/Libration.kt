@@ -6,11 +6,20 @@ import java.util.concurrent.CancellationException
 import kotlin.math.*
 import kotlin.random.Random
 
-enum class LibrationVoice { GATHER, TWINS, DEPARTURE }
+/** GATHER, TWINS and DEPARTURE were kept first. CHIME, STRUM, ROTOR and HOLLOW were kept in round
+ * libration-voices-1 (20 Nov 2026); they are appended so saved names and ordinals never move. */
+enum class LibrationVoice { GATHER, TWINS, DEPARTURE, CHIME, STRUM, ROTOR, HOLLOW }
 
 /** Finite instrument. Trajectories control voicing; they never receive audio feedback. */
 object Libration {
     const val MODEL_VERSION = 3
+    /** The voices players are offered: every voice, all kept by ear. */
+    val KEPT_VOICES = LibrationVoice.entries.toList()
+    /**
+     * The voices the cloud renderer plays. Only these have a held instrument, touch keys, keygroups and the
+     * starter kit; CHIME, STRUM, ROTOR and HOLLOW are finite notes (LibrationCandidates.kt).
+     */
+    val CLOUD_VOICES = listOf(LibrationVoice.GATHER, LibrationVoice.TWINS, LibrationVoice.DEPARTURE)
     const val MIN_MIDI = 36
     const val MAX_MIDI = 84
     const val CONTROL_RATE = 500
@@ -26,6 +35,7 @@ object Libration {
             LibrationVoice.GATHER -> floatArrayOf(0f, .48f, .12f, .55f, .40f)
             LibrationVoice.TWINS -> floatArrayOf(1f, .40f, .14f, .95f, .53f)
             LibrationVoice.DEPARTURE -> floatArrayOf(.5f, .52f, .72f, .78f, .66f)
+            else -> LibrationCandidates.defaults(voice)
         }
         return listOf("REGION", "WANDER", "NUDGE", "SWARM", "RESONANCE").mapIndexed { i, name ->
             MacroSpec(name, values[i], neutral = .5f)
@@ -144,6 +154,7 @@ object Libration {
         val m = settled(voice, macros)
         val population = cached ?: population(voice, m, options, model)
         require(population.key == populationKey(voice, m, options, model)) { "stale LIBRATION trajectory cache" }
+        if (voice !in CLOUD_VOICES) return LibrationCandidates.probe(voice, m, midi, velocity, options, population, began)
         val particles = population.particles
         val hz = Keys.midiHz(midi).toDouble()
         val resonance = m.getValue("RESONANCE").toDouble()

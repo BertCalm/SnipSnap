@@ -166,6 +166,7 @@ object Robin {
         val padRecipe = Breed.recipeOf(pad)
         if (padRecipe == null) Breed.warnIfCorruptRecipe(pad, slot, "robin")
         val patch = com.snipsnap.synth.Velocity.patchForLayers(padRecipe)
+        val kerf = com.snipsnap.synth.Velocity.kerfForLayers(padRecipe)
         val patchFx = padRecipe?.fx
         val brightnessSpec = if (patch != null) {
             com.snipsnap.synth.Velocity.brightnessSpec(patch)
@@ -203,7 +204,9 @@ object Robin {
                             // soften[z] is a softening depth (0 untouched, 1 softest);
                             // layerAt (like atVelocity) speaks velocity (1
                             // untouched, 0 softest) - hence 1f - soften[z].
-                            val darker = com.snipsnap.synth.Velocity.layerAt(
+                            // A KERF twin is struck again from its own numbers, not filtered.
+                            val darker = if (kerf != null) com.snipsnap.synth.Velocity.kerfLayerAt(original, kerf, patchFx, 1f - soften[z])
+                            else com.snipsnap.synth.Velocity.layerAt(
                                 original, patch, patchFx, 1f - soften[z], brightnessSpec, useAtVelocity,
                             )
                             gain(darker, level)
@@ -245,9 +248,16 @@ object Robin {
         val pad = model.pad(slot) ?: throw IllegalArgumentException("no pad on slot $slot")
         require(pad.chain == null) { "pad $slot is already a round-robin chain - `robin --undo` first" }
         var boundaries: List<Long> = emptyList()
+        // A KERF twin deals its takes from its own numbers: the same hit cut again, another knife and other
+        // noise each time ([com.snipsnap.synth.KerfRecipe.take]), with the dial sliding how far the knife moves.
+        val twin = Breed.recipeOf(pad)?.let { r -> com.snipsnap.synth.Velocity.kerfForLayers(r)?.takeIf { r.fx == null } }
         model.replaceAudio(slot, pad.recipe) { original ->
             val rng = Random(settings.seed.toLong() * 31 + slot)
-            val rendered = RobinVariation.takes(original, settings.takes, amount, rng)
+            val rendered = if (twin != null) {
+                listOf(original) + (1 until settings.takes).map { t ->
+                    com.snipsnap.synth.Velocity.peakMatch(original, twin.take(t + settings.seed * MAX_TAKES, 1.0, amount.toDouble()))
+                }
+            } else RobinVariation.takes(original, settings.takes, amount, rng)
             boundaries = sliceStarts(rendered)
             concat(rendered)
         }
@@ -458,6 +468,11 @@ object Robin {
         val patchFx = padRecipe?.fx
         val restrikes = patch != null && patchFx == null && com.snipsnap.synth.Restrike.canRestrike(patch) &&
             com.snipsnap.synth.Velocity.canUseAtVelocity(original, patch, patchFx)
+        // A KERF twin is cut again for each take: another knife, other noise, at the zone's own velocity.
+        val twin = com.snipsnap.synth.Velocity.kerfForLayers(padRecipe)?.takeIf { patchFx == null }
+        if (twin != null) return { reference, velocity, take ->
+            com.snipsnap.synth.Velocity.peakMatch(reference, twin.take(take + seed * MAX_TAKES * 4, velocity.toDouble()))
+        }
         return { reference, velocity, take ->
             if (!restrikes) null
             else com.snipsnap.synth.Restrike.take(patch!!, velocity, seed * 31 + slot, take)

@@ -33,12 +33,13 @@ class FerryMatchTest {
             val patch = FerryPatch("Legacy", macros = mapOf("HANDOFF" to c.getValue("handoff").num().toFloat()),
                 midi = c.getValue("midi").int(), velocity = c.getValue("velocity").num().toFloat(),
                 seed = c.getValue("seed").str().toLong(), model = 1)
-            val legacy = Patches.fromJsonText(patch.toJsonText()).render().samples
+            // The goldens hash the note before its onset ease (FerryOnsetTest ties render() to it).
+            val legacy = Patches.fromJsonText(patch.toJsonText()).let { it as FerryPatch }.acceptedBody()
             val bytes = ByteBuffer.allocate(legacy.size * 4).order(ByteOrder.LITTLE_ENDIAN)
             legacy.forEach { bytes.putInt(it.toRawBits()) }
             val hash = MessageDigest.getInstance("SHA-256").digest(bytes.array()).joinToString("") { "%02x".format(it) }
             assertEquals(c.getValue("float_le_sha256").str(), hash, "Accepted renderer changed: $patch")
-            assertContentEquals(legacy, patch.copy(model = 2, macros = patch.macros + ("MATCH" to 1f)).render().samples)
+            assertContentEquals(legacy, patch.copy(model = 2, macros = patch.macros + ("MATCH" to 1f)).acceptedBody())
             assertEquals(patch, Patches.fromJsonText(patch.toJsonText()))
         }
     }
@@ -96,7 +97,10 @@ class FerryMatchTest {
             assertTrue(snip.samples.all { it.isFinite() })
             assertTrue(snip.samples.maxOf { abs(it) } in .01f..1f)
             assertTrue(abs(snip.samples.sumOf { it.toDouble() } / snip.samples.size) < .001)
-            assertTrue(abs(Loudness.of(snip) - Dsp.MELODIC_LOUDNESS_TARGET) < .001)
+            // The accepted note is leveled to the target; the onset ease then takes the click's own energy out of
+            // the loudest window, so the eased note reads a little lower (FerryOnsetTest prints and bounds it).
+            assertTrue(abs(Loudness.of(Ferry.body(macros = mapOf("HANDOFF" to handoff, "MATCH" to match), midi = midi), 1, Dsp.RATE) - Dsp.MELODIC_LOUDNESS_TARGET) < .001)
+            assertTrue(Loudness.of(snip) in Dsp.MELODIC_LOUDNESS_TARGET * FerryOnsetTest.MIN_EASED_LOUDNESS..Dsp.MELODIC_LOUDNESS_TARGET + .001f)
             val root = 440 * 2.0.pow((midi - 69) / 12.0)
             for (time in listOf(.05f, 1.3f, 3.2f)) {
                 val pitch = assertNotNull(Pitch.detect(snip, time), "$midi/$handoff/$match/$time missing pitch")

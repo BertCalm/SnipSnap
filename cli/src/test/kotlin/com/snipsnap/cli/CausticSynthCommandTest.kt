@@ -22,7 +22,7 @@ class CausticSynthCommandTest {
     fun `each character voice replays its own saved note and accepts native control overrides`() {
         val root = createTempDirectory("caustic-cli-voices").toFile()
         try {
-            for (voice in CausticVoice.entries.filter { it != CausticVoice.ALLOY }) {
+            for (voice in CausticInstrument.KEPT_VOICES.filter { it != CausticVoice.ALLOY }) {
                 assertEquals(1, Presets.forVoice("CAUSTIC", voice.name).size)
                 val patch = CausticPatch("SAVED DIRECTION", voice,
                     mapOf("SOURCE" to .62f, "LENGTH" to 0f), midi = 55, velocity = .43f, model = 1)

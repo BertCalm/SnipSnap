@@ -51,7 +51,7 @@ internal object ArcoLiftReads {
     val steps: List<Read> by lazy {
         ArcoMeasure.BODY_VOICES.flatMap { v -> (0..Arco.tuneSemitones(v)).map { v to it } }.pmap { (voice, step) ->
             val raw = ArcoLiftRig.rawOf(voice, ArcoLiftRig.macros(voice, step, Arco.DEFAULT_BODY))
-            readOf(voice, "$voice ${ArcoLiftRig.name(voice, step)}", raw, Arco.render(voice, ArcoLiftRig.macros(voice, step, 1f)).samples)
+            readOf(voice, "$voice ${ArcoLiftRig.name(voice, step)}", raw, Arco.render(voice, ArcoLiftRig.macros(voice, step, 1f), Arco.BUZZ_LAW, human = Humanize.OFF).samples)
         }
     }
 
