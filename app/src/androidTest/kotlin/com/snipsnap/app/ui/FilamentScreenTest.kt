@@ -203,7 +203,9 @@ class FilamentScreenTest : ComposeScreenTest() {
         // factory sound must replace every field of that older draft.
         assertEquals(old, currentPatch(FilamentVoice.THREAD))
         assertEquals(.81f, progress("INJECT"), 0f)
-        assertEquals(13, FilamentPresets.all().size)
+        // Twelve original presets, then Glass Flute (FRAY) and String Braid, Glass Harmonica and Spring Tank
+        // (BRAID, HALO, SPRING), each kept on 20-21 Nov 2026.
+        assertEquals(16, FilamentPresets.all().size)
         for (voice in Filament.KEPT_VOICES) {
             activate(voice.name)
             for (macro in Filament.macrosFor(voice)) slider(macro.name).assertExists()
