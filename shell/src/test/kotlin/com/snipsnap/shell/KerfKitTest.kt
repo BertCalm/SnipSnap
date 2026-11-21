@@ -25,7 +25,10 @@ class KerfKitTest {
             try {
                 // a snare, the roll and the riser: KerfKits.build(g, roles) levels each pad by its own grid, so these
                 // are the kit's own pads (`:shell:generateKerfKits` proves every pad of every kit the same way)
-                val roles = listOf(3, KerfKits.HITS, KerfKits.HITS + 1)
+                // The roll and riser are one code path for every kit; they are proved here on one kit per bank (the
+                // pool, round 5's, round 6's new loops and its percussion kit), every kit's fourth pad on all.
+                val sample = setOf(Genre.DUST, Genre.RUSH, Genre.JUNGLE, Genre.CLANG)
+                val roles = if (g in sample) listOf(3, KerfKits.HITS, KerfKits.HITS + 1) else listOf(3)
                 val pads = KerfKits.build(g, roles)
                 // one gain per pad: its loudest cell sits at its level, so nothing a pad deals clips
                 for ((role, pad) in roles.zip(pads)) {

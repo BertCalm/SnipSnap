@@ -125,10 +125,12 @@ object KerfBank {
 
     /**
      * The second bank (round 5, 2026-11-21): four genre kits' hits the first bank does not hold, keyed by genre
-     * ([KerfKits.Genre.name]), written by `prototype/kerf/genre_bank.py`. Only those kits read it; the engine's pools
+     * ([KerfKits.Genre.name]), written by `prototype/kerf/genre_bank.py`; round 6 (2026-11-21) adds eight more from
+     * `genre_bank_r6.py` (`genre_patches_r6.json`), from 31 new loops and the first loops' leftovers. Only those kits
+     * read it; the engine's pools
      * ([Kerf.pool]) stay on [kits], so a saved patch's HIT keeps its hit.
      */
-    val genreKits: Map<String, List<KerfPad>> by lazy { load("genre_patches.json") }
+    val genreKits: Map<String, List<KerfPad>> by lazy { load("genre_patches.json") + load("genre_patches_r6.json") }
 
     private fun load(file: String): Map<String, List<KerfPad>> {
         val text = requireNotNull(javaClass.getResourceAsStream("/kerf/v$VERSION/$file")) { "Missing KERF bank $file" }

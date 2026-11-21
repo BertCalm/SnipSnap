@@ -29,6 +29,12 @@ import kotlin.math.pow
  *   loops have none; long decays, the wash and bleed pushed, tuned down.
  * - [Genre.CHATTER], 90 BPM: the busy, hat-heavy loops. Hats and ghosts up front, short decays.
  *
+ * Round 6 (2026-11-21) adds eight more ([KerfBank.genreKits], `genre_bank_r6.py`). From 31 new loops, by measurement:
+ * [Genre.JUNGLE] (172 BPM breaks), [Genre.CLANG] (metal and percussion loops: three kicks and eleven struck hits, no
+ * snares or hats), [Genre.HOUSE] and [Genre.DEEP] (the 120 to 131 BPM loops, bright and dark), [Genre.SWAY] (the swung
+ * loops). From the first loops' leftovers: [Genre.CASSETTE] (round 5 CHATTER's loops), [Genre.BOOM] (the hits that ring
+ * longest) and [Genre.TIGHT] (the shortest).
+ *
  * Every pad is a grid of three velocity zones and four takes, as SOOT's:
  * - **A01 to A14:** single hits, each a KERF voice and pool hit at this genre's settings.
  * - **A15:** a roll: sixteen strikes of the genre's roll pad, accelerating over one bar, each strike a fresh take.
@@ -73,6 +79,15 @@ object KerfKits {
         POCKET("kerf-pocket", "Pocket", 96, tune = .5f, decay = .65f, floor = .45f, bleed = .58f, slop = .7f, rollPad = 6, riserPad = 12, second = true),
         MURK("kerf-murk", "Murk", 80, tune = .36f, decay = .7f, floor = .8f, bleed = .7f, slop = .55f, rollPad = 4, riserPad = 12, second = true),
         CHATTER("kerf-chatter", "Chatter", 90, tune = .54f, decay = .35f, floor = .62f, bleed = .42f, slop = .45f, rollPad = 8, riserPad = 12, second = true),
+        // Round 6 (2026-11-21): five from 31 new loops grouped by measurement, three from the first loops' leftovers.
+        JUNGLE("kerf-jungle", "Jungle", 172, tune = .56f, decay = .26f, floor = .26f, bleed = .62f, slop = .72f, rollPad = 4, riserPad = 10, second = true),
+        CLANG("kerf-clang", "Clang", 112, tune = .5f, decay = .5f, floor = .22f, bleed = .2f, slop = .2f, rollPad = 5, riserPad = 13, second = true),
+        HOUSE("kerf-house", "House", 124, tune = .53f, decay = .44f, floor = .3f, bleed = .15f, slop = .12f, rollPad = 5, riserPad = 11, second = true),
+        DEEP("kerf-deep", "Deep", 127, tune = .42f, decay = .62f, floor = .56f, bleed = .3f, slop = .22f, rollPad = 7, riserPad = 11, second = true),
+        SWAY("kerf-sway", "Sway", 86, tune = .44f, decay = .68f, floor = .64f, bleed = .42f, slop = .64f, rollPad = 6, riserPad = 11, second = true),
+        CASSETTE("kerf-cassette", "Cassette", 92, tune = .46f, decay = .48f, floor = .74f, bleed = .56f, slop = .42f, rollPad = 8, riserPad = 12, second = true),
+        BOOM("kerf-boom", "Boom", 78, tune = .38f, decay = .78f, floor = .6f, bleed = .62f, slop = .5f, rollPad = 3, riserPad = 11, second = true),
+        TIGHT("kerf-tight", "Tight", 100, tune = .62f, decay = .22f, floor = .42f, bleed = .24f, slop = .26f, rollPad = 4, riserPad = 11, second = true),
     }
 
     private fun p(name: String, voice: KerfVoice, hit: Int, levelDb: Double = 0.0, vararg over: Pair<String, Float>) =
@@ -151,6 +166,136 @@ object KerfKits {
             q("Hat", KerfVoice.HAT, 9, -6.0), q("Hat Dark", KerfVoice.HAT, 10, -6.0), q("Hat Long", KerfVoice.HAT, 11, -7.0),
             q("Open Hat", KerfVoice.HAT_OPEN, 12, -5.0),
             q("Rim Stack", KerfVoice.PERC, 13, -4.0), q("Snap Stack", KerfVoice.PERC, 14, -4.0),
+        )
+        // Round 6: names from what each hit measures beside the first of its kind (darker, brighter, longer, shorter;
+        // a kick with little under 150 Hz is a knock), else numbered.
+        Genre.JUNGLE -> listOf(
+            q("Kick", KerfVoice.KICK, 1),
+            q("Kick Bright", KerfVoice.KICK, 2, -1.0),
+            q("Kick 3", KerfVoice.KICK, 3, -1.0),
+            q("Snare", KerfVoice.SNARE, 4),
+            q("Snare Bright", KerfVoice.SNARE, 5, -1.0),
+            q("Snare 3", KerfVoice.SNARE, 6, -1.0),
+            q("Ghost", KerfVoice.GHOST, 7, -8.0),
+            q("Hat", KerfVoice.HAT, 8, -7.0),
+            q("Hat 2", KerfVoice.HAT, 9, -8.0),
+            q("Hat 3", KerfVoice.HAT, 10, -8.0),
+            q("Open Hat", KerfVoice.HAT_OPEN, 11, -5.0),
+            q("Open Hat 2", KerfVoice.HAT_OPEN, 12, -6.0),
+            q("Stack", KerfVoice.PERC, 13, -3.0),
+            q("Stack Bright", KerfVoice.PERC, 14, -4.0),
+        )
+        Genre.CLANG -> listOf(
+            q("Kick", KerfVoice.KICK, 1),
+            q("Kick Knock", KerfVoice.KICK, 2, -1.0),
+            q("Kick Bright", KerfVoice.KICK, 3, -1.0),
+            q("Clang", KerfVoice.PERC, 4, -2.0),
+            q("Clang Bright", KerfVoice.PERC, 5, -3.0),
+            q("Clang Short", KerfVoice.PERC, 6, -3.0),
+            q("Clang 4", KerfVoice.PERC, 7, -3.0),
+            q("Clang 5", KerfVoice.PERC, 8, -3.0),
+            q("Clang 6", KerfVoice.PERC, 9, -3.0),
+            q("Clang 7", KerfVoice.PERC, 10, -3.0),
+            q("Clang 8", KerfVoice.PERC, 11, -3.0),
+            q("Clang 9", KerfVoice.PERC, 12, -3.0),
+            q("Clang Dark", KerfVoice.PERC, 13, -3.0),
+            q("Clang Long", KerfVoice.PERC, 14, -3.0),
+        )
+        Genre.HOUSE -> listOf(
+            q("Kick", KerfVoice.KICK, 1),
+            q("Kick Knock", KerfVoice.KICK, 2, -1.0),
+            q("Kick Low", KerfVoice.KICK, 3, -1.0),
+            q("Snare", KerfVoice.SNARE, 4),
+            q("Snare Dark", KerfVoice.SNARE, 5, -1.0),
+            q("Snare Short", KerfVoice.SNARE, 6, -1.0),
+            q("Ghost", KerfVoice.GHOST, 7, -8.0),
+            q("Ghost Bright", KerfVoice.GHOST, 8, -9.0),
+            q("Hat", KerfVoice.HAT, 9, -7.0),
+            q("Hat Dark", KerfVoice.HAT, 10, -8.0),
+            q("Hat 3", KerfVoice.HAT, 11, -8.0),
+            q("Open Hat", KerfVoice.HAT_OPEN, 12, -5.0),
+            q("Stack", KerfVoice.PERC, 13, -3.0),
+            q("Stack Bright", KerfVoice.PERC, 14, -4.0),
+        )
+        Genre.DEEP -> listOf(
+            q("Kick", KerfVoice.KICK, 1),
+            q("Kick Knock", KerfVoice.KICK, 2, -1.0),
+            q("Kick Bright", KerfVoice.KICK, 3, -1.0),
+            q("Snare", KerfVoice.SNARE, 4),
+            q("Snare Dark", KerfVoice.SNARE, 5, -1.0),
+            q("Ghost", KerfVoice.GHOST, 6, -8.0),
+            q("Ghost Long", KerfVoice.GHOST, 7, -9.0),
+            q("Hat", KerfVoice.HAT, 8, -7.0),
+            q("Hat 2", KerfVoice.HAT, 9, -8.0),
+            q("Hat 3", KerfVoice.HAT, 10, -8.0),
+            q("Hat 4", KerfVoice.HAT, 11, -8.0),
+            q("Open Hat", KerfVoice.HAT_OPEN, 12, -5.0),
+            q("Stack", KerfVoice.PERC, 13, -3.0),
+            q("Stack Short", KerfVoice.PERC, 14, -4.0),
+        )
+        Genre.SWAY -> listOf(
+            q("Kick", KerfVoice.KICK, 1),
+            q("Kick Knock", KerfVoice.KICK, 2, -1.0),
+            q("Kick Short", KerfVoice.KICK, 3, -1.0),
+            q("Snare", KerfVoice.SNARE, 4),
+            q("Snare Bright", KerfVoice.SNARE, 5, -1.0),
+            q("Snare Dark", KerfVoice.SNARE, 6, -1.0),
+            q("Ghost", KerfVoice.GHOST, 7, -8.0),
+            q("Ghost Dark", KerfVoice.GHOST, 8, -9.0),
+            q("Hat", KerfVoice.HAT, 9, -7.0),
+            q("Hat 2", KerfVoice.HAT, 10, -8.0),
+            q("Hat 3", KerfVoice.HAT, 11, -8.0),
+            q("Open Hat", KerfVoice.HAT_OPEN, 12, -5.0),
+            q("Stack", KerfVoice.PERC, 13, -3.0),
+            q("Stack Dark", KerfVoice.PERC, 14, -4.0),
+        )
+        Genre.CASSETTE -> listOf(
+            q("Kick", KerfVoice.KICK, 1),
+            q("Kick 2", KerfVoice.KICK, 2, -1.0),
+            q("Kick Low", KerfVoice.KICK, 3, -1.0),
+            q("Snare", KerfVoice.SNARE, 4),
+            q("Snare 2", KerfVoice.SNARE, 5, -1.0),
+            q("Snare Bright", KerfVoice.SNARE, 6, -1.0),
+            q("Ghost", KerfVoice.GHOST, 7, -8.0),
+            q("Ghost Bright", KerfVoice.GHOST, 8, -9.0),
+            q("Hat", KerfVoice.HAT, 9, -7.0),
+            q("Hat Dark", KerfVoice.HAT, 10, -8.0),
+            q("Hat 3", KerfVoice.HAT, 11, -8.0),
+            q("Open Hat", KerfVoice.HAT_OPEN, 12, -5.0),
+            q("Open Hat 2", KerfVoice.HAT_OPEN, 13, -6.0),
+            q("Stack", KerfVoice.PERC, 14, -3.0),
+        )
+        Genre.BOOM -> listOf(
+            q("Kick", KerfVoice.KICK, 1),
+            q("Kick Knock", KerfVoice.KICK, 2, -1.0),
+            q("Kick Bright", KerfVoice.KICK, 3, -1.0),
+            q("Snare", KerfVoice.SNARE, 4),
+            q("Snare Bright", KerfVoice.SNARE, 5, -1.0),
+            q("Snare Long", KerfVoice.SNARE, 6, -1.0),
+            q("Ghost", KerfVoice.GHOST, 7, -8.0),
+            q("Ghost Short", KerfVoice.GHOST, 8, -9.0),
+            q("Hat", KerfVoice.HAT, 9, -7.0),
+            q("Hat 2", KerfVoice.HAT, 10, -8.0),
+            q("Hat Dark", KerfVoice.HAT, 11, -8.0),
+            q("Open Hat", KerfVoice.HAT_OPEN, 12, -5.0),
+            q("Open Hat 2", KerfVoice.HAT_OPEN, 13, -6.0),
+            q("Stack", KerfVoice.PERC, 14, -3.0),
+        )
+        Genre.TIGHT -> listOf(
+            q("Kick", KerfVoice.KICK, 1),
+            q("Kick 2", KerfVoice.KICK, 2, -1.0),
+            q("Kick 3", KerfVoice.KICK, 3, -1.0),
+            q("Snare", KerfVoice.SNARE, 4),
+            q("Snare 2", KerfVoice.SNARE, 5, -1.0),
+            q("Snare 3", KerfVoice.SNARE, 6, -1.0),
+            q("Ghost", KerfVoice.GHOST, 7, -8.0),
+            q("Ghost Dark", KerfVoice.GHOST, 8, -9.0),
+            q("Hat", KerfVoice.HAT, 9, -7.0),
+            q("Hat Bright", KerfVoice.HAT, 10, -8.0),
+            q("Hat 3", KerfVoice.HAT, 11, -8.0),
+            q("Open Hat", KerfVoice.HAT_OPEN, 12, -5.0),
+            q("Open Hat 2", KerfVoice.HAT_OPEN, 13, -6.0),
+            q("Stack", KerfVoice.PERC, 14, -3.0),
         )
     }
 

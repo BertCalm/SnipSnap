@@ -15,8 +15,8 @@ From the new loops, grouped by what they measure, never by name (no loop or pack
 From the first loops' leftovers (fitted in round 2, used by no kit), grouped by the hits themselves:
 
 - CASSETTE: the leftovers of the loops round 5 filed as CHATTER (the busy, hat-heavy cassette breaks).
-- BOOM: of what remains, the longest-ringing hits.
-- TIGHT: of what remains, the shortest.
+- BOOM: of what remains, per kind, the third that rings longest.
+- TIGHT: of what remains after BOOM, per kind, the shortest third.
 
 Every kit picks 14 hits the way `kits.py` does (loudest first, then least like those already chosen), only from hits
 no other kit holds that fit well (envelope match at least 0.85, band error at most 5 dB) and last 0.08 to 1.2 s.
@@ -128,8 +128,16 @@ old_loops = list(dict.fromkeys(r['loop'] for r in OLD))
 cassette = [lp for lp in old_loops if chatter(OLD, lp)]
 left = [r for r in OLD if good(r)]
 out['CASSETTE'] = kit([r for r in left if r['loop'] in cassette]); source['CASSETTE'] = (OLD, len(cassette), len([r for r in left if r['loop'] in cassette]))
-out['BOOM'] = kit(left, key=lambda r: -r['t60']); source['BOOM'] = (OLD, len(old_loops), len(left))
-out['TIGHT'] = kit(left, key=lambda r: r['dur']); source['TIGHT'] = (OLD, len(old_loops), len(left))
+def third(rows, key, longest):
+    """Per kind, the third of [rows] with the highest (or lowest) [key]: the picker's spread then stays inside it."""
+    out = []
+    for c in set(r['cls'] for r in rows):
+        rr = sorted((r for r in rows if r['cls'] == c), key=key, reverse=longest); out += rr[:max(1, len(rr) // 3)]
+    return out
+rest = [r for r in left if r['patch']['seed'] not in taken]
+boom = third(rest, lambda r: r['t60'], True); out['BOOM'] = kit(boom); source['BOOM'] = (OLD, len(old_loops), len(boom))
+rest = [r for r in left if r['patch']['seed'] not in taken]
+tight = third(rest, lambda r: r['dur'], False); out['TIGHT'] = kit(tight); source['TIGHT'] = (OLD, len(old_loops), len(tight))
 
 bank = {}
 for g, pads in out.items():

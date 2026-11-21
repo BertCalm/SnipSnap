@@ -940,3 +940,59 @@ owner picked fresh hits, four kits, and genres measured from the loops (2026-11-
   "These are great" (2026-11-21). MURK stays as its loops are, without closed hats. Phone and
   MPC playback of these four is open.
 
+## As built: round 6, eight more genre kits (2026-11-21)
+
+The owner asked to do all three of the round-5 follow-ups: more kits from the leftovers, kits from
+new loops, and a bigger engine. They sent 31 new loops (four zips, deduplicated by content),
+cleared for commercial use, and left the genres to the loops. This round is the kits. The engine
+comes after the owner hears these hits.
+
+- **Fitting.** `chop.py` and `run_fit.py`, unchanged, made 1,179 hits: band error median 4.0 dB
+  (p90 5.8), envelope match median 0.92, a little looser than the first loops. Only hits at 5 dB
+  or better are used.
+- **The third bank** (`prototype/kerf/genre_bank_r6.py` writes `genre_patches_r6.json`;
+  `KerfBank.genreKits` reads both genre files). From the new loops, by measurement:
+  - JUNGLE: 160 BPM and up (2 loops).
+  - CLANG: kicks under 13% of the hits at 100 BPM and up (5 loops). Their bright metal hits label
+    as snares, so CLANG plays them as PERC.
+  - HOUSE and DEEP: 118 to 132 BPM with kicks at least 20% of the hits, split at a spectral
+    centre of 800 Hz (10 and 7 loops).
+  - SWAY: 70 to 115 BPM (7 loops).
+
+  One loop's name has no tempo, so it was estimated from where its onsets sit (129.5 BPM, HOUSE).
+  From the first loops' leftovers:
+  - CASSETTE: the leftovers of round 5 CHATTER's loops.
+  - BOOM: per kind, the third of what remains that rings longest (ring median 0.90 s).
+  - TIGHT: then per kind the shortest third (length median 0.15 s).
+
+  A first pass sorted BOOM and TIGHT only for their first pick, and TIGHT came out longer than
+  BOOM, so each now picks inside its third.
+- **The kits** (`KerfKits.Genre`, `second = true`):
+
+  | Kit | Tempo |
+  |---|---:|
+  | JUNGLE | 172 |
+  | CLANG | 112 |
+  | HOUSE | 124 |
+  | DEEP | 127 |
+  | SWAY | 86 |
+  | CASSETTE | 92 |
+  | BOOM | 78 |
+  | TIGHT | 100 |
+
+  Each kit has fourteen hits, a roll and a riser, and 3 zones × 4 takes per pad. Pad names come
+  from what each hit measures beside the first of its kind (darker, brighter, longer, shorter; a
+  kick with little under 150 Hz is a knock); otherwise they are numbered. All sixteen kits differ
+  pairwise in tempo, lead kick and lead snare. They share at most three hits (round 6 shares none)
+  and differ in at least three settings (`KerfKitsTest`).
+  CLANG is held to a percussion kit's roles (two kicks, at least eight struck hits) instead of a
+  break's.
+- **Proof.** `KerfKitTest` puts every kit's fourth pad through save, reload, `PadHit.resolve` and
+  MPC 3. It puts the roll and riser, one code path for all kits, through the same on one kit per
+  bank: DUST, RUSH, JUNGLE and CLANG. `:shell:generateKerfKits` proves every pad of all sixteen.
+  `KerfKits.build(g, roles)` builds chosen pads, each levelled by its own grid, so they are the same
+  bytes as in a full build.
+- **Not yet.** The owner has not heard round 6's kits; the audition page goes to them with this
+  round. Phone and MPC playback of rounds 5 and 6 is open. The engine's bigger pools
+  (model 2) follow the listen.
+

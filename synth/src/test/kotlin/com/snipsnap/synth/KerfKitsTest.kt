@@ -38,6 +38,14 @@ class KerfKitsTest {
             assertEquals(KerfKits.HITS, pads.size)
             val names = KerfKits.names(g)
             assertEquals(KerfKits.PADS, names.size); assertEquals(names.size, names.toSet().size, "$g pad names")
+            if (g == KerfKits.Genre.CLANG) {
+                // a percussion kit: its loops are struck metal, tambourine and the like, with a few kicks and no snares
+                // or hats (genre_bank_r6.py), so it is held to that instead of a break's roles
+                assertTrue(pads.count { it.voice == KerfVoice.KICK } >= 2, "$g has two kicks")
+                assertTrue(pads.count { it.voice == KerfVoice.PERC } >= 8, "$g is mostly percussion")
+                assertEquals(pads.size, drums(g).toSet().size, "$g plays no hit twice")
+                continue
+            }
             for (v in listOf(KerfVoice.KICK, KerfVoice.SNARE)) assertTrue(pads.count { it.voice == v } >= 2, "$g has two ${v}s")
             // MURK's dark loops hold one usable ghost note (genre_bank.py), and the kit keeps what its loops have
             assertTrue(pads.count { it.voice == KerfVoice.GHOST } >= 1, "$g has a ghost")
