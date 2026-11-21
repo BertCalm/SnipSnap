@@ -88,6 +88,14 @@ class DeterminismTest {
         }
     }
 
+    @Test fun `KERF replays every saved drum and every take byte for byte`() {
+        for (voice in KerfVoice.entries) {
+            val patch = KerfPatch("Canary", voice, Kerf.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+            assertContentEquals(patch.render(.6f, take = 2).samples, patch.render(.6f, take = 2).samples)
+        }
+    }
+
     @Test fun `BREAKER replays every saved drum and every take byte for byte`() {
         for (voice in BreakerVoice.entries) {
             val patch = BreakerPatch("Canary", voice, Breaker.defaults(voice))

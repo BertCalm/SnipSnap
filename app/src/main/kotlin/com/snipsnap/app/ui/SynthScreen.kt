@@ -250,6 +250,9 @@ import com.snipsnap.synth.SambaPatch
 import com.snipsnap.synth.ParadeSamba
 import com.snipsnap.synth.DrumlinePatch
 import com.snipsnap.synth.DrumlineVoice
+import com.snipsnap.synth.Kerf
+import com.snipsnap.synth.KerfPatch
+import com.snipsnap.synth.KerfVoice
 import com.snipsnap.synth.Soot
 import com.snipsnap.synth.SootPatch
 import com.snipsnap.synth.SootVoice
@@ -1005,6 +1008,7 @@ fun SynthScreen(
                         else if (e == Engine.SAMBA) seed.seededDrafts.filterIsInstance<SambaPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.DRUMLINE) seed.seededDrafts.filterIsInstance<DrumlinePatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.SOOT) seed.seededDrafts.filterIsInstance<SootPatch>().firstOrNull { it.voice == v }
+                        else if (e == Engine.KERF) seed.seededDrafts.filterIsInstance<KerfPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.CLUTTER) seed.seededDrafts.filterIsInstance<ClutterPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.CALABASH) seed.seededDrafts.filterIsInstance<CalabashPatch>().firstOrNull { it.voice == v }
                         else if (e == Engine.SERVO) seed.seededDrafts.filterIsInstance<ServoPatch>().firstOrNull { it.voice == v }
@@ -1235,6 +1239,13 @@ fun SynthScreen(
                 engine.patchDisplayName(voice), voice as SootVoice, macros,
             )
         }
+        // KERF keeps its engine model on the patch, as SOOT does.
+        if (engine == Engine.KERF && (engine to voice) !in loadedPatchesByVoice &&
+            (engine to voice) !in seed.seededPresets) {
+            loadedPatchesByVoice[engine to voice] = KerfPatch(
+                engine.patchDisplayName(voice), voice as KerfVoice, macros,
+            )
+        }
         // CLUTTER keeps its strike velocity, take and renderer model on the patch; a factory preset (a kit's pad at
         // the kit grid's first take) loads whole through loadPreset, so freeze one only where no recipe is loading.
         if (engine == Engine.CLUTTER && (engine to voice) !in loadedPatchesByVoice &&
@@ -1319,7 +1330,7 @@ fun SynthScreen(
         // existing draft format, including a last-frame macro edit before navigation.
         if (patch is CausticPatch) CausticEditing.edited(patch, macros = macrosByVoice.getValue(pair))
         else if (patch is SkinPatch) patch.withMacros(macrosByVoice.getValue(pair))
-        else if (patch is BristlePatch || patch is SambaPatch || patch is EmberPatch || patch is RiddimPatch || patch is DrumlinePatch || patch is TempestPatch || patch is SplayPatch || patch is OsteriaPatch || patch is EtchPatch || patch is ScuffPatch || patch is CairnPatch || patch is BackwashPatch || patch is SootPatch || patch is HiccupPatch || patch is ClutterPatch || patch is CalabashPatch || patch is ServoPatch || patch is KindredPatch || patch is HalobarPatch || patch is ErosionPatch || patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is RivetPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
+        else if (patch is BristlePatch || patch is SambaPatch || patch is EmberPatch || patch is RiddimPatch || patch is DrumlinePatch || patch is TempestPatch || patch is SplayPatch || patch is OsteriaPatch || patch is EtchPatch || patch is ScuffPatch || patch is CairnPatch || patch is BackwashPatch || patch is SootPatch || patch is KerfPatch || patch is HiccupPatch || patch is ClutterPatch || patch is CalabashPatch || patch is ServoPatch || patch is KindredPatch || patch is HalobarPatch || patch is ErosionPatch || patch is OnsetPatch || patch is AccordPatch || patch is LibrationPatch || patch is RimePatch || patch is OtisPatch || patch is RivetPatch || patch is WickPatch || patch is FilamentPatch || patch is TidalPatch || patch is TremorPatch || patch is ChamberPatch ||
             patch is PrismPatch || patch is NacrePatch || patch is OverlapPatch || patch is ObbligatoPatch || patch is RelayPatch || patch is MurmurPatch ||
             patch is PluckPatch && patch.voice == PluckVoice.UPRIGHT)
             patch.withMacros(macrosByVoice.getValue(pair)) else patch
@@ -6709,7 +6720,7 @@ private enum class ObbligatoVoice { AIR_REED }
  */
 private enum class Engine {
     LATTICE, ACCORD,
-    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED_BRONZE, BACKWASH, DRUMLINE, SOOT, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, SERVO, EMBER, SAMBA, KINDRED, RIDDIM, CAIRN;
+    THUMP, SCANNED_CHAIN, SKIN, ONSET, TINES, VELVET, VOX, PLUCK, ORPHICA, TONEWHEEL, OTIS, REGISTERS, FATHOM, RESIN, TIDE, GLINT, SIREN, FORK, HALOBAR, FLOTILLA, AEROSTAT, TREMOR, BALLAST, CISTERN, CIRCUIT, OBBLIGATO, ALLOY, THAW, MURK, NIMBUS, COROLLA, UNDERTOW, SUTURE, TESSERA, PITCHWHEEL, REVEL, PRISM, CONTOUR, STOOP, LACQUER, SPOOL, SKITTER, TANGLE, SHOAL, RELAY, EMBOUCHURE, BELLOWS, MURMUR, OSPREY, OPENSKY, OVERLAP, OVEN, FLOCK, VENT, CREASE, TRIO, NACRE, ORIGAMI, TREFOIL, OHM, MERCURY, CAUSTIC, FILAMENT, APSIS, TIDAL, CHAMBER, LIBRATION, MERIDIAN, RIME, BORE, ARCO, SCOUR, KEEL, CHITIN, WICK, EROSION, RIVET, FIRED_BRONZE, BACKWASH, DRUMLINE, SOOT, KERF, HICCUP, TEMPEST, SPLAY, OSTERIA, ETCH, SCUFF, CLUTTER, CALABASH, TERRA, BRISTLE, SERVO, EMBER, SAMBA, KINDRED, RIDDIM, CAIRN;
     val displayName: String get() = name.replace('_', ' ')
 
     /** The engine after this one in the enum's order, wrapping from the last back to the first. */
@@ -6832,6 +6843,7 @@ private enum class Engine {
         BRISTLE -> Bristle.Route.entries
         SCUFF -> ScuffVoice.entries
         CAIRN -> CairnVoice.entries
+        KERF -> KerfVoice.entries
         KEEL -> KeelVoice.entries
     }
 
@@ -6929,6 +6941,7 @@ private enum class Engine {
         BRISTLE -> Bristle.macrosFor(voice as Bristle.Route)
         SCUFF -> Scuff.macrosFor(voice as ScuffVoice)
         CAIRN -> Cairn.macrosFor(voice as CairnVoice)
+        KERF -> Kerf.macrosFor(voice as KerfVoice)
         KEEL -> Keel.macrosFor(voice as KeelVoice)
         FILAMENT -> Filament.macrosFor(voice as FilamentVoice)
         TIDAL -> Tidal.macrosFor(voice as TidalVoice).filterNot { it.name == "HOLD" }
@@ -7032,6 +7045,7 @@ private enum class Engine {
         BRISTLE -> Bristle.defaults(voice as Bristle.Route)
         SCUFF -> Scuff.defaults(voice as ScuffVoice)
         CAIRN -> Cairn.defaults(voice as CairnVoice)
+        KERF -> Kerf.defaults(voice as KerfVoice)
         KEEL -> Keel.defaults(voice as KeelVoice)
         FILAMENT -> Filament.defaults(voice as FilamentVoice)
         TIDAL -> Tidal.defaults(voice as TidalVoice)
@@ -7138,6 +7152,7 @@ private enum class Engine {
         BRISTLE -> Bristle.scramble(voice as Bristle.Route, random)
         SCUFF -> Scuff.scramble(voice as ScuffVoice, random)
         CAIRN -> Cairn.scramble(voice as CairnVoice, random)
+        KERF -> Kerf.scramble(voice as KerfVoice, random)
         KEEL -> Keel.scramble(voice as KeelVoice, random)
         FILAMENT -> Filament.scramble(voice as FilamentVoice, random)
         TIDAL -> Tidal.scramble(voice as TidalVoice, random)
@@ -7250,6 +7265,7 @@ private enum class Engine {
         BRISTLE -> Bristle.render(voice as Bristle.Route, macros)
         SCUFF -> ScuffPatch("Scuff", voice as ScuffVoice, macros).render()
         CAIRN -> Cairn.render(voice as CairnVoice, macros)
+        KERF -> KerfPatch("Kerf", voice as KerfVoice, macros).render()
         KEEL -> Keel.render(voice as KeelVoice, macros)
         FILAMENT -> Filament.render(voice as FilamentVoice, macros)
         TIDAL -> Tidal.render(voice as TidalVoice, macros)
@@ -7359,6 +7375,7 @@ private enum class Engine {
         BRISTLE -> Bristle.drumClassFor(voice as Bristle.Route, macros)
         SCUFF -> Scuff.drumClassFor(voice as ScuffVoice)
         CAIRN -> Cairn.drumClassFor(voice as CairnVoice, macros)
+        KERF -> Kerf.drumClassFor(voice as KerfVoice)
         KEEL -> Keel.drumClassFor(voice as KeelVoice, macros)
         FILAMENT -> Filament.drumClassFor(voice as FilamentVoice, macros)
         TIDAL -> Tidal.drumClassFor(voice as TidalVoice, macros)
@@ -7462,6 +7479,7 @@ private enum class Engine {
         BRISTLE -> BristlePatch(name, voice as Bristle.Route, macros)
         SCUFF -> ScuffPatch(name, voice as ScuffVoice, macros)
         CAIRN -> CairnPatch(name, voice as CairnVoice, macros)
+        KERF -> KerfPatch(name, voice as KerfVoice, macros)
         KEEL -> KeelPatch(name, voice as KeelVoice, macros)
         FILAMENT -> FilamentPatch(name, voice as FilamentVoice, macros)
         TIDAL -> TidalPatch(name, voice as TidalVoice, macros)
