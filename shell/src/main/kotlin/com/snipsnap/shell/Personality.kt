@@ -232,6 +232,41 @@ object Copy {
     const val NO_KIT_FOR_EXPORT = "Add a kit to this project first, because EXPORT dubs it for the MPC."
     /** A kit folder that won't parse (torn `kit.json`, missing file, etc.) — distinct from EMPTY_SHELF, which claims no kit exists at all. */
     const val KIT_WONT_OPEN = "This kit won't open. The file may be damaged."
+
+    /**
+     * The LIBRARY's line for kit folders whose `kit.json` will not load (UAT 2026-11 user
+     * states, S-15). They used to vanish with no row and no line, which reads as lost work;
+     * this names them, by folder, two at most and then a count. Nothing offers to delete or
+     * repair them here: the folder is still on the phone, and a damaged file may be recoverable.
+     */
+    fun kitsWontOpen(names: List<String>): String {
+        val who = when (names.size) {
+            1 -> names[0]
+            2 -> "${names[0]} and ${names[1]}"
+            else -> "${names[0]}, ${names[1]} and ${names.size - 2} more"
+        }
+        return if (names.size == 1) {
+            "$who won't open, and its kit file may be damaged."
+        } else {
+            "$who won't open, and their kit files may be damaged."
+        }
+    }
+
+    /**
+     * Said once when a kit opens with pads whose sound file is gone (UAT 2026-11 user states,
+     * S-15): such a pad was silent and said nothing until export's preflight. Pads are named
+     * by their on-screen tag, three at most and then a count; [slots] in slot order.
+     */
+    fun padsMissingFiles(slots: List<Int>): String {
+        val tags = slots.map { PadBanks.tag(it) }
+        val who = if (tags.size <= 3) {
+            if (tags.size == 1) tags[0] else tags.dropLast(1).joinToString(", ") + " and " + tags.last()
+        } else {
+            "${tags.take(3).joinToString(", ")} and ${tags.size - 3} more"
+        }
+        val noun = if (tags.size == 1) "Pad $who has no sound file, so it plays" else "Pads $who have no sound file, so they play"
+        return "$noun nothing. Record or load a sound onto ${if (tags.size == 1) "it" else "them"}."
+    }
     /**
      * CHOP SHOP's own empty face when TAPE's last commit exists but nothing
      * readable came back — its source file is gone or won't decode, and the
@@ -1401,7 +1436,11 @@ object Copy {
     // to it. See feelRolled/FEEL_RECENTRED below for its replacements.
     // The phone reads (wave ZZ): READ AS GROOVE, DIG, STEAL THE FEEL on TAPE.
     const val READ_GROOVE_BUSY = "Listening…"
-    const val READ_GROOVE_NEEDS_KIT = "Add a kit to this project first, because the ear needs pads to play on."
+    /**
+     * BEAT with no kit, and READ AS GROOVE or STEAL THE FEEL with none. It named "the ear",
+     * a word no screen uses (UAT 2026-11 user states, D-10); a beat plays on a kit's pads.
+     */
+    const val READ_GROOVE_NEEDS_KIT = "Add a kit to this project first, because a beat plays on its pads."
     /** The reading landed: how much was heard, and where it plays. */
     fun grooveRead(hits: Int, bars: Int, bpm: Int): String =
         "Heard ${countOf(hits, "hit", "hits")} over ${countOf(bars, "bar", "bars")} at ~$bpm BPM. They play on your pads now."
@@ -3539,6 +3578,12 @@ object Copy {
     const val NOTHING_DELETED = "Nothing deleted."
     /** SNIPS' own empty state. */
     const val SNIPS_EMPTY = "No samples yet."
+    /** The empty SAVED SAMPLES' way forward (D-6): the mic, named as the dock names it. */
+    @field:CopyLabel const val LISTEN_MIC = "LISTEN · MIC"
+    /** CREATE's way to a kit when none is open (D-6): the LIBRARY, where kits are opened. */
+    @field:CopyLabel const val LIBRARY_DOOR = "LIBRARY ▸"
+    /** The empty INSTRUMENTS list's way forward (D-6): SYNTH, whose MAKE INSTRUMENT makes one. */
+    @field:CopyLabel const val SYNTH_DOOR = "SYNTH ▸"
     /** SAVED SAMPLES while the first read of the folder is still running: not "no samples", which it has not found out yet. */
     const val SNIPS_LOADING = "Loading SAVED SAMPLES…"
     /**
@@ -3627,6 +3672,8 @@ object Copy {
     const val SNAP_NEEDS_KIT = "Open a kit to send sounds to pads."
     /** SURFACE with no kit open - the pad it plays has nothing to come from yet. */
     const val SURFACE_NEEDS_KIT = "Open a kit. The SURFACE plays its first pad."
+    /** SYNTH with no kit open (UAT 2026-11 user states, S-9): SEND TO PAD is greyed, and this line says why, as SNAP's and SURFACE's do. */
+    const val SYNTH_NEEDS_KIT = "Open a kit to send this sound to a pad."
     /** SPLICE's own picker hint before a head and a tail are chosen. */
     const val SPLICE_PICK_HINT = "Pick a head and a tail - two different takes of this pad."
     /** X-RAY on a JSON file that isn't an MPC program at all - [topKeys] the top-level field count when the tree parsed as an object, null when it didn't even parse that far. */

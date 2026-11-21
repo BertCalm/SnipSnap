@@ -144,4 +144,29 @@ class PreflightTest {
         val findings = Preflight.check(kit, temp)
         assertTrue(findings.any { it.severity == Severity.WARN && "choke" in it.message }, "$findings")
     }
+
+    /** UAT 2026-11 user states, S-15: the app names silent pads when a kit opens, not only at export. */
+    @Test
+    fun `missing file slots are the pads whose sample or layer file is gone, and agree with check`() {
+        wav("A01.wav"); wav("A02_soft.wav"); wav("A02_loud.wav"); wav("A04_loud.wav")
+        val kit = kitOf(
+            KitPad(1, "A01.wav"),
+            KitPad(2, "A02_loud.wav", velocityLayers = listOf(KitLayer("A02_soft.wav", 0, 63), KitLayer("A02_loud.wav", 64, 127))),
+            KitPad(3, "gone.wav"),
+            KitPad(4, "A04_loud.wav", velocityLayers = listOf(KitLayer("A04_gone_soft.wav", 0, 63), KitLayer("A04_loud.wav", 64, 127))),
+        )
+        assertEquals(listOf(3, 4), Preflight.missingFileSlots(kit, temp))
+        val missingInCheck = Preflight.check(kit, temp)
+            .filter { it.severity == Severity.FAIL && it.message.startsWith("missing ") }
+            .mapNotNull { it.slot }
+            .distinct()
+            .sorted()
+        assertEquals(missingInCheck, Preflight.missingFileSlots(kit, temp))
+    }
+
+    @Test
+    fun `a kit with every file present has no missing slots`() {
+        wav("A01.wav")
+        assertEquals(emptyList(), Preflight.missingFileSlots(kitOf(KitPad(1, "A01.wav")), temp))
+    }
 }

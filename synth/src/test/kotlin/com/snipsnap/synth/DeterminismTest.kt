@@ -88,6 +88,14 @@ class DeterminismTest {
         }
     }
 
+    @Test fun `KERF replays every saved drum and every take byte for byte`() {
+        for (voice in KerfVoice.entries) {
+            val patch = KerfPatch("Canary", voice, Kerf.defaults(voice))
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples)
+            assertContentEquals(patch.render(.6f, take = 2).samples, patch.render(.6f, take = 2).samples)
+        }
+    }
+
     @Test fun `BREAKER replays every saved drum and every take byte for byte`() {
         for (voice in BreakerVoice.entries) {
             val patch = BreakerPatch("Canary", voice, Breaker.defaults(voice))
@@ -452,6 +460,15 @@ class DeterminismTest {
     }
 
     @Test
+    fun `DRAWL retains its velocity and take across renders`() {
+        for (voice in DrawlVoice.entries) {
+            val patch = DrawlPatch("Drawl canary", voice, mapOf("SLIDE" to .7f), velocity = .4f, take = 3)
+            assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+        }
+    }
+
+    @Test
     fun `CONSORT retains its section velocity and take across renders`() {
         val patch = ConsortPatch("Section canary", ConsortVoice.CLARINET, mapOf("HOLD" to 0.2f),
             chairs = listOf(ConsortChair(ConsortVoice.FLUTE, ConsortInterval.OCT_UP), ConsortChair(ConsortVoice.BASSOON, ConsortInterval.OCT_DOWN)),
@@ -574,7 +591,7 @@ class DeterminismTest {
 
     @Test
     fun `native Caustic saved finite notes are byte identical across renders`() {
-        for (voice in CausticVoice.entries) {
+        for (voice in CausticInstrument.KEPT_VOICES) {
             val patch = CausticPatch("Native finite canary", voice,
                 mapOf("SOURCE" to .61f, "FOCUS" to .23f, "BODY" to .72f, "LENGTH" to .08f),
                 midi = 57, velocity = .63f, model = 1)
@@ -801,7 +818,7 @@ class DeterminismTest {
     // (settledFrame) - all deterministic or a saved recipe would not regenerate. One per voice, one-shot and LOOP.
     @Test
     fun `BORE is byte-identical across renders, both voices, one-shot and loop, and an overblown FLUTE`() {
-        for (voice in BoreVoice.entries) {
+        for (voice in Bore.KEPT_VOICES) {
             val shot = BorePatch("Canary", voice, Bore.defaults(voice))
             assertContentEquals(shot.render().samples, shot.render().samples, "$voice one-shot")
             val loop = BorePatch("Canary", voice, Bore.defaults(voice) + ("HOLD" to 1f))
@@ -823,7 +840,7 @@ class DeterminismTest {
     // vibrato began and nothing else, so it needs no seed either and must not read a clock or a random draw.
     @Test
     fun `ARCO is byte-identical across renders, both voices, one-shot and loop`() {
-        for (voice in ArcoVoice.entries) {
+        for (voice in Arco.KEPT_VOICES) {
             val shot = ArcoPatch("Canary", voice, Arco.defaults(voice))
             assertContentEquals(shot.render().samples, shot.render().samples, "$voice one-shot")
             val bitten = ArcoPatch("Canary", voice, Arco.defaults(voice) + ("BOW" to 1f))
@@ -840,7 +857,7 @@ class DeterminismTest {
     // from the same render at BUZZ 0.
     @Test
     fun `ARCO with BUZZ on is byte-identical across renders, both voices, one-shot and loop`() {
-        for (voice in ArcoVoice.entries) for (buzz in listOf(0.5f, 1f)) {
+        for (voice in Arco.KEPT_VOICES) for (buzz in listOf(0.5f, 1f)) {
             val shot = ArcoPatch("Canary", voice, Arco.defaults(voice) + ("BUZZ" to buzz))
             assertContentEquals(shot.render().samples, shot.render().samples, "$voice one-shot at BUZZ $buzz")
             assertTrue(!shot.render().samples.contentEquals(Arco.render(voice, Arco.defaults(voice)).samples), "$voice one-shot at BUZZ $buzz equals BUZZ 0")
@@ -921,6 +938,7 @@ class DeterminismTest {
                 TerraVoice.SHIME -> mapOf("STROKE" to 0.5f)
                 TerraVoice.KANE -> mapOf("EDGE" to 0.5f)
                 TerraVoice.BINZASARA -> mapOf("SPREAD" to 1f)
+                TerraVoice.FAN -> mapOf("SWEEP" to 0.5f)
                 TerraVoice.COWBELL -> mapOf("DAMP" to 0.5f)
                 TerraVoice.NAGADO, TerraVoice.KA, TerraVoice.CHAPPA, TerraVoice.WATER_DRUM -> mapOf("ATTACK" to 1f)
             }

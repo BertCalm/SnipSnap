@@ -137,6 +137,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.KitStore
+import com.snipsnap.kit.Preflight
 import com.snipsnap.kit.isRobinChain
 import com.snipsnap.kit.Project
 import com.snipsnap.kit.ProjectStore
@@ -1176,6 +1177,23 @@ fun App(shelf: KitShelf) {
     fun requestArmInside() {
         armInsidePending = true
         requestArm()
+    }
+
+    // Kit folders the last shelf read could not load (UAT 2026-11 user states, S-15). Every
+    // reload goes through `shelf.list`, which records them, and every reload lands in `kits`,
+    // so following `kits` keeps this current without a second read of the shelf.
+    var unreadableKits by remember { mutableStateOf<List<String>>(emptyList()) }
+    LaunchedEffect(kits) { unreadableKits = shelf.unreadable }
+    // A kit opening with pads whose sound file is gone says so once (S-15): such a pad was
+    // silent until export's preflight. `open` changes identity on every edit, so the kit and
+    // the slots last said are kept, and the same news is not said again until it changes.
+    var missingPadsSaid by remember { mutableStateOf<Pair<File, List<Int>>?>(null) }
+    LaunchedEffect(open) {
+        val entry = open ?: return@LaunchedEffect
+        val missing = withContext(Dispatchers.IO) { Preflight.missingFileSlots(entry.kit, entry.dir) }
+        val news = entry.dir to missing
+        if (missing.isNotEmpty() && news != missingPadsSaid) dock.say(Copy.padsMissingFiles(missing))
+        missingPadsSaid = news
     }
 
     LaunchedEffect(Unit) {
@@ -3334,6 +3352,8 @@ fun App(shelf: KitShelf) {
     // waiting, nothing busy), so it never pulls a user away from somewhere they went.
     // `startPicked` also holds the write below back until the pick has read the old value:
     // `project` starts null, and writing that first would forget it before it was read.
+    // CHOP's work in progress, held here so it outlives the CHOP screen (S-6).
+    val chopHold = remember { com.snipsnap.app.ui.ChopHold() }
     var startPicked by remember { mutableStateOf(false) }
     LaunchedEffect(kitsLoaded) {
         if (!kitsLoaded || startPicked) return@LaunchedEffect
@@ -3863,6 +3883,9 @@ fun App(shelf: KitShelf) {
                             // and a pick still pending for a pad survives it.
                             onBin = { nav.open(Bench.BIN) },
                             onToast = { dock.say(it) },
+                            // LISTEN · MIC on the empty list (D-6): the mic, as the button says, not
+                            // the dock's kept source; not offered while a session is already listening.
+                            onListen = if (armed) null else ({ requestArm() }),
                             onOpenInTape = { file ->
                                 nav.closeBench()
                                 tapeOpenOverride = file
@@ -3965,6 +3988,7 @@ fun App(shelf: KitShelf) {
                                 kits = kits,
                                 projects = projects,
                                 listening = armed,
+                                unreadableKits = unreadableKits,
                                 onOpenProject = { openProject(it.project) },
                                 openProjectName = project?.name,
                                 onNewProject = ::newProject,
@@ -4563,6 +4587,7 @@ fun App(shelf: KitShelf) {
                             entry = open,
                             lastCommit = lastCommit,
                             shelf = shelf,
+                            hold = chopHold,
                             onToast = { dock.say(it) },
                             onSentToGrid = { newEntry, sent ->
                                 haptics.land()
@@ -4943,6 +4968,7 @@ fun App(shelf: KitShelf) {
                         top == null && location.place == Place.MAKE -> MakeList(
                             onOpen = { nav.open(it) }, hasKit = open != null, onMyVoice = { nav.open(Bench.MY_VOICE) },
                             kitName = open?.kit?.name,
+                            onOpenLibrary = { landOn(AppScreen.KITS) },
                         )
                         top == Bench.INSTRUMENTS -> InstrumentsBench(
                             instruments = instruments,
@@ -4957,6 +4983,7 @@ fun App(shelf: KitShelf) {
                             murmurInstrumentEnabled = busy == null,
                             roundRobinShelf = shelf.root,
                             onOpenRoundRobin = { openInstrument = null; openRoundRobin = it; landOn(AppScreen.KEYS) },
+                            onOpenSynth = { nav.open(Bench.SYNTH) },
                         )
                         // The pad editor benches (PAD SHEET, GRAIN FIELD,
                         // SPLICE, STACK, SPREAD) and SNAP's own panels (LIVE,

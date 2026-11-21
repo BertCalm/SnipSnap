@@ -45,3 +45,93 @@ as shipped, and so does the softened SAX opening.
 **Pins.** `HoldHumanizePinsTest` pins every factory preset and each voice's
 default note and default LOOP as they ship. The hashes from before the change
 still hold with the player off and the old opening (`BoreFrozenSoundTest`).
+
+## Candidate voices (round bore-voices-1, 20 Nov 2026: kept, touch reworked)
+
+**Why.** The melodic gate asks for six voices; BORE has two. Five candidates are
+built, one of them a spare, appended to `BoreVoice` after SAX so saved names
+never move. `Bore.KEPT_VOICES` is what players are offered; a candidate has no
+preset, kit or starter, and `BorePadMaker.VOICES` is the kept voices. Each is a
+different blown instrument using a part of the valve-in-a-pipe model the kept
+two leave unused (`BoreCandidates.kt`); the breath, the tongue, the player and
+the held cut are the engine's own, so a kept candidate needs only to be added
+to `KEPT_VOICES`.
+
+| Voice | Instrument | What is new in the model | Range |
+|---|---|---|---|
+| HOLLOW | clarinet, low register | the design's closed cylinder (half-period loop, -0.95, no blocker) under the reed: odd harmonics | A2 to A4 |
+| SHAWM | shawm or oboe | a double reed (table slope -0.5) on a cone, and the formant hook used for two nasal formants | G3 to G5 |
+| SHAKU | end-blown bamboo flute | the jet's edge noise heard outside the pipe, and a 60 cent bend into each note | D4 to D6 |
+| PANPIPE | pan flute | the jet on a closed pipe: odd harmonics, a little air | C4 to C6 |
+| VESSEL | ocarina | the jet across one Helmholtz cavity in the pipe's place: one resonance | C4 to C6 |
+
+Every candidate lets its note go over 0.25 s with the sound itself faded (the
+kept voices' 80 ms release left a still-ringing pipe cut), leaves the mean to
+the output's high-pass (no step at the first sample), and has no rasp or bite.
+A brass lip valve (STK's brass) was tried and never locked to its note.
+
+**Measured** (`BoreCandidateVoicesTest`): every candidate within 5 cents of the
+note at its root, middle and top; the nearest third-octave distance to any
+other voice is HOLLOW and PANPIPE 6.8 dB (each other at C4), SHAWM 8.6 dB,
+SHAKU 4.0 dB (FLUTE at C5), VESSEL 27 dB, against the 3.7 dB bar; soft, medium
+and hard differ by 0.55 to 1.4 dB of level-matched shape; a held note's level
+moves 0.34 to 0.78 dB with the player on; every held key and LOOP joins. The
+kept voices render bit for bit as before (16 renders pinned against 6a1c248a7).
+Nobody has heard any of them.
+
+**Risks.** SHAKU is the nearest to a kept voice (FLUTE); its difference is its
+breath. VESSEL is almost a sine. At extreme corners (BREATH 0 with CHIFF 1, a
+tight lip at the top) several candidates read as a drum to the classifier; the
+filing itself comes from the length, as the kept voices' does.
+
+**The round.** Clips DP (HOLLOW), DQ (SHAWM), DR (SHAKU), DS (PANPIPE), DT
+(VESSEL): four notes across the range, then soft, medium and hard; DU1 is the
+kept two for reference.
+
+## Verdict of 20 Nov 2026 (round bore-voices-1) and the candidates' touch
+
+**Verdict.** Every range clip (DP1, DQ1, DR1, DS1, DT1): **KEEP**, no notes, so
+HOLLOW, SHAWM, SHAKU, PANPIPE and VESSEL are kept as sounds and BORE will have
+seven voices. Every soft, medium, hard clip (DP2 to DT2): **TWEAK**, "All sound
+the same". Touch moved only the breath, the engine levelled every note to one
+loudness, and soft and hard were 1.3 to 2.7 dB apart by level-matched shape.
+
+**The touch** (`CandidateTouch`, `BoreCandidates.TOUCH`). A candidate blown
+under the default BREATH (0.6) is a gentler air stream, by depth u = how far
+under, as a share of the default: it loses 48u dB above three times the note,
+plays 20u dB quieter and rises over 0.8u s. The corner sits higher than ARCO's
+so a soft low SHAWM keeps enough edge to stay a melodic note to the classifier.
+At the default BREATH and above nothing changes, so the hardest touch is the
+kept sound, byte for byte: the range clips re-render to the heard SHA-256 (5 of
+5, and DU1), and the candidates' default renders are pinned (`KEPT_CANDIDATES`,
+equal to the build before). Only a one-shot is touched; the LOOP and the held
+keys are not yet.
+
+Measured at the clips' touches 0.3, 0.7, 1 (`BoreCandidateVoicesTest`): soft to
+hard 8.6 to 13.2 dB of level-matched third-octave shape (was 1.3 to 2.7), each
+step 4.2 dB or more (was 0.7 to 1.6); soft 8.8 to 9.5 dB and medium 4.2 to
+4.9 dB quieter than hard (was 0); soft reaches half its level 80 to 100 ms
+later. Round touch-ab-1 plays each heard clip, then the new touch (EE1 to EI1).
+
+## Verdict of 20 Nov 2026 (round touch-bore-1): shipped
+
+**Verdict.** EE1 (HOLLOW), EF1 (SHAWM), EG1 (SHAKU), EH1 (PANPIPE), EI1
+(VESSEL), the new touch (hard is the kept sound): **KEEP**, no notes. So BORE
+ships seven voices: `Bore.KEPT_VOICES` is FLUTE, SAX, HOLLOW, SHAWM, SHAKU,
+PANPIPE, VESSEL, the picker follows it, and each new voice has one factory preset, the note the owner heard
+as its touch clip's hard note (defaults, an octave over the root, 2.5 s of
+breath): LOW WOOD REED (HOLLOW), PINCHED REED (SHAWM), BAMBOO BREATH (SHAKU),
+CANE PIPES (PANPIPE), ROUND CLAY (VESSEL). Each preset renders byte for byte the
+heard note and is pinned in `HoldHumanizePinsTest` with each new voice's default
+note and default LOOP. Being 2.5 s long, each reads and is filed LOOP by length.
+
+**Held keys: not offered yet.** The owner heard the new voices only as one-shots,
+so MAKE INSTRUMENT stays on FLUTE and SAX (`BorePadMaker.VOICES`), as LIBRATION's
+new voices stay finite only. Every zone of every new voice renders and its join
+holds, but nobody has heard a held key or decided how the one-shot's touch
+(`CandidateTouch`) should carry to the held soft layer (`BoreKeys`' lower breath,
+levelled to one target). The LOOP (HOLD 1) is offered, unleaned, and its join
+holds at every note under the engine's own bar for a played loop
+(`Bore.maxDipDb`; SHAKU's random corner at A#4 dips 1.01 dB, past the plain
+1.0 dB `BoreLoopFuzzTest` used before the player), but has not been heard. No
+kit pad or starter has been made for them.

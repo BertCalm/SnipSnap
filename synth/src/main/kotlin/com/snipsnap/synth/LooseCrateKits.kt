@@ -1,6 +1,7 @@
 package com.snipsnap.synth
 
 import com.snipsnap.audio.DrumClass
+import com.snipsnap.audio.Resampler
 import com.snipsnap.audio.Snip
 import com.snipsnap.synth.Cypher.Note
 import java.util.concurrent.ConcurrentHashMap
@@ -9,10 +10,10 @@ import kotlin.math.max
 import kotlin.math.pow
 
 /**
- * LOOSE CRATE: four authored drum kits after one producer's loose, dusty, sub-heavy beat-tape drums
- * (`docs/LOOSE_CRATE.md`). A rendered kit family in the [CypherKits] shape, not a Patch engine: the hits come
- * from SKIN, THUMP, TERRA, TINES and BREAKER's cymbals as they stand, and each kit prints them through its own
- * converter, tape and record ([Print]).
+ * LOOSE CRATE: seven authored drum kits after one producer's loose, dusty, sub-heavy beat-tape drums
+ * (`docs/LOOSE_CRATE.md`): four after the owner's references, three adjacent kits the owner asked for. A rendered
+ * kit family in the [CypherKits] shape, not a Patch engine: the hits come from SKIN, THUMP, TERRA, TINES, EMBER and
+ * BREAKER's cymbals as they stand, and each kit prints them through a converter, tape and record ([Print]).
  *
  * The family's gesture: the kick hums under the bar → the snare lands loose, flammed or bouncing → the hats
  * drag behind → a dark, rumbling bed with the top cut off.
@@ -23,6 +24,14 @@ import kotlin.math.pow
  * - [Kit.HAZE] (84, a half-time feel): a washing cymbal, bells and metal, a lazy flam, the top cut hardest and
  *   the tape wobbling most.
  * - [Kit.RITUAL] (86): sparse and dub-leaning; a short sub thud, the high slap, hand drums, a sub that drops.
+ *
+ * The expansion (docs/LOOSE_CRATE.md, "Expansion"), each heard at round 0 and settled by the owner on 2026-11-20:
+ * - [Kit.BLUE] (90): jazz breaks off a record. EMBER's felt kick, brushes, a bright stick ride and foot hat played as
+ *   a hip-hop break, through a fresher print ([BLUE_PRINT]).
+ * - [Kit.SPEED] (108): HUMMIN's record played fast, 45 rpm over 33 1/3. Not a fifth genre but HUMMIN's speed variant,
+ *   chosen as such: every pad and phrase is HUMMIN's, played at 80 and resampled 1.35 times faster ([sped]).
+ * - [Kit.RAGA] (94): Indian-record percussion. TERRA's tabla leads (pads 1 and 2), the dholak and the family's thud
+ *   kick and slap snare under it.
  *
  * Every pad has three velocity zones of four takes. A zone is its own strike (SKIN's and TERRA's drums and
  * THUMP's SUB strike at a velocity; the hats have their own contact law; the rest are [KitStrikes.touched]),
@@ -43,6 +52,9 @@ object LooseCrateKits {
         CLOTH("loose-crate-cloth", "Cloth", 82),
         HAZE("loose-crate-haze", "Haze", 84),
         RITUAL("loose-crate-ritual", "Ritual", 86),
+        BLUE("loose-crate-blue", "Blue", 90),
+        SPEED("loose-crate-speed", "Speed", 108),
+        RAGA("loose-crate-raga", "Raga", 94),
     }
 
     val velocities = listOf(.30f, .65f, 1f)
@@ -152,15 +164,33 @@ object LooseCrateKits {
         mapOf("CRACKLE" to .15f, "RUMBLE" to .40f, "HISS" to .20f),
         mapOf("CRACKLE" to .15f, "RUMBLE" to .80f, "HISS" to .20f))
 
+    /**
+     * BLUE's print: the crate print made fresher, for a kit led by a ride (docs/LOOSE_CRATE.md, rounds 0g, 0j, 0l). The
+     * tape steady (WOBBLE 0: wow and flutter smeared the ride's modes into swish), the converter at its full rate (RATE 0:
+     * a hold near 32 kHz folded the cymbal's top back as tones in tune with nothing), the converter's tone open, the tape
+     * head fresher and its drive lighter (AGE .20, DRIVE .08: the worn head and drive muffled the brushes). Its 12 bits
+     * and the record's surface stay.
+     */
+    val BLUE_PRINT = Print("blue",
+        CRATE.crunch + mapOf("RATE" to 0f, "TONE" to 1f),
+        CRATE.tape + mapOf("WOBBLE" to 0f, "AGE" to .20f, "DRIVE" to .08f),
+        CRATE.hitVinyl, CRATE.grooveVinyl)
+
     fun printOf(kit: Kit): Print = when (kit) {
         Kit.HUMMIN -> CRATE
         Kit.CLOTH -> CLOSE
         Kit.HAZE -> HAZY
         Kit.RITUAL -> DUB
+        Kit.BLUE -> BLUE_PRINT
+        // SPEED is HUMMIN's record played fast, then sampled: HUMMIN's print. RAGA was heard and settled through it.
+        Kit.SPEED, Kit.RAGA -> CRATE
     }
 
-    /** One playable hit: its name, class, choke group and how to strike it dry. */
-    internal class Part(val name: String, val cls: DrumClass, val mute: Int = 0, val strike: Strike)
+    /**
+     * One playable hit: its name, class, choke group and how to strike it dry. [byLoudness] levels the softer
+     * zones to the hard zone's loudness instead of each to [PAD_PEAK] (see [zoneGain]).
+     */
+    internal class Part(val name: String, val cls: DrumClass, val mute: Int = 0, val strike: Strike, val byLoudness: Boolean = false)
 
     /** A phrase pad: notes on the kit's grid. [loop] folds the tail back onto the start and keeps the bars exact. */
     internal class Phrase(val name: String, val notes: List<Note>, val loop: Boolean)
@@ -222,6 +252,7 @@ object LooseCrateKits {
     internal fun dryRaw(kit: Kit, role: Int, velocity: Float, take: Int): FloatArray {
         val parts = parts(kit)
         if (role < HITS) return KitStrikes.struck(parts[role].strike, velocity, take, touch(velocity))
+        if (kit == Kit.SPEED) return spedPhrase(role, velocity, take)
         val phrase = phrases(kit)[role - HITS]
         val room = roomOf(kit)
         if (!phrase.loop) {
@@ -314,6 +345,15 @@ object LooseCrateKits {
             -5f, kickCurve = 3f, wireWeight = .10f, hatLevel = .6f, ringBarEnd = true, ride = null)
         Kit.RITUAL -> Room(mapOf("SIZE" to .28f, "WALLS" to .50f, "DISTANCE" to .55f), mapOf("AMOUNT" to .40f, "ATTACK" to .80f, "RECOVER" to .50f),
             -4f, kickCurve = 2.5f, wireWeight = .08f, hatLevel = .8f, ringBarEnd = false, ride = null)
+        // BLUE's room as settled at round 0l: HUMMIN's, a little smaller and drier, for brushes, the compressor eased
+        // to .20 (it lifted the tails). No wires and no curve: the break was heard and chosen as written.
+        Kit.BLUE -> Room(mapOf("SIZE" to .18f, "WALLS" to .50f, "DISTANCE" to .50f), mapOf("AMOUNT" to .20f, "ATTACK" to .80f, "RECOVER" to .50f),
+            -4f, kickCurve = 1f, wireWeight = 0f, hatLevel = 1f, ringBarEnd = false, ride = null)
+        // SPEED's phrases are played in HUMMIN's room at HUMMIN's source tempo and then sped ([spedPhrase]).
+        Kit.SPEED -> roomOf(Kit.HUMMIN)
+        // RAGA's room as heard at round 0: RITUAL's size, a little closer; no wires, no curve.
+        Kit.RAGA -> Room(mapOf("SIZE" to .25f, "WALLS" to .50f, "DISTANCE" to .55f), mapOf("AMOUNT" to .40f, "ATTACK" to .80f, "RECOVER" to .50f),
+            -4f, kickCurve = 1f, wireWeight = 0f, hatLevel = 1f, ringBarEnd = false, ride = null)
     }
 
     /**
@@ -332,7 +372,9 @@ object LooseCrateKits {
                     n.part in kicks -> {
                         val w = n.weight.pow(room.kickCurve)
                         add(Note(n.beat, n.part, w, n.offsetMs, n.tuneSemis))
-                        add(Note(n.beat, WIRES, (w * room.wireWeight).coerceAtLeast(.05f), n.offsetMs + 2f))
+                        // A room with no wires (BLUE's brushes, RAGA's hand drums) adds none: the floor of .05 is for
+                        // the rooms that have them.
+                        if (room.wireWeight > 0f) add(Note(n.beat, WIRES, (w * room.wireWeight).coerceAtLeast(.05f), n.offsetMs + 2f))
                     }
                     n.part == hat && room.ringBarEnd && abs(n.beat % 4.0 - 3.5) < 1e-6 ->
                         add(Note(n.beat, openHat, n.weight * .8f * room.hatLevel, n.offsetMs, n.tuneSemis))
@@ -373,12 +415,39 @@ object LooseCrateKits {
 
     private val gains = ConcurrentHashMap<Triple<Kit, Int, Float>, Float>()
 
-    /** One gain per velocity zone, from its first take, shared by its four: every zone peaks at [PAD_PEAK]. */
-    private fun zoneGain(kit: Kit, role: Int, velocity: Float): Float = gains.getOrPut(Triple(kit, role, velocity)) {
+    /**
+     * One gain per velocity zone, from its first take, shared by its four: every zone peaks at [PAD_PEAK],
+     * and the player's velocity gain (pad level times velocity) makes a harder zone louder.
+     *
+     * A [Part.byLoudness] pad's softer zones are instead levelled to the hard zone's rms over its first
+     * [LOUDNESS_SECONDS], never above [PAD_PEAK]. A dayan's hard stroke is mostly click: its crest factor
+     * rises about 7 dB from soft to hard, so at one peak its soft zone measured louder than its hard, and the
+     * player's 3.7 dB medium-to-hard step came out at 0.2 dB (Dayan Na and Tin, 2026-11-20). The hard zone,
+     * the one heard and approved, keeps its peak gain.
+     */
+    private fun zoneGain(kit: Kit, role: Int, velocity: Float): Float = gains[Triple(kit, role, velocity)] ?: run {
         val x = printed(kit, role, velocity, 0)
         val peak = if (role == GROOVE) KitStrikes.peakOf(x.let { y -> val m = y.average().toFloat(); FloatArray(y.size) { y[it] - m } })
         else KitStrikes.finish(x, 1f, ceiling = Float.MAX_VALUE).peak()
-        if (peak > 1e-9f) PAD_PEAK / peak else 1f
+        val byPeak = if (peak > 1e-9f) PAD_PEAK / peak else 1f
+        val hard = velocities.last()
+        val gain = if (role >= HITS || velocity == hard || !parts(kit)[role].byLoudness) byPeak else {
+            val target = zoneGain(kit, role, hard) * headRms(KitStrikes.finish(printed(kit, role, hard, 0), 1f, ceiling = Float.MAX_VALUE).samples)
+            val own = headRms(KitStrikes.finish(x, 1f, ceiling = Float.MAX_VALUE).samples)
+            if (own > 1e-9f) minOf(byPeak, target / own) else byPeak
+        }
+        gains.putIfAbsent(Triple(kit, role, velocity), gain) ?: gain
+    }
+
+    /** How long a [Part.byLoudness] zone is measured: the stroke and its first ring. */
+    private const val LOUDNESS_SECONDS = .4f
+
+    private fun headRms(x: FloatArray): Float {
+        val n = minOf(x.size, (LOUDNESS_SECONDS * Dsp.RATE).toInt())
+        if (n == 0) return 0f
+        var sum = 0.0
+        for (i in 0 until n) sum += x[i].toDouble() * x[i]
+        return kotlin.math.sqrt(sum / n).toFloat()
     }
 
     // ---------- the strikes ----------
@@ -450,6 +519,9 @@ object LooseCrateKits {
         Kit.CLOTH -> cloth
         Kit.HAZE -> haze
         Kit.RITUAL -> ritual
+        Kit.BLUE -> blue
+        Kit.SPEED -> speed
+        Kit.RAGA -> raga
     }
 
     internal fun phrases(kit: Kit): List<Phrase> = when (kit) {
@@ -457,6 +529,9 @@ object LooseCrateKits {
         Kit.CLOTH -> clothPhrases
         Kit.HAZE -> hazePhrases
         Kit.RITUAL -> ritualPhrases
+        Kit.BLUE -> bluePhrases
+        Kit.SPEED -> speedPhrases
+        Kit.RAGA -> ragaPhrases
     }
 
     // HUMMIN (88): built around the humming kick. Pads 1, 2, 3, 5, 6, 7 and 14 are round 0's candidates.
@@ -653,5 +728,244 @@ object LooseCrateKits {
     private val ritualPhrases = listOf(
         Phrase("Slap Roll", accelerating(12, 2.0, 10, .30f, .80f, land = 1), loop = false),
         Phrase("Ritual Groove", ritualGroove, loop = true),
+    )
+
+    // ---------- the expansion: BLUE, SPEED, RAGA ----------
+    // Each was heard at round 0 in LooseCrateExpansionRound0Generator and settled by the owner on 2026-11-20
+    // (docs/LOOSE_CRATE.md, "Expansion"). The pads marked "round 0" are those sounds as heard; the rest are shape values.
+
+    // BLUE (90): jazz breaks off a record.
+
+    /** An EMBER voice with its own distance and warmth off: BLUE's room and print supply both. */
+    private fun ember(voice: EmberVoice, vararg m: Pair<String, Float>): Strike = { v, t, _ ->
+        Ember.render(voice, mapOf("DISTANCE" to 0f, "WARMTH" to 0f) + mapOf(*m), v, t).samples
+    }
+
+    /**
+     * A part made to come through BLUE's room clear (round 0l): a +4 dB shelf at [SHELF_HZ] that cancels the room's
+     * -4 dB one (the same linear shelf, mirrored), and [airDb] more over 4 kHz. The ride keeps the room's shelf.
+     */
+    private fun clearer(strike: Strike, airDb: Float): Strike = { v, t, x ->
+        val y = strike(v, t, x)
+        val undo = Dsp.Biquad().apply { highShelf(SHELF_HZ, 4f) }
+        val air = Dsp.Biquad().apply { highShelf(4_000f, airDb) }
+        FloatArray(y.size) { air.process(undo.process(y[it])) }
+    }
+
+    /** A Butterworth low-pass (RBJ's cookbook, Q 0.7071), 12 dB an octave; twice over, 24. */
+    private fun lowPass(x: FloatArray, hz: Float): FloatArray {
+        val w = 2 * Math.PI * hz / Dsp.RATE
+        val alpha = Math.sin(w) / (2 * .7071)
+        val cw = Math.cos(w)
+        val a0 = 1 + alpha
+        val b0 = (1 - cw) / 2 / a0
+        val b1 = (1 - cw) / a0
+        val a1 = -2 * cw / a0
+        val a2 = (1 - alpha) / a0
+        var x1 = 0.0; var x2 = 0.0; var y1 = 0.0; var y2 = 0.0
+        return FloatArray(x.size) {
+            val xi = x[it].toDouble()
+            val y = b0 * xi + b1 * x1 + b0 * x2 - a1 * y1 - a2 * y2
+            x2 = x1; x1 = xi; y2 = y1; y1 = y
+            y.toFloat()
+        }
+    }
+
+    /**
+     * BLUE's ride, as settled: "a bright stick hit to the ride (not bell) with a light and shimmery ring that fades
+     * quickly" (round 0k), the longer of its two rings chosen ("The longer cymbal is good"), through BLUE's print
+     * (round 0l). EMBER's flat ride at TUNE .40, DAMP .55, BUZZ 0; a 2 kHz low cut; +8 dB at 8 kHz (Q .8) against the
+     * tape head; the ride's own band over 5 kHz added 1.5 times over and gone in 10 ms (the stick's ping); after 30 ms
+     * a fade of [RIDE_FADE_SECONDS]; two Butterworth low-passes at 12 kHz (no shimmer). Measured on the printed hit:
+     * the stick's first 40 ms centred near 8 kHz, 1 to 3 kHz 17.5 dB under the whole, 40 dB down at 0.77 s.
+     */
+    private val stickRide: Strike = { v, t, _ ->
+        val x = Ember.render(EmberVoice.RIDE, mapOf("TUNE" to .40f, "DAMP" to .55f, "BUZZ" to 0f, "DISTANCE" to 0f, "WARMTH" to 0f), v, t).samples
+        val a = Dsp.FixedOnePole(2_000f)
+        val b = Dsp.FixedOnePole(2_000f)
+        val presence = Dsp.Biquad().apply { peaking(8_000f, 8f, .8f) }
+        val c = Dsp.FixedOnePole(5_000f)
+        val d = Dsp.FixedOnePole(5_000f)
+        val shaped = FloatArray(x.size) {
+            val h1 = x[it] - a.lp(x[it])
+            val y = presence.process(h1 - b.lp(h1))
+            val p1 = y - c.lp(y)
+            val seconds = it.toDouble() / Dsp.RATE
+            val pinged = y + 1.5f * (p1 - d.lp(p1)) * Math.exp(-seconds / .010).toFloat()
+            if (seconds <= .03) pinged else pinged * Math.exp(-(seconds - .03) / RIDE_FADE_SECONDS).toFloat()
+        }
+        lowPass(lowPass(shaped, 12_000f), 12_000f)
+    }
+
+    private const val RIDE_FADE_SECONDS = .50
+
+    /**
+     * A soft strike made duller, as LOOSE CRATE's own hats are ([hat]): EMBER's fitted hats are no darker soft than hard
+     * (the recordings' soft strokes), and the family holds every soft zone to a different and duller strike. Under
+     * [from] the strike is EMBER's at [from] through two one-poles falling from 10 kHz toward 2 kHz (the family hat's
+     * contact, steeper); at [from] and over nothing changes, so the break plays as it was chosen (the foot hat at weight
+     * .50 in the hard zone, the ride at .65 and .38, so the ride's [from] is .35). The stick ride's soft zone measured
+     * as bright as its hard one (0.6963 against 0.6956 of its energy over 2 kHz) before this.
+     */
+    private fun softDarker(strike: Strike, from: Float = CONTACT_FROM): Strike = { v, t, x ->
+        if (v >= from) strike(v, t, x) else {
+            val y = strike(from, t, x)
+            val r = v / from
+            val hz = 2_000f + 8_000f * r * r
+            val a = Dsp.FixedOnePole(hz)
+            val b = Dsp.FixedOnePole(hz)
+            FloatArray(y.size) { b.lp(a.lp(y[it])) }
+        }
+    }
+
+    private const val CONTACT_FROM = .5f
+
+    private val brushTap = clearer(ember(EmberVoice.BRUSH_TAP, "TUNE" to .55f, "DAMP" to .35f, "BUZZ" to .55f), 3f)
+
+    // The family's first four pads (kick, snare, hat, open hat); round 0's five sounds are pads 1, 2, 3, 5 and 6.
+    private val blue: List<Part> = listOf(
+        Part("Felt Kick", DrumClass.KICK, strike = clearer(ember(EmberVoice.KICK, "TUNE" to .35f, "DAMP" to .65f, "BUZZ" to .15f), 0f)),
+        Part("Brush Tap", DrumClass.SNARE, strike = brushTap),
+        Part("Foot Hat", DrumClass.HAT_CLOSED, HAT_GROUP, softDarker(clearer(ember(EmberVoice.HAT_FOOT, "TUNE" to .45f, "DAMP" to .50f, "BUZZ" to .10f), 3f))),
+        Part("Open Hat", DrumClass.HAT_OPEN, HAT_GROUP, softDarker(clearer(ember(EmberVoice.HAT_OPEN, "TUNE" to .45f, "DAMP" to .40f), 3f))),
+        Part("Stick Ride", DrumClass.PERC, strike = softDarker(stickRide, .35f)),
+        Part("Shaker", DrumClass.PERC, strike = clearer(ember(EmberVoice.SHAKER, "TUNE" to .30f, "DAMP" to .45f), 3f)),
+        Part("Ghost Tap", DrumClass.SNARE, strike = KitStrikes.softer(brushTap, .40f)),
+        Part("Cross Stick", DrumClass.PERC, strike = clearer(ember(EmberVoice.CROSS_STICK, "TUNE" to .50f, "DAMP" to .40f, "BUZZ" to .30f), 3f)),
+        Part("Closed Hat", DrumClass.HAT_CLOSED, HAT_GROUP, softDarker(clearer(ember(EmberVoice.HAT_CLOSED, "TUNE" to .45f, "DAMP" to .55f), 3f))),
+        Part("Soft Kick", DrumClass.KICK, strike = clearer(ember(EmberVoice.KICK, "TUNE" to .28f, "DAMP" to .80f, "BUZZ" to .10f), 0f)),
+        Part("Rack Tom", DrumClass.TOM, strike = clearer(ember(EmberVoice.TOM_RACK, "TUNE" to .55f, "DAMP" to .45f, "BUZZ" to .20f), 0f)),
+        Part("Floor Tom", DrumClass.TOM, strike = clearer(ember(EmberVoice.TOM_FLOOR, "TUNE" to .40f, "DAMP" to .45f, "BUZZ" to .20f), 0f)),
+        Part("Finger Snaps", DrumClass.CLAP, strike = clearer(ember(EmberVoice.SNAPS, "TUNE" to .50f, "CROWD" to .30f), 3f)),
+        Part("Rimshot", DrumClass.SNARE, strike = clearer(ember(EmberVoice.RIMSHOT, "TUNE" to .55f, "DAMP" to .40f, "BUZZ" to .45f), 3f)),
+    )
+
+    /** How late a swung sixteenth lands, as a share of its eighth: 0.5 is straight, 0.58 an MPC's gentle swing. */
+    private const val BREAK_SWING = .58
+
+    /** The [i]th sixteenth of a bar, the odd ones swung by [BREAK_SWING]. */
+    private fun sixteenth(i: Int) = (i / 2) * .5 + if (i % 2 == 1) BREAK_SWING * .5 else 0.0
+
+    /**
+     * BLUE's break, as chosen (round 0m: "The break for blue sounds better than the groove"; the triplet pocket trotted
+     * "like a Happy Trails type beat"). Sixteenths swung at [BREAK_SWING], the ride on eighths, the kick at 1, the "a"
+     * of 1 soft and the "and" of 3, the brush taps on two and four with a ghost on the "a" of 4 every other bar, the
+     * foot hat on two and four. One grid, a fixed feel per part (the brushes 16 ms behind, the ride 4 ms ahead, the foot
+     * hat 6 behind, the kick on the grid) and a seeded spread of 4 ms.
+     */
+    private val blueBreak: List<Note> = run {
+        val laid = mapOf(0 to 0f, 1 to 16f, 4 to -4f, 2 to 6f)
+        val notes = buildList {
+            for (bar in 0 until GROOVE_BARS) {
+                val b = bar * 4.0
+                for (i in 0 until 8) add(Note(b + sixteenth(2 * i), 4, if (i % 2 == 0) .65f else .38f))
+                add(Note(b + 1.0, 2, .50f)); add(Note(b + 3.0, 2, .50f))
+                add(Note(b + 1.0, 1, .92f)); add(Note(b + 3.0, 1, .95f))
+                if (bar % 2 == 1) add(Note(b + 3 + sixteenth(3), 1, .30f))
+                add(Note(b + 0.0, 0, .90f)); add(Note(b + sixteenth(3), 0, .50f)); add(Note(b + sixteenth(10), 0, .80f))
+            }
+        }
+        Cypher.humanised(notes.map { Note(it.beat, it.part, it.weight, laid.getValue(it.part)) }, 4f, "loose-crate-blue-pocket")
+    }
+
+    private val bluePhrases = listOf(
+        Phrase("Tap Roll", accelerating(6, 2.0, 12, .30f, .80f, land = 1), loop = false),
+        Phrase("Blue Break", blueBreak, loop = true),
+    )
+
+    // SPEED (108): HUMMIN's record played fast.
+
+    /** 45 rpm over 33 1/3. */
+    const val SPEED_RATIO = 1.35
+
+    /** The tempo HUMMIN's phrases are played at before the speed-up: 80 x 1.35 = 108, four bars to the sample. */
+    const val SPEED_SOURCE_BPM = 80
+
+    /** A one-shot read as if recorded at RATE x [SPEED_RATIO] and resampled to RATE: shorter, higher. */
+    private fun spedOnce(x: FloatArray): FloatArray =
+        Resampler.resample(Snip(x, 1, Math.round(Dsp.RATE * SPEED_RATIO).toInt()), Dsp.RATE).samples
+
+    /**
+     * A loop played [SPEED_RATIO] times faster: three copies end to end, resampled, the middle kept, so the resampler's
+     * edges never reach the loop (round 0: 529,200 frames at 80 become 392,000, four bars at 108 exactly).
+     */
+    internal fun sped(loop: FloatArray): FloatArray {
+        val n = loop.size
+        val fast = spedOnce(FloatArray(3 * n) { loop[it % n] })
+        val m = Math.round(n / SPEED_RATIO).toInt()
+        return fast.copyOfRange(m, 2 * m)
+    }
+
+    /** HUMMIN's fourteen hits, each struck and then played fast. */
+    private val speed: List<Part> = hummin.map { p -> Part(p.name, p.cls, p.mute, strike = { v, t, s -> spedOnce(p.strike(v, t, s)) }) }
+
+    private val speedPhrases = listOf(
+        Phrase("Sped Roll", humminPhrases[0].notes, loop = false),
+        Phrase("Speed Groove", humminPhrases[1].notes, loop = true),
+    )
+
+    /**
+     * SPEED's roll and groove: HUMMIN's notes played by HUMMIN's drums in HUMMIN's room at [SPEED_SOURCE_BPM], then the
+     * record sped. The speed-up comes before the print: the record was sped up, then sampled.
+     */
+    private fun spedPhrase(role: Int, velocity: Float, take: Int): FloatArray {
+        val phrase = speedPhrases[role - HITS]
+        val room = roomOf(Kit.HUMMIN)
+        val strike = { part: Int -> strikeOf(Kit.HUMMIN, part) }
+        if (!phrase.loop) {
+            val end = phrase.notes.maxOf { Cypher.startFrame(it, SPEED_SOURCE_BPM) }
+            val raw = Cypher.phraseRaw(phrase.notes, SPEED_SOURCE_BPM, velocity, take, TAKES, end.toFloat() / Dsp.RATE + TAIL_SECONDS, ::touch, strike = strike)
+            return spedOnce(room.play(raw))
+        }
+        val frames = Math.round(GROOVE_BARS * 4 * 60.0 / SPEED_SOURCE_BPM * Dsp.RATE).toInt()
+        val raw = Cypher.phraseRaw(played(Kit.HUMMIN, phrase.notes), SPEED_SOURCE_BPM, velocity, take, TAKES, frames.toFloat() / Dsp.RATE + LOOP_TAIL_SECONDS, ::touch, strike = strike)
+        val roomed = room.play(raw)
+        val folded = FloatArray(frames)
+        for (i in roomed.indices) folded[i % frames] += roomed[i]
+        return sped(folded).also { check(it.size == grooveFrames(Kit.SPEED)) { "SPEED's loop is ${it.size} frames, ${grooveFrames(Kit.SPEED)} wanted" } }
+    }
+
+    // RAGA (94): Indian-record percussion, the tabla leading.
+
+    // Pads 1 to 6 are round 0's sounds (the tabla first, as it leads); the rest are shape values after TERRA PUNJAB's.
+    private val raga: List<Part> = listOf(
+        Part("Dayan Na", DrumClass.PERC, byLoudness = true, strike = terra(TerraVoice.DAYAN, "TUNE" to .55f, "DECAY" to .55f, "FORCE" to .85f, "OPEN" to 1f, "CLICK" to .65f)),
+        Part("Bayan Ge", DrumClass.PERC, strike = terra(TerraVoice.BAYAN, "TUNE" to .45f, "DECAY" to .60f, "FORCE" to .80f, "BEND" to 1f)),
+        Part("Dayan Ti", DrumClass.PERC, byLoudness = true, strike = terra(TerraVoice.DAYAN, "TUNE" to .55f, "DECAY" to .30f, "FORCE" to .75f, "OPEN" to 0f, "CLICK" to .80f)),
+        Part("Thud Kick", DrumClass.KICK, strike = thudKick),
+        Part("Slap Snare", DrumClass.SNARE, strike = slapSnare),
+        Part("Dholak", DrumClass.PERC, strike = terra(TerraVoice.DHOLAK, "TUNE" to .50f, "DECAY" to .45f, "FORCE" to .75f, "DROP" to .50f, "TREBLE" to .55f)),
+        Part("Bayan Low", DrumClass.PERC, strike = terra(TerraVoice.BAYAN, "TUNE" to .25f, "DECAY" to .60f, "FORCE" to .65f, "BEND" to 0f)),
+        Part("Dayan Tin", DrumClass.PERC, byLoudness = true, strike = terra(TerraVoice.DAYAN, "TUNE" to .36f, "DECAY" to .70f, "FORCE" to .70f, "OPEN" to 1f, "CLICK" to .55f)),
+        Part("Dayan Te", DrumClass.PERC, byLoudness = true, strike = terra(TerraVoice.DAYAN, "TUNE" to .60f, "DECAY" to .15f, "FORCE" to .70f, "OPEN" to 0f, "CLICK" to .90f)),
+        Part("Bayan Ka", DrumClass.PERC, strike = terra(TerraVoice.BAYAN, "TUNE" to .45f, "DECAY" to .10f, "FORCE" to .80f, "BEND" to .20f)),
+        Part("Dholak Boom", DrumClass.PERC, strike = terra(TerraVoice.DHOLAK, "TUNE" to .35f, "DECAY" to .65f, "FORCE" to .70f, "DROP" to .80f, "TREBLE" to .30f)),
+        Part("Dholak High", DrumClass.PERC, strike = terra(TerraVoice.DHOLAK, "TUNE" to .65f, "DECAY" to .40f, "FORCE" to .60f, "DROP" to .30f, "TREBLE" to .70f)),
+        Part("Ghost Snare", DrumClass.SNARE, strike = KitStrikes.softer(slapSnare, .40f)),
+        Part("Bell Clink", DrumClass.PERC, strike = terra(TerraVoice.CONICAL_BELL, "TUNE" to .90f, "DECAY" to .30f, "FORCE" to .85f, "CLACK" to .40f)),
+    )
+
+    /**
+     * RAGA's groove, round 0's notes on this kit's pads: the kick on one and the "and" of three, the slap on two and
+     * four, the bayan's bending "ge" on the beat and pickups, the dayan running sixteenths (the open "na" on the
+     * accents, the closed "ti" between), the dholak answering on the off-beats. A 10 ms seeded spread.
+     */
+    private val ragaGroove: List<Note> = Cypher.humanised(buildList {
+        for (bar in 0 until GROOVE_BARS) {
+            val b = bar * 4.0
+            add(Note(b + 0.0, 3, 1f)); add(Note(b + 2.5, 3, .80f)); if (bar % 2 == 1) add(Note(b + 3.25, 3, .55f))
+            add(Note(b + 1.0, 4, .90f, offsetMs = 10f)); add(Note(b + 3.0, 4, .95f, offsetMs = 12f))
+            for ((beat, w) in listOf(0.0 to .90f, .75 to .55f, 2.0 to .80f, 2.75 to .50f, 3.5 to .45f)) add(Note(b + beat, 1, w))
+            for (s in 0 until 16) {
+                val accent = s % 4 == 0 || s == 6 || s == 14
+                add(Note(b + s * .25, if (accent) 0 else 2, if (accent) .70f else if (s % 2 == 0) .45f else .30f, offsetMs = if (s % 2 == 1) 14f else 4f))
+            }
+            for (o in listOf(.5, 1.5, 2.5, 3.5)) add(Note(b + o, 5, if (o == 3.5) .65f else .45f, offsetMs = 8f))
+        }
+    }, 10f, "loose-crate-raga")
+
+    private val ragaPhrases = listOf(
+        Phrase("Tabla Roll", accelerating(2, 2.0, 14, .30f, .85f, land = 0), loop = false),
+        Phrase("Raga Groove", ragaGroove, loop = true),
     )
 }

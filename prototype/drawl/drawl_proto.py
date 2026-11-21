@@ -330,7 +330,10 @@ class Performance:
             self.slide_dur = .28 * (1 + .10 * u[2])
         self.zeta = .8 + .05 * u[3]
         depth_scale = {"STEEL": .6, "GUT": .45, "FLATTOP": .35}.get(voice, 1.0)
-        self.vib_depth = 150 * waver ** 1.3 * depth_scale * (1 + .08 * u[4])
+        # Round 0d (owner: "a tad shallower"): trimmed most where the shake is widest, 20 % at
+        # full WAVER and about 10 % at the defaults, which already sat near the references'
+        # 140-190 cents peak to peak while full WAVER reached 250-260.
+        self.vib_depth = 150 * waver ** 1.3 * (1 - .2 * waver) * depth_scale * (1 + .08 * u[4])
         # A wider shake moves more of the arm, so the rate levels off as the depth grows (round 0c,
         # owner: the long slide's vibrato "a smidge slower"): 5.0 Hz still, 6.05 at .5, 6.8 at 1
         # (round 0: 7.6 at 1, the fast edge of the references' 5.9 to 7.5 Hz).

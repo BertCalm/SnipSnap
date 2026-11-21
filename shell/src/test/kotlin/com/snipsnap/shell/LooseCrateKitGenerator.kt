@@ -15,7 +15,8 @@ import java.util.Locale
 /**
  * Builds the LOOSE CRATE kits, proves the grid through save, reload, playback and MPC 3 export, writes SFZ
  * and DecentSampler beside them, and writes the listening pack. Every clip is read back from the exported
- * WAV through the app's own pad resolver ([PadHit.resolve]), so what the page plays is what a pad plays.
+ * WAV through the app's own pad resolver ([PadHit.resolve]) and scaled by the gain it returns (pad level
+ * times velocity), so what the page plays is what a pad plays, loudness included.
  *
  * Per kit folder: `pad-NN.wav` (the hard first take), `touch-NN.wav` (soft, medium, hard, each zone's four
  * takes in order), `dry-NN.wav` (the hard first take with no print), `mpc/`, `sfz/`, `decentsampler/`,
@@ -52,7 +53,11 @@ object LooseCrateKitGenerator {
                 val pad = saved.pads.single { it.slot == slot }
                 val wav = waves.getValue(slot)
                 val h = requireNotNull(PadHit.resolve(pad, velocity, index) { wav.frameCount.toLong() })
-                return wav.samples.copyOfRange(h.startFrame.toInt(), h.endFrameExclusive.toInt())
+                // The pad's level times the touch velocity, as the player applies it (centre pan, so left = right).
+                check(h.gainLeft == h.gainRight) { "${g.title} pad ${pad.slot}: the listening pack is mono and needs a centred pad" }
+                return wav.samples.copyOfRange(h.startFrame.toInt(), h.endFrameExclusive.toInt()).also { x ->
+                    for (i in x.indices) x[i] *= h.gainLeft
+                }
             }
             fun write(name: String, x: FloatArray) = WavWriter.write(File(folder, name), Snip(x, 1, RATE))
 
@@ -81,7 +86,7 @@ object LooseCrateKitGenerator {
             println("Verified ${g.title}: 16 pads, 192 slices, saved PCM + playback + MPC 3 track + SFZ + DecentSampler, built in $buildMs ms")
         }
         manifest.append("  ]\n}\n")
-        File(root, "README.txt").writeText("LOOSE CRATE kits, version ${LooseCrateKits.VERSION}: four drum kits, three velocity zones of four takes per pad.\n" +
+        File(root, "README.txt").writeText("LOOSE CRATE kits, version ${LooseCrateKits.VERSION}: ${Kit.entries.size} drum kits, three velocity zones of four takes per pad.\n" +
             "MPC 3, SFZ and DecentSampler exports cycle takes. MPC 2 is not written: it keeps each zone's first take (the owner's format-limit decision of 2026-11-14).\n" +
             "Nothing here has been played on a phone or an MPC.\n")
         File(root, "verification.csv").writeText(proof.toString())
