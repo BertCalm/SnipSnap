@@ -16,12 +16,13 @@ import kotlin.test.assertTrue
  * Candidate voices (ChamberCandidates). Round chamber-voices-1 (21 Nov 2026) kept GLAZE (a singing bowl's split mode
  * pairs in a glass room) and asked for the rest to be "More distinctive". Round chamber-voices-2 gives each its own
  * instrument layer over its room network (ChamberCandidateLayers): TIMBER (a marimba), MASS (a huge low drum and its
- * hall), ALLOY (a steel pan) and BOUNCE (a cimbalom whose hammer rebounds). CHAMBER is finite: no held keys. HYBRID and
- * AQUARIUM are pinned against the build before round 1, GLAZE against the build the owner heard.
+ * hall), ALLOY (a steel pan) and BOUNCE (a cimbalom whose hammer rebounds). Round fix-chamber-voices-1 (21 Nov 2026) kept all
+ * four. CHAMBER is finite: no held keys. HYBRID and AQUARIUM are pinned against the build before round 1, the five new
+ * voices against the builds the owner heard.
  */
 class ChamberCandidateVoicesTest {
     private val M = CandidateVoiceMeasures
-    private val candidates = ChamberVoice.entries.filter { it !in Chamber.KEPT_VOICES }
+    private val candidates = ChamberVoice.entries.filter { it !in Chamber.ORIGINAL_VOICES }
 
     private fun hz(midi: Int) = 440.0 * 2.0.pow((midi - 69) / 12.0)
     private fun rms(x: FloatArray, from: Double, to: Double): Double {
@@ -49,14 +50,22 @@ class ChamberCandidateVoicesTest {
     }
 
     @Test
-    fun `candidates are appended, register model only and offered nowhere`() {
+    fun `the new voices are appended, register model only, kept, and each has one recipe at the note the owner heard`() {
         assertEquals(listOf(ChamberVoice.TIMBER, ChamberVoice.MASS, ChamberVoice.ALLOY, ChamberVoice.GLAZE, ChamberVoice.BOUNCE), candidates)
-        assertEquals(listOf(ChamberVoice.HYBRID, ChamberVoice.AQUARIUM), Chamber.KEPT_VOICES)
-        assertEquals(Chamber.KEPT_VOICES, ChamberVoice.entries.take(2))
-        assertTrue((ChamberPresets.all() + ChamberPresets.original()).all { it.voice in Chamber.KEPT_VOICES }, "a candidate has a preset")
-        assertTrue(ChamberKits.patches().all { it.voice in Chamber.KEPT_VOICES }, "a candidate is in the kit")
+        assertEquals(listOf(ChamberVoice.HYBRID, ChamberVoice.AQUARIUM), Chamber.ORIGINAL_VOICES)
+        assertEquals(Chamber.ORIGINAL_VOICES, ChamberVoice.entries.take(2))
+        assertEquals(Chamber.ORIGINAL_VOICES + listOf(ChamberVoice.GLAZE, ChamberVoice.TIMBER, ChamberVoice.MASS, ChamberVoice.ALLOY,
+            ChamberVoice.BOUNCE), Chamber.KEPT_VOICES)
+        assertEquals(ChamberVoice.entries.toSet(), Chamber.KEPT_VOICES.toSet())
+        assertTrue(ChamberPresets.original().all { it.voice in Chamber.ORIGINAL_VOICES }, "a new voice is in the published six")
+        assertTrue(ChamberKits.patches().all { it.voice in Chamber.ORIGINAL_VOICES }, "a new voice is in the kit")
         for (voice in candidates) {
-            assertTrue(ChamberPresets.forVoice(voice).isEmpty(), "$voice has presets")
+            val preset = ChamberPresets.forVoice(voice).single()
+            assertEquals(ChamberPatch(preset.name, voice, Chamber.defaults(voice), model = Chamber.REGISTER_MODEL), preset)
+            assertEquals(60, preset.midi)
+            assertEquals(Chamber.NORMAL_VELOCITY, preset.velocity)
+            // The medium note of the touch clip the owner kept (FD2 for GLAZE, GE2 to GH2 for the rest).
+            assertContentEquals(render(voice), preset.render().samples, "$voice's recipe is not the note the owner heard")
             assertEquals(Chamber.macrosFor(ChamberVoice.HYBRID).map { it.name }, Chamber.macrosFor(voice).map { it.name })
             val saved = ChamberPatch("Candidate", voice, Chamber.defaults(voice) + ("STRIKE" to .3f), midi = 55, velocity = .6f)
             assertEquals(saved, Patches.fromJsonText(saved.toJsonText()), "$voice does not survive saving")
@@ -124,6 +133,20 @@ class ChamberCandidateVoicesTest {
     }
 
     @Test
+    fun `TIMBER, MASS, ALLOY and BOUNCE, kept on 21 Nov 2026, render exactly what the owner heard`() {
+        val lines = ArrayList<String>()
+        for (voice in REWORKED) {
+            // The new half of each before/after clip (GE1 to GH1), then its touch clip (GE2 to GH2).
+            for (midi in listOf(36, 52)) lines += "CHAMBER $voice midi $midi v ${Chamber.NORMAL_VELOCITY} " +
+                M.hash(Chamber.render(voice, emptyMap(), midi, Chamber.NORMAL_VELOCITY).samples)
+            for (v in TOUCH) lines += "CHAMBER $voice midi 60 v $v " + M.hash(Chamber.render(voice, emptyMap(), 60, v).samples)
+        }
+        for (voice in candidates) lines += "CHAMBER preset $voice " + M.hash(ChamberPresets.forVoice(voice).single().render().samples)
+        assertEquals(25, lines.size)
+        assertEquals(REWORKED_RENDERS, M.hash(lines), lines.joinToString("\n"))
+    }
+
+    @Test
     fun `soft, medium and hard are obviously different - in tone and in level`() {
         for (voice in candidates) for (midi in listOf(48, 60)) {
             val notes = TOUCH.map { render(voice, midi, it) }
@@ -143,7 +166,7 @@ class ChamberCandidateVoicesTest {
     @Test
     fun `the top of the range stays no harsher than the brightest kept room`() {
         for (velocity in listOf(Chamber.NORMAL_VELOCITY, 1f)) {
-            val ceiling = Chamber.KEPT_VOICES.maxOf { harshBandDb(render(it, 84, velocity), 84) } + HARSH_MARGIN_DB
+            val ceiling = Chamber.ORIGINAL_VOICES.maxOf { harshBandDb(render(it, 84, velocity), 84) } + HARSH_MARGIN_DB
             for (voice in candidates) {
                 val band = harshBandDb(render(voice, 84, velocity), 84)
                 println("CHAMBER $voice MIDI84 v$velocity 2-8 kHz against the root %.1f dB (ceiling %.1f)".format(band, ceiling))
@@ -220,13 +243,13 @@ class ChamberCandidateVoicesTest {
     @Test
     fun `the kept rooms render exactly what they rendered before the candidates`() {
         val lines = ArrayList<String>()
-        for (voice in Chamber.KEPT_VOICES) {
+        for (voice in Chamber.ORIGINAL_VOICES) {
             for (model in 1..Chamber.MAX_MODEL_VERSION) lines += "CHAMBER ${voice.name} m$model " +
                 M.hash(Chamber.render(voice, emptyMap(), 60, .75f, model = model).samples)
             for (midi in listOf(36, 84)) for (v in listOf(.3f, 1f)) lines += "CHAMBER ${voice.name} midi $midi v $v " +
                 M.hash(Chamber.render(voice, emptyMap(), midi, v).samples)
         }
-        for (p in ChamberPresets.all() + ChamberPresets.original()) lines += "CHAMBER preset ${p.name} m${p.model} " + M.hash(p.render().samples)
+        for (p in (ChamberPresets.all() + ChamberPresets.original()).filter { it.voice in Chamber.ORIGINAL_VOICES }) lines += "CHAMBER preset ${p.name} m${p.model} " + M.hash(p.render().samples)
         assertEquals(KEPT_LINES, lines.size)
         assertEquals(KEPT_RENDERS, M.hash(lines), lines.joinToString("\n"))
     }
@@ -238,6 +261,9 @@ class ChamberCandidateVoicesTest {
         const val KEPT_LINES = 30
         /** SHA-256 over GLAZE's lines, taken from the build the owner heard in round chamber-voices-1 (c42bc8e89). */
         const val GLAZE_RENDERS = "f76065e863620b220a36e2922d8460d6a044095f7965fc26e756be093d4e8cae"
+        val REWORKED = listOf(ChamberVoice.TIMBER, ChamberVoice.MASS, ChamberVoice.ALLOY, ChamberVoice.BOUNCE)
+        /** SHA-256 over the reworked voices' lines, taken from the build the owner heard in round fix-chamber-voices-1 (2b294f616). */
+        const val REWORKED_RENDERS = "e4f7244db22ff14f234c95674c2a1c948017b5e8be10d3506bf02908f18a7fc7"
         /**
          * The reworked voices (round chamber-voices-2, "More distinctive") must stand at least this far from every other
          * voice; the rest keep ETCH's bar. Measured 10.5 to 17.3 dB.

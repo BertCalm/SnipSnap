@@ -17,12 +17,12 @@ import kotlin.test.assertTrue
  * pitches) and asked for the rest to be "More distinctive". Round ferry-voices-2 gives each its own instrument layer over
  * its network (FerryCandidateLayers): TWIN (a piano's beating double string), SWELL (a bowed swell), TARAB (a sitar's
  * sweeping jawari and sympathetic strings), PEAL (a handbell, was CHIME), BATON (wood, wire, glass, was RELAY) and VANE,
- * the spare (a vibraphone's motor tremolo). FERRY is finite: no held keys. PASSAGE is pinned against the build before
- * round 1, TINE against the build the owner heard.
+ * the spare (a vibraphone's motor tremolo). Round fix-ferry-voices-1 (21 Nov 2026) kept all six. FERRY is finite: no held
+ * keys. PASSAGE is pinned against the build before round 1, the seven new voices against the builds the owner heard.
  */
 class FerryCandidateVoicesTest {
     private val M = CandidateVoiceMeasures
-    private val candidates = FerryVoice.entries.filter { it !in Ferry.KEPT_VOICES }
+    private val candidates = FerryVoice.entries.filter { it !in Ferry.ORIGINAL_VOICES }
 
     private fun hz(midi: Int) = 440.0 * 2.0.pow((midi - 69) / 12.0)
     private fun rms(x: FloatArray, from: Double, to: Double): Double {
@@ -50,13 +50,20 @@ class FerryCandidateVoicesTest {
     }
 
     @Test
-    fun `candidates are appended, model four only and offered nowhere`() {
+    fun `the new voices are appended, model four only, kept, and each has one recipe at the note the owner heard`() {
         assertEquals(listOf(FerryVoice.TWIN, FerryVoice.SWELL, FerryVoice.TARAB, FerryVoice.PEAL, FerryVoice.BATON, FerryVoice.TINE, FerryVoice.VANE), candidates)
-        assertEquals(listOf(FerryVoice.PASSAGE), Ferry.KEPT_VOICES)
+        assertEquals(listOf(FerryVoice.PASSAGE), Ferry.ORIGINAL_VOICES)
         assertEquals(FerryVoice.PASSAGE, FerryVoice.entries.first())
-        assertTrue(FerryPresets.all().all { it.voice in Ferry.KEPT_VOICES }, "a candidate has a preset")
+        assertEquals(listOf(FerryVoice.PASSAGE, FerryVoice.TINE, FerryVoice.TWIN, FerryVoice.SWELL, FerryVoice.TARAB, FerryVoice.PEAL,
+            FerryVoice.BATON, FerryVoice.VANE), Ferry.KEPT_VOICES)
+        assertEquals(3 + candidates.size, FerryPresets.all().size)
         for (voice in candidates) {
-            assertTrue(FerryPresets.forVoice(voice).isEmpty(), "$voice has presets")
+            val preset = FerryPresets.forVoice(voice).single()
+            assertEquals(FerryPatch(preset.name, voice, Ferry.defaults(voice)), preset)
+            assertEquals(48, preset.midi)
+            assertEquals(1f, preset.velocity)
+            // C3 at full touch: a note of the range clip the owner kept (FL1 for TINE, GJ1 to GN1's new half, GO1 for VANE).
+            assertContentEquals(render(voice), preset.render().samples, "$voice's recipe is not the note the owner heard")
             assertEquals(Ferry.macrosFor(FerryVoice.PASSAGE).map { it.name }, Ferry.macrosFor(voice).map { it.name })
             val saved = FerryPatch("Candidate", voice, Ferry.defaults(voice) + ("HANDOFF" to .3f), midi = 55, velocity = .6f)
             assertEquals(saved, Patches.fromJsonText(saved.toJsonText()), "$voice does not survive saving")
@@ -128,6 +135,20 @@ class FerryCandidateVoicesTest {
         lines += "FERRY TINE macros " + M.hash(Ferry.render(FerryVoice.TINE, mapOf("HANDOFF" to .2f, "MATCH" to .4f), 55, .8f).samples)
         assertEquals(15, lines.size)
         assertEquals(TINE_RENDERS, M.hash(lines), lines.joinToString("\n"))
+    }
+
+    @Test
+    fun `TWIN, SWELL, TARAB, PEAL, BATON and VANE, kept on 21 Nov 2026, render exactly what the owner heard`() {
+        val lines = ArrayList<String>()
+        for (voice in REWORKED) {
+            // The new half of each before/after clip (GJ1 to GN1), VANE's range clip (GO1), then each touch clip (GJ2 to GO2).
+            val range = if (voice == FerryVoice.VANE) listOf(36, 48, 60, 72) else listOf(36, 48)
+            for (midi in range) lines += "FERRY $voice midi $midi v 1 " + M.hash(Ferry.render(voice, emptyMap(), midi, 1f).samples)
+            for (v in TOUCH) lines += "FERRY $voice midi 60 v $v " + M.hash(Ferry.render(voice, emptyMap(), 60, v).samples)
+        }
+        for (voice in candidates) lines += "FERRY preset $voice " + M.hash(FerryPresets.forVoice(voice).single().render().samples)
+        assertEquals(39, lines.size)
+        assertEquals(REWORKED_RENDERS, M.hash(lines), lines.joinToString("\n"))
     }
 
     @Test
@@ -247,7 +268,7 @@ class FerryCandidateVoicesTest {
         for (loss in listOf(0f, 1f)) lines += "FERRY ${voice.name} LOSS $loss " +
             M.hash(Ferry.render(voice, mapOf("LOSS" to loss), 48, 1f).samples)
         lines += "FERRY ${voice.name} seed " + M.hash(Ferry.render(voice, mapOf("MATCH" to .5f), 60, .8f, seed = -3L).samples)
-        for (p in FerryPresets.all()) lines += "FERRY preset ${p.name} " + M.hash(p.render().samples)
+        for (p in FerryPresets.forVoice(FerryVoice.PASSAGE)) lines += "FERRY preset ${p.name} " + M.hash(p.render().samples)
         assertEquals(KEPT_LINES, lines.size)
         assertEquals(KEPT_RENDERS, M.hash(lines), lines.joinToString("\n"))
     }
@@ -258,6 +279,9 @@ class FerryCandidateVoicesTest {
         const val KEPT_LINES = 19
         /** SHA-256 over TINE's lines, taken from the build the owner heard in round ferry-voices-1 (c42bc8e89). */
         const val TINE_RENDERS = "4abbc5bbd5126963a3498ae108c348e6d92a43016d6a0185271040a383dd4b49"
+        val REWORKED = listOf(FerryVoice.TWIN, FerryVoice.SWELL, FerryVoice.TARAB, FerryVoice.PEAL, FerryVoice.BATON, FerryVoice.VANE)
+        /** SHA-256 over the reworked voices' lines, taken from the build the owner heard in round fix-ferry-voices-1 (2b294f616). */
+        const val REWORKED_RENDERS = "e25cff6e5d769c9cfa8969e08c33b32a61cc4cb1af1285fc5f408edec3a72537"
         /**
          * The reworked voices (round ferry-voices-2, "More distinctive") must stand at least this far from every other
          * voice; the rest keep ETCH's bar. Measured 8.5 (TWIN against SWELL, which swells where TWIN strikes) to 27 dB.

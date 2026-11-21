@@ -83,11 +83,16 @@ class ChamberPatchTest {
     @Test
     fun `factory recipes remain complete finite and available through the shared roster`() {
         val recipes = ChamberPresets.all()
-        assertEquals(6, recipes.size)
+        // Six room recipes, then one for each of the five voices kept on 21 Nov 2026.
+        assertEquals(11, recipes.size)
         assertEquals(recipes.size, recipes.map { it.name }.distinct().size)
         assertEquals(recipes, Presets.all().filter { it.engine == ChamberPatch.ENGINE })
-        for (voice in Chamber.KEPT_VOICES) {
+        for (voice in Chamber.ORIGINAL_VOICES) {
             assertEquals(3, ChamberPresets.forVoice(voice).size)
+            assertEquals(ChamberPresets.forVoice(voice), Presets.forVoice(ChamberPatch.ENGINE, voice.name))
+        }
+        for (voice in Chamber.KEPT_VOICES - Chamber.ORIGINAL_VOICES.toSet()) {
+            assertEquals(1, ChamberPresets.forVoice(voice).size)
             assertEquals(ChamberPresets.forVoice(voice), Presets.forVoice(ChamberPatch.ENGINE, voice.name))
         }
         for (recipe in recipes) {

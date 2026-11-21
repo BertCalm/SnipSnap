@@ -11,7 +11,7 @@ class ChamberWorkingResponseTest {
     @Test
     fun `new recipes and the public renderer use the heard response at C6`() {
         assertEquals(Chamber.REGISTER_MODEL, Chamber.MODEL_VERSION)
-        for (voice in Chamber.KEPT_VOICES) {
+        for (voice in Chamber.ORIGINAL_VOICES) {
             val patch = ChamberPatch("New room", voice, Chamber.defaults(voice) + ("MATERIAL" to 1f), midi = 84)
             assertEquals(Chamber.REGISTER_MODEL, patch.model)
             assertEquals(patch, Patches.fromJsonText(patch.toJsonText()))

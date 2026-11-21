@@ -125,7 +125,7 @@ class ChamberSynthScreenTest : ComposeScreenTest() {
     }
 
     @Test
-    fun picker_reaches_both_finite_voices_and_their_factory_presets() {
+    fun picker_reaches_every_kept_voice_and_its_factory_presets() {
         val settings = mutableMapOf("engine" to "FILAMENT", "voice" to "THREAD")
         show(shelf(), settings)
         compose.onNodeWithContentDescription("ENGINE FILAMENT. CHOOSE ENGINE").assertExists()

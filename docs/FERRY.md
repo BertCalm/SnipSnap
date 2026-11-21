@@ -2,7 +2,8 @@
 
 The characteristic gesture is **strike → handoff → sympathetic bloom → return**.
 
-This is one finite, dry, mono PASSAGE voice. It ports the owner-approved Python
+This is one finite, dry, mono PASSAGE voice; seven more (TINE, TWIN, SWELL, TARAB,
+PEAL, BATON, VANE) were kept on 21 Nov 2026 (see [Kept voices](#kept-voices-21-nov-2026)). It ports the owner-approved Python
 study to SnipSnap's Kotlin renderer. The owner answered “Yes, clearly” to the first
 handoff comparison and “Clear throughout” to nine low/middle/high, slow/normal/fast
 examples. Those answers approve the Python references. On 2026-10-30 the owner
@@ -541,3 +542,26 @@ SWELL 8.5 dB from each other (one struck, one swelling: the loudest moment is 10
 instrument: SWELL's loudest moment after .35 s and every struck voice's before 50 ms, TWIN's beating (5.0 dB about its
 decay), BATON's three stages (upper partials .12, then .47, then .001 of the root), TARAB's sweep (the centre of its
 upper partials falls from 6.7 to 4.9), PEAL's waver (3.4 dB), VANE's tremolo (12.6 dB peak to trough), TINE's fixed box.
+
+## Kept voices (21 Nov 2026)
+
+| Round | Clips | Verdict |
+|---|---|---|
+| ferry-voices-1 | FL1 TINE range, FL2 TINE touch | KEEP, no notes |
+| fix-ferry-voices-1 | GJ TWIN, GK SWELL, GL TARAB, GM PEAL, GN BATON (before/after range, then touch); GO1/GO2 VANE (range, touch) | KEEP, no notes |
+
+FERRY now has eight voices: `Ferry.KEPT_VOICES` is PASSAGE, TINE, TWIN, SWELL, TARAB, PEAL, BATON, VANE;
+`Ferry.ORIGINAL_VOICES` is PASSAGE, which every model plays. PASSAGE keeps its three recipes; each new voice has one, its
+default settings at C3 and full touch, a note of the range clip the owner kept: Kalimba (TINE), Double String (TWIN),
+Bowed Swell (SWELL), Sitar (TARAB), Handbell (PEAL), Wood Wire Glass (BATON), Vibraphone (VANE). They render on model 4
+only.
+
+Where they are offered: FERRY is not in the app's engine picker or the shared factory roster (`Presets.all()`), and it
+was not before this round either; it is played from the command line (`snipsnap synth FERRY TINE`, `--preset`,
+`--macros`, `--midi`) and saved as patches. The new voices join it there, through their recipes. Putting FERRY on the
+app's picker is a separate piece of work.
+
+`FerryCandidateVoicesTest` pins what was heard: TINE's 15 renders (c42bc8e89), and 39 lines for the rest, the new half
+of each before/after clip (C2, C3), VANE's four range notes, each touch clip's three notes and every new recipe
+(2b294f616); each recipe also renders sample for sample the heard note. The listening clips were re-rendered from this
+build and match the heard clips' SHA-256 exactly. FERRY is finite: no voice has held keys.

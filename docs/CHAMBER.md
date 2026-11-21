@@ -7,7 +7,9 @@ excitation and energy returning to the instruments. Material names describe
 designed musical responses, rather than measured building materials.
 
 This stage implements **HYBRID and AQUARIUM**, six factory recipes, complete
-patch replay, phone controls and a sixteen-pad dry MPC kit. The supplied
+patch replay, phone controls and a sixteen-pad dry MPC kit. Five more voices,
+GLAZE, TIMBER, MASS, ALLOY and BOUNCE, were kept on 21 Nov 2026 (see
+[Kept voices](#kept-voices-21-nov-2026) at the end); the kit stays the two rooms'. The supplied
 [engineering specification](CHAMBER_SPEC.md) remains the unchanged proposal.
 Its other four voices, 36-preset library, expanded room editor and sustained
 HOLD operation remain later work. The owner accepted the revised membrane
@@ -575,3 +577,26 @@ now asks at least 9 dB of the reworked voices (3.7 for the rest) and checks each
 48 dB while its root falls 11 (.05 to .6 s), MASS's pitch is 235 cents high at the strike, its hall mode at 53 Hz 16
 times the 47 Hz gap, ALLOY's root wavers 2.1 dB, BOUNCE's rebound lifts the level 1.4 times at the default touch. The
 layer is mixed by one call from `renderProbe`, whose bytecode grows by 24 bytes to about 7,460 of HotSpot's 8,000.
+
+## Kept voices (21 Nov 2026)
+
+| Round | Clips | Verdict |
+|---|---|---|
+| chamber-voices-1 | FD1 GLAZE range, FD2 GLAZE touch | KEEP, no notes |
+| fix-chamber-voices-1 | GE1/GE2 TIMBER, GF1/GF2 MASS, GG1/GG2 ALLOY, GH1/GH2 BOUNCE (before/after range, then the new soft/medium/hard) | KEEP, no notes |
+
+CHAMBER now offers seven voices: `Chamber.KEPT_VOICES` is HYBRID, AQUARIUM, GLAZE, TIMBER, MASS, ALLOY, BOUNCE, and the
+app's picker reads it. `Chamber.ORIGINAL_VOICES` (HYBRID, AQUARIUM) names the two rooms every model plays; the kit, the
+six room recipes and the room studies and tests stay on them, so nothing already heard moved. Each new voice has one
+factory recipe at its default settings, middle C and the default touch (.75), the medium note of the touch clip the
+owner kept: Singing Bowl (GLAZE), Marimba (TIMBER), Hall Drum (MASS), Steel Pan (ALLOY), Cimbalom (BOUNCE). They render
+on the register model (5) only.
+
+`ChamberCandidateVoicesTest` pins what was heard: GLAZE's 16 renders (c42bc8e89), and 25 lines for the rest, the new
+half of each before/after clip (C2, E3), each touch clip's three notes and every new recipe (2b294f616); each recipe
+also renders sample for sample the heard note. The listening clips were re-rendered from this build and match the
+heard clips' SHA-256 exactly.
+
+Two things to know. TIMBER, MASS, ALLOY and BOUNCE are mostly their instrument layer, which ignores STRIKE, BALANCE,
+MATERIAL, DIVIDE and PLACEMENT; only the quieter room under it (about a quarter of the level) moves with those knobs, so
+on these four the knobs do little. And CHAMBER is finite: no voice has held keys (HOLD is refused).

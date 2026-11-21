@@ -139,7 +139,8 @@ class StarterKitsTest {
         StarterKits.ACCORD_VOICES_ID to OneEngine(AccordPatch::class.java, setOf("REED", "COURSE", "ESCAPEMENT", "BELL")) {
             Accord.drumClassFor(it as AccordPatch)
         },
-        "chamber" to OneEngine(ChamberPatch::class.java, Chamber.KEPT_VOICES.map { it.name }.toSet()) {
+        // The kit plays the two rooms it was published and heard with; the voices kept on 21 Nov 2026 are not in it.
+        "chamber" to OneEngine(ChamberPatch::class.java, Chamber.ORIGINAL_VOICES.map { it.name }.toSet()) {
             (it as ChamberPatch).let { p -> Chamber.drumClassFor(p.voice, p.macros) }
         },
         "caustic" to OneEngine(CausticPatch::class.java, CausticVoice.entries.map { it.name }.toSet()) {

@@ -6,7 +6,8 @@ import java.util.concurrent.CancellationException
 import kotlin.math.*
 import kotlin.random.Random
 
-/** HYBRID and AQUARIUM are kept; the rest are candidates appended after them (see [Chamber.KEPT_VOICES] and ChamberCandidates). */
+/** HYBRID and AQUARIUM came first; GLAZE, TIMBER, MASS, ALLOY and BOUNCE ([ChamberCandidates]) were kept on 21 Nov 2026 and are
+ * appended after them so saved names and ordinals never move. */
 enum class ChamberVoice { HYBRID, AQUARIUM, TIMBER, MASS, ALLOY, GLAZE, BOUNCE }
 
 /**
@@ -44,10 +45,14 @@ object Chamber {
     const val MAX_SECONDS = 6f
 
     /**
-     * The voices players are offered: presets, kits, pickers and key makers read this. The voices after AQUARIUM are
-     * candidates for listening round chamber-voices-1 (ChamberCandidates), offered nowhere until the owner keeps them.
+     * The voices players are offered: presets and pickers read this. GLAZE was kept in round chamber-voices-1 and TIMBER,
+     * MASS, ALLOY and BOUNCE, reworked, in fix-chamber-voices-1 (both 21 Nov 2026). They render on the register model only.
      */
-    val KEPT_VOICES: List<ChamberVoice> = listOf(ChamberVoice.HYBRID, ChamberVoice.AQUARIUM)
+    val KEPT_VOICES: List<ChamberVoice> = listOf(ChamberVoice.HYBRID, ChamberVoice.AQUARIUM, ChamberVoice.GLAZE,
+        ChamberVoice.TIMBER, ChamberVoice.MASS, ChamberVoice.ALLOY, ChamberVoice.BOUNCE)
+
+    /** The two rooms CHAMBER shipped with, which every model plays: the kit, the six room recipes and the room studies are theirs. */
+    val ORIGINAL_VOICES: List<ChamberVoice> = listOf(ChamberVoice.HYBRID, ChamberVoice.AQUARIUM)
     private const val IR = RATE * Dsp.OVERSAMPLE
     private const val TAU = 2.0 * PI
     private const val AUDIO_GAIN = 38.0

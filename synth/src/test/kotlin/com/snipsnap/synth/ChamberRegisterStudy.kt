@@ -31,7 +31,7 @@ object ChamberRegisterStudy {
         val settings = linkedMapOf("default" to emptyMap(), "balance-low" to mapOf("BALANCE" to 0f),
             "balance-high" to mapOf("BALANCE" to 1f), "material-high" to mapOf("MATERIAL" to 1f),
             "divide-low" to mapOf("DIVIDE" to 0f))
-        for (voice in Chamber.KEPT_VOICES) {
+        for (voice in Chamber.ORIGINAL_VOICES) {
             for ((setting, macros) in settings) for (model in 3..4) cases += Case(voice, 60, model, setting, macros)
             for (midi in listOf(48, 72, 84)) for (setting in listOf("default", "material-high"))
                 cases += Case(voice, midi, 4, setting, settings.getValue(setting))
@@ -124,7 +124,7 @@ object ChamberRegisterStudy {
             File(baseline, record.getValue(mode).str()).canonicalFile.also {
                 require(it.toPath().startsWith(baseline.toPath()) && it.isFile)
             }
-        for (voice in Chamber.KEPT_VOICES) for (midi in listOf(48, 60, 72, 84)) {
+        for (voice in Chamber.ORIGINAL_VOICES) for (midi in listOf(48, 60, 72, 84)) {
             val previous = old(voice, midi)
             val patch = ChamberPatch.fromJsonValue(previous.getValue("patch")).copy(model = 5)
             val id = "${voice.name.lowercase()}-c${midi / 12 - 1}-revised"
@@ -183,7 +183,7 @@ object ChamberRegisterStudy {
             val publishedManifestFile = File(published!!, "manifest.json")
             val publishedManifest = Json.parse(publishedManifestFile.readText()).obj()
             val publishedClips = publishedManifest.getValue("clips").arr().map { it.obj() }
-            for (voice in Chamber.KEPT_VOICES) {
+            for (voice in Chamber.ORIGINAL_VOICES) {
                 val baselineId = "${voice.name.lowercase()}-material-high-wider"
                 val anchor = publishedClips.single { it.getValue("id").str() == baselineId }
                 val id = "${voice.name.lowercase()}-c4-anchor"
@@ -218,7 +218,7 @@ object ChamberRegisterStudy {
                 File(repo, "synth/src/test/resources/chamber-register/$name").copyTo(File(root, name))
             val manifest = mapOf("schemaVersion" to 1, "title" to "CHAMBER / Keep the upper notes ringing", "sourceRevision" to revision,
                 "createdAt" to Instant.now().toString(), "models" to mapOf("before" to 4, "after" to 5),
-                "voices" to Chamber.KEPT_VOICES.map { it.name }, "notes" to listOf(60, 72, 84),
+                "voices" to Chamber.ORIGINAL_VOICES.map { it.name }, "notes" to listOf(60, 72, 84),
                 "clips" to clips, "cards" to cards, "checks" to "checks.json", "provenance" to "source-provenance.json",
                 "baseline" to mapOf("sourceRevision" to baselineRevision, "studySha256" to fileSha(baselineFile),
                     "publishedManifestSha256" to fileSha(publishedManifestFile)),
@@ -268,7 +268,7 @@ object ChamberRegisterStudy {
 
     /** Same targets as the source regression test, measured over the complete 4.5-second study. */
     private fun qualityChecks(candidates: List<Map<String, Any?>>, prior: List<Map<String, JsonValue>>): List<Map<String, Any?>> =
-        Chamber.KEPT_VOICES.map { voice ->
+        Chamber.ORIGINAL_VOICES.map { voice ->
             fun candidate(midi: Int) = candidates.single { it["voice"] == voice.name && it["midi"] == midi }
                 .getValue("mix") as Map<*, *>
             val center = candidate(60)

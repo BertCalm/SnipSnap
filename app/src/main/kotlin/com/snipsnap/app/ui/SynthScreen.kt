@@ -6805,6 +6805,7 @@ private enum class Engine {
         MERCURY -> listOf(MercuryVoice.PING, MercuryVoice.SING, MercuryVoice.BLADE)
         FILAMENT -> FilamentVoice.entries
         TIDAL -> TidalVoice.entries
+        // HYBRID and AQUARIUM, then GLAZE, TIMBER, MASS, ALLOY and BOUNCE, kept in chamber-voices-1 and fix-chamber-voices-1 (21 Nov 2026).
         CHAMBER -> Chamber.KEPT_VOICES
         MERIDIAN -> MeridianVoice.entries
         // GROTTO (saved model 8) joined after BUBBLE once the owner kept round nacre-grotto-1 (15 Nov 2026);

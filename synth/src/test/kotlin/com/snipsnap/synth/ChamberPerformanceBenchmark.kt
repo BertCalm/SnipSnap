@@ -30,7 +30,7 @@ object ChamberPerformanceBenchmark {
             Hashes encode every output Float32 bit in big-endian order, independently of WAV quantization.
             These are desktop JVM timings. They do not establish target-phone or MPC acceptance.
         """.trimIndent() + "\n")
-        val recipes = Chamber.KEPT_VOICES.flatMap { voice -> listOf(48, 60).map { midi ->
+        val recipes = Chamber.ORIGINAL_VOICES.flatMap { voice -> listOf(48, 60).map { midi ->
             ChamberPatch("$voice MIDI$midi", voice, Chamber.defaults(voice), midi = midi)
         } }
         repeat(2) { recipes.forEach { it.render() } }

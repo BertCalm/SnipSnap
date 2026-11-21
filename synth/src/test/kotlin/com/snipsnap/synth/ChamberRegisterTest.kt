@@ -22,7 +22,7 @@ class ChamberRegisterTest {
     fun `stock C3 and C4 defaults and all single control endpoints remain model four exact`() {
         val settings = listOf(emptyMap<String, Float>()) + controls.flatMap { name -> listOf(0f, 1f).map { mapOf(name to it) } }
         val options = Chamber.ProbeOptions(seconds = .35f, recordStems = false, normalize = true)
-        for (voice in Chamber.KEPT_VOICES) for (midi in listOf(48, 60)) for (setting in settings) {
+        for (voice in Chamber.ORIGINAL_VOICES) for (midi in listOf(48, 60)) for (setting in settings) {
             val before = Chamber.probe(voice, setting, midi = midi, model = Chamber.WIDE_RANGE_MODEL, options = options)
             val after = Chamber.probe(voice, setting, midi = midi, model = Chamber.REGISTER_MODEL, options = options)
             val label = "$voice MIDI$midi $setting"
@@ -38,7 +38,7 @@ class ChamberRegisterTest {
     @Test
     fun `high material response retains a substantial late body and distinct material range at C6`() {
         val options = Chamber.ProbeOptions(seconds = 2.5f, recordStems = true)
-        for (voice in Chamber.KEPT_VOICES) {
+        for (voice in Chamber.ORIGINAL_VOICES) {
             val lowerReference = Chamber.probe(voice, mapOf("MATERIAL" to 1f), midi = 60,
                 model = Chamber.WIDE_RANGE_MODEL, options = options)
             val old = Chamber.probe(voice, mapOf("MATERIAL" to 1f), midi = 84,
@@ -133,7 +133,7 @@ class ChamberRegisterTest {
     @Test
     fun `intermediate high metal strikes retain their actual fundamentals above octave down`() {
         val options = Chamber.ProbeOptions(seconds = .85f, roomEnabled = false, recordStems = true)
-        for (voice in Chamber.KEPT_VOICES) for (strike in listOf(.65f, .75f, .85f, 1f)) {
+        for (voice in Chamber.ORIGINAL_VOICES) for (strike in listOf(.65f, .75f, .85f, 1f)) {
             val probe = Chamber.probe(voice, mapOf("STRIKE" to strike), midi = 84,
                 model = Chamber.REGISTER_MODEL, options = options)
             for (source in 2..3) {
@@ -155,7 +155,7 @@ class ChamberRegisterTest {
     @Test
     fun `upper bar body remains excited at C6 rather than only preserving the fundamental`() {
         val options = Chamber.ProbeOptions(seconds = .7f, roomEnabled = false, recordStems = true)
-        for (voice in Chamber.KEPT_VOICES) {
+        for (voice in Chamber.ORIGINAL_VOICES) {
             val reference = Chamber.probe(voice, midi = 60, model = Chamber.WIDE_RANGE_MODEL, options = options)
             val old = Chamber.probe(voice, midi = 84, model = Chamber.WIDE_RANGE_MODEL, options = options)
             val revised = Chamber.probe(voice, midi = 84, model = Chamber.REGISTER_MODEL, options = options)
@@ -196,7 +196,7 @@ class ChamberRegisterTest {
     @Test
     fun `near room and source focus extremes keep full length raw headroom at maximum velocity`() {
         val options = Chamber.ProbeOptions(seconds = 4.5f, recordStems = false)
-        for (voice in Chamber.KEPT_VOICES) for (balance in listOf(0f, 1f)) {
+        for (voice in Chamber.ORIGINAL_VOICES) for (balance in listOf(0f, 1f)) {
             val macros = mapOf("STRIKE" to 1f, "BALANCE" to balance, "MATERIAL" to 1f,
                 "DIVIDE" to 0f, "PLACEMENT" to 0f)
             val probe = Chamber.probe(voice, macros, midi = 84, velocity = 1f,
@@ -212,7 +212,7 @@ class ChamberRegisterTest {
     fun `bright high register and maximum valid source tuning retain the strict eight rate reference`() {
         val options = Chamber.ProbeOptions(seconds = .7f, recordDiagnostics = false, recordStems = false)
         val bright = controls.associateWith { 1f }
-        for (voice in Chamber.KEPT_VOICES) {
+        for (voice in Chamber.ORIGINAL_VOICES) {
             val stock = Chamber.configFor(voice)
             val maximum = stock.copy(tuningRatios = ChamberTuningRatios(8f, 8f, 8f, 8f))
             for ((name, configuration, room) in listOf(
