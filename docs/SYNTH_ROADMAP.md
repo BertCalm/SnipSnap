@@ -1,7 +1,7 @@
-> STAGGER (round 3b built 2026-11-20, the snare damped and opened and the dark shelf removed after round 3 was heard as "flat, muffled, and muddy"; round 3 boxed the kicks after round 2d's "light taps"; round 2c was "room reverb", round 2b "echoy", round 1 "too much like drum machine sounds", round 1b "New sounds are better"):
+> STAGGER kits (complete 2026-11-20: sound approved, phone and MPC gates passed, at kit version 9). Round 3d: 16-bit words and a half-clean converter after the bit crushing was heard as too much; round 3c rebuilt the Dark Gong as a modal gong; round 3b damped and opened the snare after round 3's "flat, muffled, and muddy"; round 3 boxed the kicks after round 2d's "light taps"; round 2c was "room reverb", round 2b "echoy", round 1 "too much like drum machine sounds", round 1b "New sounds are better"):
 > three kits, CARDBOARD, MATINEE and STUMBLE, on the SKINS shelf, after the owner's muffled-kick, drunk-clock, foley-fill
-> producer profile, in the CYPHER shape, their drums EMBER's, proven through save, playback and MPC 3 export in software; a MUFFLE strike law, the `Cypher.staggered` clock, a kit-side
-> converter-then-pitch FOLEY print, a GLASS source and a PUNCH strike. Not on the shelf. See [STAGGER](STAGGER.md).
+> producer profile, in the CYPHER shape, their drums EMBER's, proven through save, playback and MPC 3 export in software and on the owner's phone and MPC; a MUFFLE strike law, the `Cypher.staggered` clock, a kit-side
+> converter-then-pitch FOLEY print, a GLASS source, a PUNCH strike and a modal GONG. See [STAGGER](STAGGER.md).
 
 > LOOSE CRATE kits (complete 2026-11-18: sound approved, phone and MPC gates passed): four beat-tape drum kits in
 > the CYPHER shape, HUMMIN, CLOTH, HAZE and RITUAL, aimed at measurements of the owner's reference loops. Every
@@ -3939,3 +3939,17 @@ presets: four pads two kits share at the same settings are filed once, and the 2
 stay CALABASH's. Every one of the 19 RIDDIM voices has a preset. RIDDIM leaves `PatchTypes.ROSTERLESS` and sits on
 SYNTH's picker after KINDRED, before CAIRN, under DRUMS; 99 picker engines. An on-device test loads CLAVE WOOD F#3 and
 keeps an edit with its hardest mallet, take and model; CI compiles and runs it. See [RIDDIM](RIDDIM.md).
+
+### KERF, round 4 (2026-11-20)
+
+KERF, the synthetic chops (docs/superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md),
+becomes a drum engine. It has six voices (KICK, SNARE, GHOST, HAT, HAT_OPEN, PERC), each a
+pool of the bank's fitted hits, 63 in all. HIT, TUNE, DECAY, FLOOR, BLEED and SLOP pick and
+shape a hit. Every render is the SYNTH TWIN sound path (`KerfRecipe.take`: velocity at the
+owner's depth 3, a take a fresh cut), with one level per setting. It is a prototype
+(`PatchTypes.PROTOTYPES`, `KerfPresets`, 27 presets) and on SYNTH's picker after SOOT, under DRUMS:
+100 picker engines. Four genre kits sit on FRESH TAPE: KERF DUST, SOUL, FUNK and STOMP. Each
+has fourteen hits, a roll and a riser, every pad 3 zones × 4 takes, proved through save,
+playback and MPC 3 export (`KerfKitTest`). The owner heard the kits and presets and played the
+kits on phone and MPC (2026-11-21): KERF is complete.
+

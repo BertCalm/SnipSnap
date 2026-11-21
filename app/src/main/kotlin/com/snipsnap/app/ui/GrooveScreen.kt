@@ -1947,7 +1947,9 @@ fun GrooveScreen(
                                 .minHeight(Layout.MIN_HIT_TARGET.dp)
                                 .background(scheme.lcd.tape, RoundedCornerShape(6.dp))
                                 .border(1.dp, scheme.amber.tape, RoundedCornerShape(6.dp))
-                                .let { m -> if (countingIn) m else m.tapeClick(label = "STOP RECORDING") { stopRecording() } },
+                                // Disabled through the count-in, not dropped (UAT 2026-11 user states, S-14):
+                                // the node stays a button and reads as unavailable.
+                                .tapeClick(label = "STOP RECORDING", enabled = !countingIn) { stopRecording() },
                             contentAlignment = Alignment.Center,
                         ) {
                             TapeText(if (countingIn) "COUNTING IN… $countInBeat" else "■ STOP RECORDING", TapeType.pixel, scheme.lcdInk.tape, maxLines = 2)
@@ -3014,6 +3016,8 @@ private fun StepEditorOverlay(
     val pads = state.lanePads
     val laneNames = remember(kit, pads) { LANE_ORDER.associateWith { laneLabel(it, kit, pads) } }
     val laneColors = laneColorsFor(kit, scheme, pads)
+    // Lanes on empty pads are not drawn (D-9), unless they still hold notes.
+    val shownLanes = remember(clip, kit, pads) { GrooveEdit.visibleLanes(clip, pads, kit.pads.mapTo(HashSet()) { it.slot }) }
     // Twelve cells for a 3/4 bar, twenty for a 5/4: the editor draws the
     // clip's own bar, so a cell's step address is the beat the clip plays.
     val barSteps = GrooveEdit.stepsPerBar(clip)
@@ -3117,7 +3121,7 @@ private fun StepEditorOverlay(
             // (imperceptible) while its actual hit rect is ~3dp wider,
             // reclaiming exactly the gap that used to be unclickable.
             Column(Modifier.weight(1f).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                for (lane in LANE_ORDER) {
+                for (lane in shownLanes) {
                     val laneColor = laneColors.getValue(lane)
                     val laneOnSteps = onSteps.getValue(lane)
                     Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {

@@ -22,6 +22,8 @@ import com.snipsnap.synth.RivetPatch
 import com.snipsnap.synth.BorePatch
 import com.snipsnap.synth.Consort
 import com.snipsnap.synth.ConsortPatch
+import com.snipsnap.synth.Drawl
+import com.snipsnap.synth.DrawlPatch
 import com.snipsnap.synth.Cairn
 import com.snipsnap.synth.CairnPatch
 import com.snipsnap.synth.CausticInstrument
@@ -324,6 +326,7 @@ object SynthRoot {
         is ChitinPatch -> tune(patch, { Chitin.midiFor(patch.voice, it) })
         is BorePatch -> tune(patch, { Bore.midiFor(patch.voice, it) })
         is ConsortPatch -> tune(patch, { Consort.midiFor(patch.voice, it) })
+        is DrawlPatch -> tune(patch, { Drawl.midiFor(patch.voice, it) })
         is CircuitPatch -> tune(patch, { Circuit.midiFor(it) })
         is ContourPatch -> tune(patch, { ContourEngine.midiFor(patch.voice, it) })
         is CorollaPatch -> tune(patch, { Corolla.midiFor(patch.voice, it) })
@@ -372,7 +375,7 @@ object SynthRoot {
         is TinesPatch -> if (patch.voice == TinesVoice.KALIMBA) tune(patch, { nearestMidi(Tines.frequencyFor(patch.voice, it)) }) else null
 
         // ---- no root a note name would describe ----
-        is com.snipsnap.synth.SecondlinePatch, is com.snipsnap.synth.SambaPatch, is com.snipsnap.synth.RiddimPatch, is com.snipsnap.synth.DrumlinePatch, is ServoPatch, is BackwashPatch, is BreakerPatch, is SootPatch, is ThumpPatch, is SkinPatch, is OnsetPatch, is TerraPatch, is VoxPatch, is FillPatch, is RivetPatch, is ScuffPatch, is com.snipsnap.synth.KindredPatch, is HiccupPatch, is ClutterPatch, is EmberPatch, is com.snipsnap.synth.CalabashPatch, is TempestPatch -> null
+        is com.snipsnap.synth.SecondlinePatch, is com.snipsnap.synth.SambaPatch, is com.snipsnap.synth.RiddimPatch, is com.snipsnap.synth.DrumlinePatch, is ServoPatch, is BackwashPatch, is BreakerPatch, is SootPatch, is com.snipsnap.synth.KerfPatch, is ThumpPatch, is SkinPatch, is OnsetPatch, is TerraPatch, is VoxPatch, is FillPatch, is RivetPatch, is ScuffPatch, is com.snipsnap.synth.KindredPatch, is HiccupPatch, is ClutterPatch, is EmberPatch, is com.snipsnap.synth.CalabashPatch, is TempestPatch -> null
         // SILK's TUNE walks scale degrees, EROSION's sweeps a frequency: neither names a note.
         is SilkPatch, is ErosionPatch -> null
     }

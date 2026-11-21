@@ -31,13 +31,22 @@ class BoreFrozenSoundTest {
         return MessageDigest.getInstance("SHA-256").digest(bytes.array()).joinToString("") { "%02x".format(it) }
     }
 
+    /**
+     * A render as it was when these hashes were taken: the player off and SAX's opening as it was heard. Since 2026-11-20 a held note
+     * carries a player ([Bore.HUMAN], the owner's verdict "Holds are unnatural, they need more humanization") and SAX opens more gently
+     * ([Bore.openingFor], "Opening is a bit harsh for most"); both moved BORE's sound on purpose, and what ships now is pinned by
+     * `HoldHumanizePinsTest`. This file goes on holding that with both switched off the engine is the one it froze, sample for sample,
+     * which is also what OBBLIGATO's players (built on `Bore.Player` with neither) stand on.
+     */
+    private fun asFrozen(voice: BoreVoice, macros: Map<String, Float>): FloatArray = Bore.render(voice, macros, Humanize.OFF, Bore.OPENING_AS_HEARD).samples
+
     /** Every render this file freezes, by a stable name. */
     private fun renders(): Map<String, () -> FloatArray> {
         val out = LinkedHashMap<String, () -> FloatArray>()
-        for (preset in BorePresets.all()) out["${preset.voice}/${preset.name}"] = { preset.render().samples }
+        for (preset in BorePresets.all().filter { it.voice in BoreMeasure.FIRST_VOICES }) out["${preset.voice}/${preset.name}"] = { asFrozen(preset.voice, preset.macros) }
         for (voice in listOf(BoreVoice.FLUTE, BoreVoice.SAX)) {
-            out["$voice/defaults"] = { Bore.render(voice).samples }
-            out["$voice/LOOP"] = { Bore.render(voice, mapOf("HOLD" to 1f)).samples }
+            out["$voice/defaults"] = { asFrozen(voice, emptyMap()) }
+            out["$voice/LOOP"] = { asFrozen(voice, mapOf("HOLD" to 1f)) }
         }
         return out
     }
@@ -72,8 +81,8 @@ class BoreFrozenSoundTest {
 
     @Test
     fun `the comparison can fail - a nudge of one macro by a thousandth changes the hash`() {
-        val base = hash(Bore.render(BoreVoice.FLUTE).samples)
-        val nudged = hash(Bore.render(BoreVoice.FLUTE, mapOf("LIP" to 0.501f)).samples)
+        val base = hash(asFrozen(BoreVoice.FLUTE, emptyMap()))
+        val nudged = hash(asFrozen(BoreVoice.FLUTE, mapOf("LIP" to 0.501f)))
         assertNotEquals(base, nudged, "a hash that does not see a thousandth of LIP could not see OVERBLOW leak either")
         assertEquals(base, FROZEN["FLUTE/defaults"], "the control reads the same render the frozen set does")
     }

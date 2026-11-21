@@ -60,6 +60,26 @@ def glide(f0: float, f1: float, tau_s: float, n: int, rate: int, law: str = "exp
     return f1 + (f0 - f1) * e
 
 
+def mode(p: dict, n: int, rate: int, rng, first_take: bool, rr: dict,
+         scale_t: float = 1.0) -> np.ndarray:
+    """A measured tail tone: a damped sine with its measured frequency, decay, level and phase.
+    The phase is the reference's, on every take: a kick's tail tones beat against each other,
+    and in a sampled kick the beats fall at the same moments on every hit. With fresh phases
+    each take would swell at its own moments, heard as extra soft hits inside the tail. It
+    fades in over p["fade_s"] from p["start_s"], taking over from the pitch fall, and out over
+    p["end_fade_s"] before p["end_s"], where the reference kick ends."""
+    t = np.arange(n) / rate
+    cents = 0.0 if first_take else rng.normal(0, rr["pitch_cents"])
+    level_db = 0.0 if first_take else rng.normal(0, rr["band_sigma_db"])
+    a = 10 ** ((p["amp_db"] + level_db) / 20)
+    y = a * np.exp(-t / (p["decay_s"] * scale_t)) * np.cos(
+        2 * np.pi * p["hz"] * 2 ** (cents / 1200) * t + p["phase"])
+    ramp = np.clip((t - p["start_s"]) / p["fade_s"], 0, 1)
+    if "end_s" in p:   # the sample's own end: the tones fade out with it
+        ramp = ramp * np.clip((p["end_s"] - t) / p["end_fade_s"], 0, 1)
+    return y * (0.5 - 0.5 * np.cos(np.pi * ramp))
+
+
 def band_sos(lo: float, hi: float, rate: int):
     return signal.butter(3, [lo, hi], btype="bandpass", fs=rate, output="sos")
 
@@ -84,6 +104,9 @@ def render(model: dict, velocity: float = 1.0, take: int = 0, oversample: int = 
 
     # Partials
     for i, p in enumerate(model["partials"]):
+        if p["kind"] == "mode":
+            out += mode(p, n, rate, rng, first_take, rr, 1 - vel["decay_loss"] * soft)
+            continue
         cents = 0.0 if first_take else rng.normal(0, rr["pitch_cents"])
         detune = 2 ** (cents / 1200)
         depth = 1 - vel["glide_depth_loss"] * soft   # softer strike: the pitch falls less far
@@ -150,7 +173,10 @@ def tilt_compensation(model: dict, soft: float) -> float:
     centres = np.sqrt(BAND_EDGES[:-1] * BAND_EDGES[1:])
     tilt = model["velocity"]["tilt_db_per_oct"] * soft * np.log2(centres / 1000.0)
     band_e = np.array([energy(e) for e in model["noise_db"]])
-    part_e = sum(energy(p["env_db"]) / 2 for p in model["partials"])
+    def mode_energy(p):   # a damped sine of amplitude A: A^2/2 at 1 ms steps, as above
+        return float(np.sum(10 ** (p["amp_db"] / 10) / 2 * np.exp(-2 * t / (p["decay_s"] * 1000))))
+    part_e = sum(mode_energy(p) if p["kind"] == "mode" else energy(p["env_db"]) / 2
+                 for p in model["partials"])
     before = band_e.sum() + part_e
     after = np.sum(band_e * 10 ** (tilt / 10)) + part_e
     return float(np.sqrt(before / max(after, 1e-30)))

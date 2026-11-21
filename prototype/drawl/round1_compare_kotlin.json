@@ -1,0 +1,302 @@
+{
+ "cone": {
+  "python_heard": {
+   "centroid_hz": 669,
+   "band_1_4k_sustain_db": -23.6,
+   "decay_db_per_s": -21.9,
+   "ltas_peaks_hz": [
+    651,
+    436,
+    867,
+    1303
+   ],
+   "vibrato_pp_default": null,
+   "vibrato_hz_default": null,
+   "vibrato_pp_wide": 215,
+   "vibrato_hz_wide": 6.63,
+   "hard_over_soft_db": 6.1,
+   "onset_centroid_soft_hard": [
+    1690,
+    1678
+   ],
+   "take_spread_db": [
+    4.58,
+    5.07
+   ]
+  },
+  "kotlin": {
+   "centroid_hz": 677,
+   "band_1_4k_sustain_db": -21.0,
+   "decay_db_per_s": -21.6,
+   "ltas_peaks_hz": [
+    867,
+    651,
+    436,
+    1093
+   ],
+   "vibrato_pp_default": null,
+   "vibrato_hz_default": null,
+   "vibrato_pp_wide": 212,
+   "vibrato_hz_wide": 6.71,
+   "hard_over_soft_db": 5.7,
+   "onset_centroid_soft_hard": [
+    1641,
+    1637
+   ],
+   "take_spread_db": [
+    4.53,
+    5.16
+   ]
+  }
+ },
+ "bottle": {
+  "python_heard": {
+   "centroid_hz": 762,
+   "band_1_4k_sustain_db": -11.5,
+   "decay_db_per_s": -8.4,
+   "ltas_peaks_hz": [
+    587,
+    872,
+    1163,
+    2632
+   ],
+   "vibrato_pp_default": 117,
+   "vibrato_hz_default": 6.16,
+   "vibrato_pp_wide": 202,
+   "vibrato_hz_wide": 6.67,
+   "hard_over_soft_db": 4.9,
+   "onset_centroid_soft_hard": [
+    1813,
+    2502
+   ],
+   "take_spread_db": [
+    3.36,
+    5.4
+   ]
+  },
+  "kotlin": {
+   "centroid_hz": 724,
+   "band_1_4k_sustain_db": -13.9,
+   "decay_db_per_s": -8.5,
+   "ltas_peaks_hz": [
+    587,
+    872,
+    1163,
+    2353
+   ],
+   "vibrato_pp_default": 118,
+   "vibrato_hz_default": 6.33,
+   "vibrato_pp_wide": 200,
+   "vibrato_hz_wide": 6.86,
+   "hard_over_soft_db": 4.5,
+   "onset_centroid_soft_hard": [
+    1826,
+    2652
+   ],
+   "take_spread_db": [
+    3.3,
+    4.14
+   ]
+  }
+ },
+ "lap": {
+  "python_heard": {
+   "centroid_hz": 592,
+   "band_1_4k_sustain_db": -24.7,
+   "decay_db_per_s": -12.2,
+   "ltas_peaks_hz": [
+    581,
+    877,
+    2046,
+    1755
+   ],
+   "vibrato_pp_default": 74,
+   "vibrato_hz_default": 5.95,
+   "vibrato_pp_wide": 199,
+   "vibrato_hz_wide": 6.84,
+   "hard_over_soft_db": 5.3,
+   "onset_centroid_soft_hard": [
+    1324,
+    2016
+   ],
+   "take_spread_db": [
+    2.36,
+    3.59
+   ]
+  },
+  "kotlin": {
+   "centroid_hz": 604,
+   "band_1_4k_sustain_db": -23.5,
+   "decay_db_per_s": -11.7,
+   "ltas_peaks_hz": [
+    581,
+    877,
+    2046,
+    1755
+   ],
+   "vibrato_pp_default": 74,
+   "vibrato_hz_default": 5.83,
+   "vibrato_pp_wide": 201,
+   "vibrato_hz_wide": 6.7,
+   "hard_over_soft_db": 5.2,
+   "onset_centroid_soft_hard": [
+    1379,
+    1904
+   ],
+   "take_spread_db": [
+    2.59,
+    5.55
+   ]
+  }
+ },
+ "steel": {
+  "python_heard": {
+   "centroid_hz": 597,
+   "band_1_4k_sustain_db": -19.8,
+   "decay_db_per_s": -6.4,
+   "ltas_peaks_hz": [
+    641,
+    942,
+    1556,
+    1863
+   ],
+   "vibrato_pp_default": 28,
+   "vibrato_hz_default": 5.77,
+   "vibrato_pp_wide": 106,
+   "vibrato_hz_wide": 6.88,
+   "hard_over_soft_db": 8.4,
+   "onset_centroid_soft_hard": [
+    1560,
+    1801
+   ],
+   "take_spread_db": [
+    0.9,
+    2.06
+   ]
+  },
+  "kotlin": {
+   "centroid_hz": 578,
+   "band_1_4k_sustain_db": -20.0,
+   "decay_db_per_s": -6.3,
+   "ltas_peaks_hz": [
+    641,
+    942,
+    1556,
+    1863
+   ],
+   "vibrato_pp_default": 28,
+   "vibrato_hz_default": 5.82,
+   "vibrato_pp_wide": 106,
+   "vibrato_hz_wide": 6.93,
+   "hard_over_soft_db": 8.3,
+   "onset_centroid_soft_hard": [
+    1432,
+    1780
+   ],
+   "take_spread_db": [
+    1.28,
+    2.52
+   ]
+  }
+ },
+ "flattop": {
+  "python_heard": {
+   "centroid_hz": 351,
+   "band_1_4k_sustain_db": -47.3,
+   "decay_db_per_s": -17.0,
+   "ltas_peaks_hz": [
+    441,
+    587,
+    1034,
+    883
+   ],
+   "vibrato_pp_default": 4,
+   "vibrato_hz_default": 5.37,
+   "vibrato_pp_wide": 36,
+   "vibrato_hz_wide": 6.82,
+   "hard_over_soft_db": 9.3,
+   "onset_centroid_soft_hard": [
+    623,
+    848
+   ],
+   "take_spread_db": [
+    4.22,
+    5.64
+   ]
+  },
+  "kotlin": {
+   "centroid_hz": 352,
+   "band_1_4k_sustain_db": -53.1,
+   "decay_db_per_s": -17.2,
+   "ltas_peaks_hz": [
+    441,
+    587,
+    883,
+    1324
+   ],
+   "vibrato_pp_default": 4,
+   "vibrato_hz_default": 5.32,
+   "vibrato_pp_wide": 35,
+   "vibrato_hz_wide": 6.74,
+   "hard_over_soft_db": 9.2,
+   "onset_centroid_soft_hard": [
+    620,
+    914
+   ],
+   "take_spread_db": [
+    3.97,
+    5.32
+   ]
+  }
+ },
+ "gut": {
+  "python_heard": {
+   "centroid_hz": 266,
+   "band_1_4k_sustain_db": -75.6,
+   "decay_db_per_s": -23.6,
+   "ltas_peaks_hz": [
+    495,
+    829,
+    662,
+    1157
+   ],
+   "vibrato_pp_default": null,
+   "vibrato_hz_default": null,
+   "vibrato_pp_wide": null,
+   "vibrato_hz_wide": null,
+   "hard_over_soft_db": 9.4,
+   "onset_centroid_soft_hard": [
+    490,
+    649
+   ],
+   "take_spread_db": [
+    3.71,
+    5.19
+   ]
+  },
+  "kotlin": {
+   "centroid_hz": 236,
+   "band_1_4k_sustain_db": -77.3,
+   "decay_db_per_s": -23.2,
+   "ltas_peaks_hz": [
+    495,
+    991,
+    662,
+    829
+   ],
+   "vibrato_pp_default": null,
+   "vibrato_hz_default": null,
+   "vibrato_pp_wide": null,
+   "vibrato_hz_wide": null,
+   "hard_over_soft_db": 9.3,
+   "onset_centroid_soft_hard": [
+    459,
+    603
+   ],
+   "take_spread_db": [
+    3.57,
+    4.52
+   ]
+  }
+ }
+}

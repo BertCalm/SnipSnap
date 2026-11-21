@@ -289,6 +289,7 @@ object ArcoAuditionGenerator {
                     (if (voxMidi == midi) "at $note" else "at ${noteName(voxMidi)}, an octave under the bowed note, because the choir's TUNE tops out at A4")
             }
             ArcoVoice.SARANGI -> error("the R1 gate page is CELLO's and ERHU's (ArcoMeasure.BODY_VOICES); SARANGI's clips are ArcoSarangiAuditionGenerator's")
+            else -> error("the candidate voices are not on the R1 gate page")
         }
 
         return HeldSet(

@@ -585,6 +585,16 @@ tasks.register<JavaExec>("generateSootGenreKits") {
     args(providers.gradleProperty("sootGenreKitsOutput").orNull ?: "${rootDir}/testkit/soot-genre-kits")
 }
 
+tasks.register<JavaExec>("generateKerfKits") {
+    group = "distribution"
+    description = "Build KERF's four genre kits, prove their velocity and round-robin grids through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.KerfKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "3g"
+    args(providers.gradleProperty("kerfKitsOutput").orNull ?: "${rootDir}/testkit/kerf-kits")
+}
+
 tasks.register<JavaExec>("generateSootKit") {
     group = "distribution"
     description = "Build the SOOT kit, prove its velocity and round-robin grids through save, playback and MPC 3 export, and write the listening pack."
@@ -623,6 +633,16 @@ tasks.register<JavaExec>("generateLooseCrateKits") {
     workingDir = rootProject.projectDir
     maxHeapSize = "2g"
     args(providers.gradleProperty("looseCrateKitsOutput").orNull ?: "${rootDir}/testkit/loose-crate-kits")
+}
+
+tasks.register<JavaExec>("generateFacsimileKits") {
+    group = "distribution"
+    description = "Build the FACSIMILE kits, prove the velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.FacsimileKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("facsimileKitsOutput").orNull ?: "${rootDir}/testkit/facsimile-kits")
 }
 
 tasks.register<JavaExec>("generateStaggerKits") {

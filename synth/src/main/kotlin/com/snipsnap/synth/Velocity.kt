@@ -85,6 +85,28 @@ object Velocity {
         it.board == null && it.pedals == null && it.layers == null && it.terminalFadeMs == null
     }?.patch
 
+    /** [patchForLayers] for a KERF twin: the twin a layer path may re-strike, under the same conditions. */
+    fun kerfForLayers(recipe: PadRecipe?): KerfRecipe? = recipe?.takeIf {
+        it.board == null && it.pedals == null && it.layers == null && it.terminalFadeMs == null
+    }?.kerf
+
+    /**
+     * [layerAt] for a KERF twin: the twin struck again at [velocity] ([KerfRecipe.renderAt]), its rack replayed on
+     * the softer strike, then peak-matched to [reference], because the sampler owns loudness. What is left is the
+     * change of character: a duller hit with a softer tick, deeper in its neighbours' wash. A render whose shape
+     * differs from [reference] falls back to [soften], as [layerAt] does.
+     */
+    fun kerfLayerAt(reference: Snip, kerf: KerfRecipe, fx: FxChain?, velocity: Float): Snip {
+        val dry = kerf.renderAt(velocity.toDouble())
+        val wet = if (fx == null || fx.isBypass) dry else {
+            val seen = StrikeVelocity.levelSeen(velocity)
+            fx.process(dry.copy(samples = FloatArray(dry.samples.size) { dry.samples[it] * seen }))
+        }
+        return if (wet.channels != reference.channels || wet.sampleRate != reference.sampleRate)
+            soften(reference, 1f - velocity.coerceIn(0f, 1f))
+        else peakMatch(reference, wet)
+    }
+
     /**
      * [variants], but re-rendered via [atVelocity] when [patch] is a synth
      * patch, replaying its [fx] after the softer strike. This is the third
@@ -247,6 +269,7 @@ object Velocity {
         is SambaPatch -> SambaPatch.macrosFor()
         is DrumlinePatch -> Drumline.macrosFor(patch.voice)
         is SootPatch -> Soot.macrosFor(patch.voice, patch.model)
+        is KerfPatch -> Kerf.macrosFor(patch.voice, patch.model)
         is SnapPatch -> Snap.macrosFor(patch.voice)
         is GlintPatch -> Glint.macrosFor(patch.voice)
         is SirenPatch -> Siren.macrosFor(patch.voice)
@@ -256,6 +279,7 @@ object Velocity {
         is BorePatch -> Bore.macrosFor(patch.voice)
         is ObbligatoPatch -> Obbligato.macrosFor()
         is ConsortPatch -> Consort.macrosFor(patch.voice)
+        is DrawlPatch -> Drawl.macrosFor(patch.voice)
         is ArcoPatch -> Arco.macrosFor(patch.voice)
         is TempestPatch -> Tempest.macrosFor(patch.voice)
         is MercuryPatch -> Mercury.macrosFor(patch.voice)
@@ -468,6 +492,8 @@ object Velocity {
         is ObbligatoPatch -> patch.copy(velocity = v).render()
         // CONSORT's velocity is breath effort: its own render turns a harder hit into more harmonics, more air and the overblow.
         is ConsortPatch -> patch.copy(velocity = v).render()
+        // DRAWL's velocity is the pick: harder is a brighter, rougher burst, a sharper start and more cone or amp drive, at one gain per sound.
+        is DrawlPatch -> patch.copy(velocity = v).render()
         is BellowsPatch -> patch.copy(velocity = v).render()
         is MurmurPatch -> patch.copy(velocity = v).render()
         is OspreyPatch -> patch.copy(velocity = v).render()
@@ -543,7 +569,10 @@ object Velocity {
         is DrumlinePatch -> patch.render(v)
         // SOOT strikes every drum at the velocity through its own contact law (and the kick's sag).
         is SootPatch -> patch.render(v)
-        is TerraPatch -> Terra.render(patch.voice, patch.macros, patch.striker, velocity = v)
+        // KERF strikes the fitted hit through KerfVelocity at the owner's depth: duller, a softer tick, the bleed kept.
+        is KerfPatch -> patch.render(v)
+        // through the patch, so a struck pad keeps its striker and a roll stays a roll
+        is TerraPatch -> patch.render(v)
         // THUMP's and ONSET's kicks take the same contact law (a shallower
         // pitch drop, a quieter and duller click); their other voices keep
         // their brightness macro or soften().

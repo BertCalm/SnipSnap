@@ -26,7 +26,7 @@ class TerraPresetsTest {
             else assertEquals(4, presets.size, voice.name)
             assertTrue(presets.all { it.voice == voice })
         }
-        assertEquals(84, TerraPresets.all().size)      // 48 kept and pinned below, and the nine stick voices' 36 (provisional, docs/TERRA_STICKS.md)
+        assertEquals(88, TerraPresets.all().size)      // 48 kept and pinned below, and the ten stick voices' 40 (provisional, docs/TERRA_STICKS.md)
     }
 
     @Test fun `names are unique and fit a pad label`() {
@@ -38,7 +38,7 @@ class TerraPresetsTest {
     @Test fun `every new preset spells out all its voice's macros and is a different sound from every kept pad`() {
         val kept = TerraPresets.kept().toSet()
         val fresh = TerraPresets.all().filter { it !in kept }
-        assertEquals(68, fresh.size)      // 32 on the first twelve voices, 36 on the stick voices
+        assertEquals(72, fresh.size)      // 32 on the first twelve voices, 40 on the stick voices
         for (p in fresh) {
             assertEquals(Terra.macrosFor(p.voice).map { it.name }.toSet(), p.macros.keys, "${p.name} names every macro")
             assertTrue(p.macros.values.all { it in 0f..1f }, p.name)
@@ -142,6 +142,67 @@ class TerraPresetsTest {
                 com.snipsnap.audio.WavWriter.write(probe, p.render(), com.snipsnap.audio.WavWriter.BitDepth.PCM_24)
                 val actual = java.security.MessageDigest.getInstance("SHA-256").digest(probe.readBytes()).joinToString("") { "%02x".format(it.toInt() and 255) }
                 assertEquals(keptRound2.getValue(p.name), actual, "${p.voice} ${p.name} changed since the owner kept it")
+            }
+        } finally { probe.delete() }
+    }
+
+    /**
+     * The PCM24 bytes of the stick voices' forty presets (TerraSticks: ODAIKO to FAN), which the owner kept on
+     * 2026-11-20 ("Ok, they are good", after hearing each at a soft and a full touch on the kits' listening page;
+     * docs/TERRA_STICKS.md). A change to any of them fails here.
+     */
+    private val keptSticks = linkedMapOf(
+        "Odaiko Long" to "a9102ab8d7e7c812881ab780b5455e77f5a04bdf16405b2a69d10e9e486e16d8", // ODAIKO
+        "Odaiko Low" to "a83bd06c14b2e9635d3ca0c9447379b7ea700655871719a92bd30ad29bd852f4", // ODAIKO
+        "Odaiko Pair" to "165588914a53deeff2ebd1fa7cb7b5ffdec5ef70b98d20e06dc18d51ea07dec1", // ODAIKO
+        "Odaiko Deep" to "196d215902e80b176474bc29b8da5115def74064e76584d07bfa0ef9614a2d71", // ODAIKO
+        "Nagado Don" to "fcaf9b7a211d1512c9aabb11978bb9d2b5c97533ba13b4df441ebcd5e52ae1cc", // NAGADO
+        "Nagado Low" to "3aff93c6103adc432e63f82b08f74c3e1234ea5366ec60b5559e518f8d27253e", // NAGADO
+        "Nagado Tight" to "d970d2c1bf7e0fe183c604bf5ee44a3271b0c7c4430a079fea6148795f082484", // NAGADO
+        "Nagado Soft" to "f537bc92a1baa2066b8f2a5e4cf1949afb51b8c0bf7dd728a89729a2d892349e", // NAGADO
+        "Shime Ten" to "c073e32cd5f3019f94ba80b9a8f7a8fa0151e9af3501005f3fc945093cf897c2", // SHIME
+        "Shime Second" to "95ff68bcb52e2fe075d408887354d523e174b011972a25c958b40fb3b065d71d", // SHIME
+        "Shime High" to "b5cfc0f35ae32dd2d1d7825d2755ae99afbecdb5f001fa0a2494c2b22be65ffb", // SHIME
+        "Shime Soft" to "cb7faaee90b09de1dbca02d157a5a3c96cc8d36dd2255eb1e68a6584c23e6c6e", // SHIME
+        "Ka Rim" to "cf2ff4722ddf97b947f87fb11c4280287b461f0cda3420b19f065ab5d3115d71", // KA
+        "Ka High" to "fb87d449c69054d4918e25b58ecea76411ffbe962cc1fdccf1c0028a0d91a978", // KA
+        "Ka Low" to "94b10c023966bb1d946f7a4a8a5e10f20c81cf714316bd3e507785e0f8beab9b", // KA
+        "Ka Crack" to "f1179a8046d9d8297ee870802e6bb2ffc1a333d9d147d5d96e2161e134762c0a", // KA
+        "Kane Chan" to "5a180d48b57369c8214390ed1d11c767f6a6aa678aa4fe9efdb7ccfd202fa19c", // KANE
+        "Kane Chiki" to "9ad539edbad4a388c095b75d8c19f1c0ed2ec0202e54dbce301015ac7dabda7f", // KANE
+        "Kane Mid" to "bdd4c13c239f65ba04ae499b50eb8f242e0fcc4d9457576088404394c6c19848", // KANE
+        "Kane Low Ring" to "e09cc7904a0107591289350c6cc73e6f3d01ab42bf7fe243f71fd46f7316d7ce", // KANE
+        "Chappa Open" to "08eb23dd35181e4678771e8ed386cf54b754e8afeee5b8ec304d98086fb15b26", // CHAPPA
+        "Chappa Choke" to "836e1497e8dfff46a222728267bf517be4829bef90d321186e47781f51f48504", // CHAPPA
+        "Chappa Small" to "6be8f28531ff47fe4342261a034f0833477db6e1ac3ef2c1137d25265e8eb45d", // CHAPPA
+        "Chappa Wash" to "4496715917ed25066353a67adadda7bf64e3a6c463837e785b9d04d2688f03d3", // CHAPPA
+        "Sasara Fall" to "f33ea06fc33e3b91d087f952a31849daa712a7e1b54aa57800f47e93bbe821b4", // BINZASARA
+        "Sasara Snap" to "5e5d0b567dca94bc1a6abd26c3621f475d1be2031482c898a86816cd6170bbbf", // BINZASARA
+        "Sasara Slow" to "3365559142356d8e607bbf6b1b1d620f93a328db7cab93773dde1d18218aaf01", // BINZASARA
+        "Sasara Low" to "f5f6314a45e22c9e13aa7d29956b43e175d5c9450b78837b65e88da88d84199e", // BINZASARA
+        "Bell Shake" to "a9df99873ccd76fd34e0a88112dbe448eb599fcc2b6e63c53cfa80ca37731407", // COWBELL
+        "Bell Single" to "e597d90eb79612eba69665c55bc6f3aa690d94c23cdb5b752d1044f702fda236", // COWBELL
+        "Bell Muted" to "a9a683502979f31bfce104bb4cec64f04aa68110a935f361a9fec1bf058047f1", // COWBELL
+        "Bell Low Shake" to "a521c6d6a94588e27cb8b8846c9846ece23e06d03b80d1d2a84e93ace027e55e", // COWBELL
+        "Water Drum" to "c78d4551934d367f553c9b9b1356243a1962a262f12c265dd1baee324e61da94", // WATER_DRUM
+        "Water Low" to "906cc866720b9a6a3e24306712fc321b7e7b009dad940fc9acddf289290c3035", // WATER_DRUM
+        "Water Tap" to "df6522fe7235f0d76d60e92ae2e47494a9a2171e360137e61dc6ed330f121b57", // WATER_DRUM
+        "Water Soft" to "f0d82711ba464c27a77f7acc8839c92b926f281618a9d76cc4aa68b59459cddf", // WATER_DRUM
+        "Fan Slap" to "852e1d603b0b52b1a264dfa07b1433cf425b629dd647e3cbacce113815a7b9a3", // FAN
+        "Fan Swish" to "c075fc6f684afe7198e7589073a148d1ce87fe5c584841906fd44ac1d63d03c5", // FAN
+        "Fan Snap" to "4a2099e45f404604e5800b33cc54229be90608e21c2077ef0f64b10b036b5888", // FAN
+        "Fan Wave" to "cee02769e24d99e9849d096a7119dba95e182ec3feed5aaad5afb0241ab6d8f6", // FAN
+    )
+
+    @Test fun `the forty stick-voice presets the owner kept retain the bytes the owner heard`() {
+        val probe = java.io.File.createTempFile("terra-preset", ".wav")
+        try {
+            val kept = TerraSticks.VOICES.flatMap { TerraPresets.forVoice(it) }
+            assertEquals(keptSticks.keys.toList(), kept.map { it.name })
+            for (p in kept) {
+                com.snipsnap.audio.WavWriter.write(probe, p.render(), com.snipsnap.audio.WavWriter.BitDepth.PCM_24)
+                val actual = java.security.MessageDigest.getInstance("SHA-256").digest(probe.readBytes()).joinToString("") { "%02x".format(it.toInt() and 255) }
+                assertEquals(keptSticks.getValue(p.name), actual, "${p.voice} ${p.name} changed since the owner kept it")
             }
         } finally { probe.delete() }
     }

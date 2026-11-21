@@ -38,7 +38,7 @@ class BoreKeysTest {
         /** Every zone of both voices, both layers, at the defaults: 36 renders, shared by the tests below. */
         val defaults: List<Zone> by lazy {
             buildList {
-                for (voice in BoreVoice.entries) for (midi in BoreKeys.padMidis(voice)) {
+                for (voice in BoreMeasure.FIRST_VOICES) for (midi in BoreKeys.padMidis(voice)) {
                     BoreKeys.layerBreaths(voice, Bore.defaults(voice)).forEachIndexed { layer, breath ->
                         val t0 = System.nanoTime()
                         val held = BoreKeys.padMeasured(voice, Bore.defaults(voice), midi, breath)
@@ -49,6 +49,17 @@ class BoreKeysTest {
         }
 
         fun zone(voice: BoreVoice, midi: Int, layer: Int) = defaults.first { it.voice == voice && it.midi == midi && it.layer == layer }
+
+        /**
+         * A zone with the player off and the opening as it was ([Humanize.OFF], [Bore.OPENING_AS_HEARD]): the zone before 2026-11-20, for
+         * the tests that read the cut's own structure against the LOOP's, or one moment of the breath's colour. With the player on a zone's
+         * loop is four seconds to the LOOP's two, and its breath drifts, on purpose (`HoldHumanizeTest`).
+         */
+        fun plainZone(voice: BoreVoice, midi: Int, layer: Int): Zone {
+            val breath = BoreKeys.layerBreaths(voice, Bore.defaults(voice))[layer]
+            val held = BoreKeys.padMeasured(voice, Bore.defaults(voice), midi, breath, human = Humanize.OFF, opening = Bore.OPENING_AS_HEARD)
+            return Zone(voice, midi, layer, breath, held, 0.0)
+        }
 
         /** The join is a sample step like any other: no larger than the loop's own steepest ordinary one (a tenth over, for the 99.9th percentile), as `BoreLoopFuzzTest` holds the LOOP's. */
         const val WRAP_OVER_STEEPEST = 1.1
@@ -91,14 +102,16 @@ class BoreKeysTest {
         val s = z.note.snip.samples
         val start = z.note.loopStartFrame.toInt()
         assertTrue(j.correlation >= Bore.LOOP_MIN_CORRELATION, "$label: the blended waves correlate only ${j.correlation}")
-        assertTrue(j.blendDipDb >= -Bore.LOOP_MAX_DIP_DB, "$label: the loop dips ${j.blendDipDb} dB inside its blend")
+        // The dip guard allows for the level the player's breath moves on purpose ([Bore.maxDipDb]).
+        assertTrue(j.blendDipDb >= -Bore.maxDipDb(Bore.HUMAN), "$label: the loop dips ${j.blendDipDb} dB inside its blend")
         assertTrue(j.junctionStep <= WRAP_OVER_STEEPEST * j.steepestStep, "$label: the wrap's step is ${j.junctionStep / j.steepestStep} times the steepest ordinary step")
         assertTrue(s.all { it.isFinite() }, "$label: not finite")
         assertTrue(s.maxOf { abs(it) } <= BoreKeys.PEAK_CEILING + 1e-5f, "$label: peaks at ${s.maxOf { abs(it) }}, over the ${BoreKeys.PEAK_CEILING} ceiling")
         assertEquals(start, j.startFrames, "$label: the join's start is not the loop marker")
         assertEquals(s.size, start + j.lengthFrames, "$label: the file does not end where the loop does")
         assertTrue(start >= ((Bore.LOOP_START_SECONDS * Dsp.RATE).toInt() + Bore.LOOP_BLEND_FRAMES), "$label: the loop starts at $start, before the floor and the blend")
-        assertTrue(j.lengthFrames in Bore.LOOP_LENGTH_LOW_FRAMES..Bore.LOOP_LENGTH_HIGH_FRAMES, "$label: the loop is ${j.lengthFrames} frames")
+        // Four seconds, give or take the search's slack, since 2026-11-20: the player's movement is fitted to that ([Bore.heldLoopSeconds]).
+        assertTrue(j.lengthFrames in Bore.loopLengthFrames(Bore.heldLoopSeconds(Bore.HUMAN)), "$label: the loop is ${j.lengthFrames} frames")
         assertEquals(1, z.note.snip.channels)
         assertEquals(Dsp.RATE, z.note.snip.sampleRate)
         // Loud where it is held: the loop at the melodic target, unless the attack's peak set the gain.
@@ -114,7 +127,7 @@ class BoreKeysTest {
     fun `the zones are nine minor thirds across each voice's range, and the soft layer blows 0_45 of the patch's breath`() {
         assertEquals((60..84 step 3).toList(), BoreKeys.padMidis(BoreVoice.FLUTE))
         assertEquals((48..72 step 3).toList(), BoreKeys.padMidis(BoreVoice.SAX))
-        for (voice in BoreVoice.entries) {
+        for (voice in BoreMeasure.FIRST_VOICES) {
             val midis = BoreKeys.padMidis(voice)
             assertEquals(Bore.rootMidi(voice), midis.first())
             assertEquals(Bore.rootMidi(voice) + Bore.TUNE_SEMITONES, midis.last(), "$voice: the top zone is the top of TUNE's range")
@@ -145,7 +158,7 @@ class BoreKeysTest {
         }
         // The report: per voice and layer, the weakest join, the deepest dip, the widest wrap step, the loop start and length,
         // the render time and the size at PCM_24 (3 bytes a frame, the package writer's depth).
-        for (voice in BoreVoice.entries) {
+        for (voice in BoreMeasure.FIRST_VOICES) {
             val all = defaults.filter { it.voice == voice }
             for (layer in 0..1) {
                 val zs = all.filter { it.layer == layer }
@@ -175,10 +188,11 @@ class BoreKeysTest {
     fun `a zone's loop is the LOOP's own cycle - the same length and correlation, cut from the same note, one blend later`() {
         // The length search is the LOOP's call with the LOOP's arguments, so the zone's loop is the LOOP preset's cycle rotated
         // to start where the attack arrives. Round 1.7's 1,071 measured corners therefore speak for the zones too.
+        // Read with the player off on both sides ([plainZone]): with it on the zone's loop is four seconds and the LOOP's two.
         for ((voice, midi) in listOf(BoreVoice.SAX to 48, BoreVoice.SAX to 66, BoreVoice.FLUTE to 60, BoreVoice.FLUTE to 84)) {
-            val z = zone(voice, midi, 1)
+            val z = plainZone(voice, midi, 1)
             val tune = (midi - Bore.rootMidi(voice)) / Bore.TUNE_SEMITONES.toFloat()
-            val loop = Bore.renderLoopMeasured(voice, Bore.defaults(voice) + mapOf("TUNE" to tune, "HOLD" to 1f)).join
+            val loop = Bore.renderLoopMeasured(voice, Bore.defaults(voice) + mapOf("TUNE" to tune, "HOLD" to 1f), Humanize.OFF, Bore.OPENING_AS_HEARD).join
             val held = z.held.join
             assertEquals(loop.lengthFrames, held.lengthFrames, "${z.label}: the zone's loop is not the LOOP's length")
             assertEquals(loop.correlation, held.correlation, 0.0, "${z.label}: the zone's join is not the LOOP's correlation")
@@ -192,7 +206,7 @@ class BoreKeysTest {
     fun `the wrap - the file's last frame runs on into the loop start, and everything before the blend is the held note untouched`() {
         for ((voice, midi, layer) in listOf(Triple(BoreVoice.SAX, 48, 0), Triple(BoreVoice.SAX, 72, 1), Triple(BoreVoice.FLUTE, 72, 1))) {
             val z = zone(voice, midi, layer)
-            val x = Bore.heldNote(voice, BoreKeys.zoneMacros(voice, Bore.defaults(voice), midi, z.breath))
+            val x = Bore.heldNote(voice, BoreKeys.zoneMacros(voice, Bore.defaults(voice), midi, z.breath), Bore.HUMAN, Bore.heldLoopSeconds(Bore.HUMAN))
             val s = z.samples
             val g = z.held.gain
             val tail = s.size - Bore.LOOP_BLEND_FRAMES
@@ -233,17 +247,20 @@ class BoreKeysTest {
     @Test
     fun `the attack is the note's own - the zone opens as the one-shot of the same key opens`() {
         // The zone is the one-shot's own blow with the gate stretched: the raw samples are the same over the attack, and the
-        // conditioning differs only by what it reads over the whole note. Compared with the one-shot the pad plays (the patch's
-        // own HOLD, 0.45 at the defaults, whose vibrato is 9 cents to the zone's 10) over the opening 0.3 s. The control: the
-        // one-shot three semitones up does not match.
+        // conditioning differs only by what it reads over the whole note. Compared with the one-shot at the zone's own HOLD
+        // ([Bore.LOOP_HOLD]) over the opening 0.3 s: since 2026-11-20 how much of the player a note carries follows its HOLD, so the
+        // pad's own HOLD of 0.45 is nine tenths of the zone's player from the first sample (SAX C5's soft layer read 0.975 against it),
+        // where it used to differ only by a vibrato that had not yet begun. The control: the one-shot three semitones up does not match.
         val n = (0.3 * Dsp.RATE).toInt()
         var weakest = 1.0
         var strongestControl = -1.0
-        for (voice in BoreVoice.entries) {
+        for (voice in BoreMeasure.FIRST_VOICES) {
             val midis = BoreKeys.padMidis(voice)
             for (midi in listOf(midis.first(), midis[midis.size / 2], midis.last())) for (layer in 0..1) {
                 val z = zone(voice, midi, layer)
-                fun shot(key: Int) = Bore.render(voice, Bore.defaults(voice) + mapOf("TUNE" to (key - Bore.rootMidi(voice)) / Bore.TUNE_SEMITONES.toFloat(), "BREATH" to z.breath)).samples
+                fun shot(key: Int) = Bore.render(
+                    voice, Bore.defaults(voice) + mapOf("TUNE" to (key - Bore.rootMidi(voice)) / Bore.TUNE_SEMITONES.toFloat(), "BREATH" to z.breath, "HOLD" to Bore.LOOP_HOLD),
+                ).samples
                 val r = correlation(z.samples, shot(midi), n)
                 val control = correlation(z.samples, shot(if (midi + 3 <= midis.last()) midi + 3 else midi - 3), n)
                 println("BORE held ${z.label}: the opening 0.3 s correlates %.4f with its one-shot, %.4f with the one-shot three semitones off".format(java.util.Locale.ROOT, r, control))
@@ -262,11 +279,13 @@ class BoreKeysTest {
         // told apart by its colour: where its power sits ([brightness], the loop's first 0.37 s) and how much breath lies
         // between its harmonics. Per zone the soft layer is never brighter; per voice it is darker on average. How far apart
         // the two are is the audition's question (SAX's layers are much closer on this measure than FLUTE's).
-        for (voice in BoreVoice.entries) {
+        // Read with the player off ([plainZone]): 0.37 s is one moment of a breath that now drifts, and the two layers' colours at that
+        // moment are the drift's as much as the breath's (SAX C3's soft layer read 3 percent brighter than its hard one there).
+        for (voice in BoreMeasure.FIRST_VOICES) {
             val gaps = ArrayList<Double>()
             for (midi in BoreKeys.padMidis(voice)) {
-                val soft = zone(voice, midi, 0)
-                val hard = zone(voice, midi, 1)
+                val soft = plainZone(voice, midi, 0)
+                val hard = plainZone(voice, midi, 1)
                 val where = "$voice ${Scales.nameOf(midi)}"
                 assertFalse(soft.samples.contentEquals(hard.samples), "$where: the soft layer is the hard one")
                 val ls = loudnessOf(soft.samples, soft.start, soft.samples.size)
@@ -297,7 +316,7 @@ class BoreKeysTest {
             mapOf("BREATH" to 0f), mapOf("BREATH" to 1f), mapOf("CHIFF" to 0f, "BREATH" to 0f), mapOf("CHIFF" to 1f),
             mapOf("LIP" to 0f, "BREATH" to 1f), mapOf("LIP" to 1f, "BREATH" to 0f), mapOf("LIP" to 0f, "BREATH" to 0f), mapOf("LIP" to 1f, "BREATH" to 1f),
         )
-        for (voice in BoreVoice.entries) {
+        for (voice in BoreMeasure.FIRST_VOICES) {
             var weakest = 1.0
             var deepest = 0.0
             var latest = 0

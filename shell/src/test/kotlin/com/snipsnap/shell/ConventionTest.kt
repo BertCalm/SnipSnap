@@ -6005,6 +6005,7 @@ class ConventionTest {
         "LAYERS AND TAKES ▸", "TRIM AND SPLICE ▸", "MAKE FROM THIS PAD ▸", "HEAR IT IN THE BEAT ▸", // the short pad page's doors (2026-11-16)
         "COMBINE KITS · MIX TWO KITS ▸", // lands on the shelf to pick the partner kit
         "LIBRARY ▸", "SAMPLE ▸", "SAVED SAMPLES ▸", // the empty-state routes
+        "SYNTH ▸", // the empty INSTRUMENTS list's way to SYNTH (D-6)
         "MIDI DEVICES ▸", // SETTINGS' door to the MIDI devices screen
         "${'$'}{bench.label} ▸", "MY VOICE ▸", "KEYBOARD ▸", // MAKE's rows
         "ORBIT ▸", "LOOP ▸", "SONG ▸", // GROOVE's doors to the other beat benches
@@ -6198,5 +6199,186 @@ class ConventionTest {
         assertTrue(padEditorWiringFaults(good.replace("{\n    PadSheetScreen(a)\n}", "{ }\nPadSheetScreen(a)")).isNotEmpty())
         assertTrue(padEditorWiringFaults(good.replace("ReleasePadEditorWhenGone(x, k)", "")).isNotEmpty())
         assertTrue(padEditorWiringFaults(good.replace("rememberPadEditorKeys(padEditorHolder)", "remember { PadEditorKeys(h) }")).isNotEmpty())
+    }
+
+    // ---- Law: a tappable control is at least MIN_HIT_TARGET tall ----
+
+    /**
+     * UAT 2026-11 user states, S-13: six rows in SETTINGS, PAD VELOCITY and RECORD OFFSET were
+     * 44 dp tall and LISTEN FROM's options had a 44 dp floor, under [Layout.MIN_HIT_TARGET]'s 48,
+     * and nothing held them to it. This reads every modifier chain that makes a control tappable
+     * (`tapeClick(` or `.clickable(`, on the line or on the `.` lines that follow it) and refuses
+     * a literal height, height floor or size under 48 dp in the same chain. A size from `Layout`
+     * passes, as does a literal of 48 or more; a small size on something no one taps is not this
+     * law's business.
+     */
+    @Test
+    fun `law - a tappable control is never given a literal height under the hit target`() {
+        val offenders = appSrcRoot.walkTopDown().filter { it.isFile && it.extension == "kt" }.flatMap { file ->
+            smallTargets(file.readLines(Charsets.UTF_8)).map { "${file.path.replace('\\', '/')}:$it" }
+        }.toList()
+        assertTrue(
+            offenders.isEmpty(),
+            "a tappable control is sized under Layout.MIN_HIT_TARGET (${Layout.MIN_HIT_TARGET} dp) at $offenders. " +
+                "Use Layout.MIN_HIT_TARGET.dp (or more) for its height or its floor.",
+        )
+    }
+
+    @Test
+    fun `law - the hit-target law reports the 44 dp row it replaced and passes the fix`() {
+        val before = listOf(
+            "Box(",
+            "    Modifier",
+            "        .fillMaxWidth()",
+            "        .height(44.dp)",
+            "        .raisedBevel(scheme)",
+            "        .tapeClick(label = \"HELP\", onClick = onHelp),",
+            ")",
+        )
+        assertEquals(listOf(4), smallTargets(before))
+        assertEquals(listOf(1), smallTargets(listOf("Column(Modifier.heightIn(min = 44.dp).tapeClick(label = \"X\") {})")))
+        assertEquals(emptyList(), smallTargets(before.map { it.replace("44.dp", "Layout.MIN_HIT_TARGET.dp") }))
+        assertEquals(emptyList(), smallTargets(listOf("Box(Modifier.size(44.dp).lcdPanel(scheme))")))
+        assertEquals(listOf(1), smallTargets(listOf(".height(40.dp)", "// a note in the chain", ".tapeClick(label = \"X\") {}")))
+    }
+
+    /** 1-based lines in [lines] that size a tappable chain under [Layout.MIN_HIT_TARGET] with a literal. */
+    private fun smallTargets(lines: List<String>): List<Int> {
+        val size = Regex("""\.(?:height|size|heightIn\(\s*min\s*=)\(?\s*(\d+)\.dp""")
+        val out = ArrayList<Int>()
+        for ((i, line) in lines.withIndex()) {
+            val t = line.trimStart()
+            if (t.startsWith("//") || t.startsWith("*")) continue
+            if (size.findAll(line).none { it.groupValues[1].toInt() < Layout.MIN_HIT_TARGET }) continue
+            val chain = ArrayList<String>().apply { add(line) }
+            var j = i + 1
+            // A comment inside the chain does not end it.
+            while (j < lines.size && j <= i + 8 && lines[j].trimStart().let { it.startsWith(".") || it.startsWith("//") }) {
+                chain += lines[j]
+                j++
+            }
+            if (chain.any { "tapeClick(" in it || ".clickable(" in it }) out += i + 1
+        }
+        return out
+    }
+
+    // ---- Law: the LCD is drawn in the LCD's own inks ----
+
+    /**
+     * UAT 2026-11 user states, S-10, ruled "Fix the law to cover these pairs." The contrast laws
+     * checked chrome inks on chrome and LCD inks on the LCD, and never the chrome's `ink`, `ink2`,
+     * `ink3` or `accent` on the LCD. Measured, those pairs are 1.1 to 3.2 : 1 in all five paper
+     * schemes (the LCD stays dark there while the chrome inks are dark too), under AA for text
+     * (4.5) and mostly under it for graphics (3.0); the LCD's own `lcdInk` and `amber` clear 6.9 :
+     * 1 or more in every scheme. So the pairs cannot be held to AA, and the law that covers them
+     * is the other half: nothing on an LCD panel is drawn in a chrome ink.
+     *
+     * It reads every `Box`, `Row`, `Column`, `BoxWithConstraints` and `Canvas` whose modifier
+     * paints `.lcdPanel(` and looks in its content for `scheme.ink`, `.ink2`, `.ink3` or
+     * `.accent`. A child that paints its own surface (`raisedBevel`, `pressedBevel`,
+     * `sunkenField`, `background`) is its own background and is skipped, with everything inside it.
+     * [LCD_CHROME_INK_ALLOWED] names the one site that is drawn over something other than the LCD.
+     */
+    @Test
+    fun `law - nothing on an LCD panel is drawn in a chrome ink`() {
+        val offenders = appSrcRoot.walkTopDown().filter { it.isFile && it.extension == "kt" }.flatMap { file ->
+            val name = file.path.replace('\\', '/').substringAfter("com/snipsnap/app/")
+            chromeInkOnLcd(file.readText(Charsets.UTF_8)).map { (line, ink) -> "$name:$line $ink" }
+                .filterNot { site -> LCD_CHROME_INK_ALLOWED.any { site.startsWith(it.key) && site.endsWith(" " + it.value) } }
+        }.toList()
+        assertTrue(
+            offenders.isEmpty(),
+            "a chrome ink is drawn on an LCD panel at $offenders. On the LCD use its own inks: " +
+                "lcdInk (or lcdInk2, its dimmer tier) for ink, ink2 and ink3, amber for accent.",
+        )
+        // The measurement this law stands on: were a paper scheme's chrome inks ever to clear the
+        // LCD, the law would be stricter than it needs to be and should be looked at again.
+        val paper = Schemes.ALL.filter { Scheme.luma(it.gray) >= 90 }
+        assertTrue(paper.isNotEmpty())
+        for (s in paper) {
+            for ((n, c) in listOf("ink2" to s.ink2, "ink3" to s.ink3, "accent" to s.accent)) {
+                assertTrue(Scheme.contrastRatio(c, s.lcd) < 4.5, "${s.id}: $n now clears AA on the LCD; this law may be relaxed")
+            }
+            assertTrue(Scheme.contrastRatio(s.amber, s.lcd) >= 4.5, "${s.id}: amber, the LCD's accent, must clear AA on it")
+            assertTrue(Scheme.contrastRatio(s.lcdInk, s.lcd) >= 4.5, "${s.id}: lcdInk must clear AA on the LCD")
+        }
+    }
+
+    @Test
+    fun `law - the LCD-ink law reports an LCD canvas and LCD text in a chrome ink, and skips a child surface`() {
+        val canvas = "Canvas(modifier.lcdPanel(scheme).semantics { contentDescription = d }) {\n" +
+            "    drawLine(scheme.ink3.tape, a, b)\n}"
+        assertEquals(listOf(2 to "ink3"), chromeInkOnLcd(canvas))
+        val text = "Box(Modifier.fillMaxWidth().lcdPanel(scheme)) {\n    TapeText(\"(a)\", TapeType.pixel, scheme.accent.tape)\n}"
+        assertEquals(listOf(2 to "accent"), chromeInkOnLcd(text))
+        val child = "Box(Modifier.lcdPanel(scheme)) {\n    Box(Modifier.raisedBevel(scheme)) {\n        TapeText(\"X\", TapeType.pixel, scheme.ink2.tape)\n    }\n}"
+        assertEquals(emptyList(), chromeInkOnLcd(child))
+        val fixed = canvas.replace("scheme.ink3.tape", "scheme.lcdInk.tape")
+        assertEquals(emptyList(), chromeInkOnLcd(fixed))
+        assertEquals(emptyList(), chromeInkOnLcd("Box(Modifier.fillMaxSize().lcdPanel(scheme))\nTapeText(\"x\", t, scheme.ink2.tape)"))
+    }
+
+    /**
+     * Sites the LCD-ink law lets stand, by path prefix and ink, each with why. LIVE's line is drawn
+     * over the camera's own picture, which fills the panel, so the LCD colour is not under it.
+     */
+    private val LCD_CHROME_INK_ALLOWED = mapOf(
+        "ui/LiveSnapScreen.kt:" to "accent",
+    )
+
+    private val lcdHostCall = Regex("""\b(Box|Row|Column|BoxWithConstraints|Canvas)\s*\(""")
+    private val surfacePaint = Regex("""\.(raisedBevel|pressedBevel|sunkenField|background)\(""")
+    private val chromeInkUse = Regex("""\bscheme\.(ink|ink2|ink3|accent)\.tape\b""")
+
+    /** Comments and string contents blanked, lengths and line breaks kept, so offsets and lines still line up. */
+    private fun blankCommentsAndStrings(src: String): String {
+        val sb = StringBuilder(src)
+        fun blank(r: IntRange) { for (i in r) if (sb[i] != '\n') sb.setCharAt(i, ' ') }
+        Regex("""/\*.*?\*/""", RegexOption.DOT_MATCHES_ALL).findAll(src).forEach { blank(it.range) }
+        Regex("""//[^\n]*""").findAll(sb.toString()).forEach { blank(it.range) }
+        Regex(""""(?:[^"\\\n]|\\.)*"""").findAll(sb.toString()).forEach { if (it.range.last - it.range.first > 1) blank((it.range.first + 1) until it.range.last) }
+        return sb.toString()
+    }
+
+    /** The offset of the bracket that closes the one at [open], `(` or `{`. */
+    private fun closeOf(code: String, open: Int): Int {
+        val o = code[open]
+        val c = if (o == '(') ')' else '}'
+        var depth = 0
+        for (i in open until code.length) {
+            if (code[i] == o) depth++ else if (code[i] == c) { depth--; if (depth == 0) return i }
+        }
+        return code.length - 1
+    }
+
+    /** Where [code] draws a chrome ink straight on an LCD panel, as (1-based line, ink). */
+    private fun chromeInkOnLcd(src: String): List<Pair<Int, String>> {
+        val code = blankCommentsAndStrings(src)
+        val out = LinkedHashSet<Pair<Int, String>>()
+        for (call in lcdHostCall.findAll(code)) {
+            val argOpen = call.range.last
+            val argClose = closeOf(code, argOpen)
+            if (".lcdPanel(" !in code.substring(argOpen, argClose)) continue
+            var k = argClose + 1
+            while (k < code.length && code[k].isWhitespace()) k++
+            if (k >= code.length || code[k] != '{') continue
+            val bodyEnd = closeOf(code, k)
+            val body = StringBuilder(code.substring(k, bodyEnd + 1))
+            // A child that paints its own surface is its own background: blank it, content and all.
+            for (child in lcdHostCall.findAll(body.toString())) {
+                val open = child.range.last
+                val close = closeOf(body.toString(), open)
+                if (!surfacePaint.containsMatchIn(body.substring(open, close))) continue
+                var end = close
+                var j = close + 1
+                while (j < body.length && body[j].isWhitespace()) j++
+                if (j < body.length && body[j] == '{') end = closeOf(body.toString(), j)
+                for (x in child.range.first..minOf(end, body.length - 1)) if (body[x] != '\n') body.setCharAt(x, ' ')
+            }
+            for (m in chromeInkUse.findAll(body)) {
+                out += (code.substring(0, k + m.range.first).count { it == '\n' } + 1) to m.groupValues[1]
+            }
+        }
+        return out.toList()
     }
 }

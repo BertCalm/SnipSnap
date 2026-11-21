@@ -209,7 +209,7 @@ object Lull : BreakcoreKit {
             12 -> {
                 val m = Arco.defaults(ArcoVoice.CELLO) + mapOf("TUNE" to 9 / 24f, "BOW" to (.3 + .4 * v).toFloat(),
                     "GRIP" to (.55 + .04 * (t % 3)).toFloat())
-                val x = fit(detune(Arco.render(ArcoVoice.CELLO, m).samples, cents(t, 4.0)), 1.1, .3)
+                val x = fit(detune(Arco.render(ArcoVoice.CELLO, m, Arco.BUZZ_LAW, human = Humanize.OFF).samples, cents(t, 4.0)), 1.1, .3)
                 Breakcore.finish(x, g, 1.1)
             }
             13 -> Breakcore.finish(crackle(v, t), g, .36)

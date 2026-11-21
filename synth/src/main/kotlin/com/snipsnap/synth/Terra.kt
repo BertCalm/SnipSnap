@@ -61,7 +61,7 @@ import kotlin.math.tanh
  */
 enum class TerraVoice {
     COMPOUND_MEMBRANE, RESONANT_CAVITY, CONICAL_BELL, TUNED_BAR, BOX, SLAP, DAYAN, DARBUKA, DOUM, DJEMBE, DHOLAK, BAYAN, TUN,
-    ODAIKO, NAGADO, SHIME, KA, KANE, CHAPPA, BINZASARA, COWBELL, WATER_DRUM,
+    ODAIKO, NAGADO, SHIME, KA, KANE, CHAPPA, BINZASARA, COWBELL, WATER_DRUM, FAN,
 }
 
 object Terra {
@@ -125,7 +125,7 @@ object Terra {
         TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA, TerraVoice.DOUM,
         TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.TUN -> TerraHands.macros(voice)
         TerraVoice.ODAIKO, TerraVoice.NAGADO, TerraVoice.SHIME, TerraVoice.KA, TerraVoice.KANE,
-            TerraVoice.CHAPPA, TerraVoice.BINZASARA, TerraVoice.COWBELL, TerraVoice.WATER_DRUM -> TerraSticks.macros(voice)
+            TerraVoice.CHAPPA, TerraVoice.BINZASARA, TerraVoice.COWBELL, TerraVoice.WATER_DRUM, TerraVoice.FAN -> TerraSticks.macros(voice)
     }
 
     /** The hand drums ([TerraHands], and [TerraFitted]'s): their own render and output stage, like BOX. */
@@ -226,7 +226,7 @@ object Terra {
             TerraVoice.BOX, TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA, TerraVoice.DOUM,
             TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.TUN,
             TerraVoice.ODAIKO, TerraVoice.NAGADO, TerraVoice.SHIME, TerraVoice.KA, TerraVoice.KANE,
-            TerraVoice.CHAPPA, TerraVoice.BINZASARA, TerraVoice.COWBELL, TerraVoice.WATER_DRUM -> error("$voice returned above")
+            TerraVoice.CHAPPA, TerraVoice.BINZASARA, TerraVoice.COWBELL, TerraVoice.WATER_DRUM, TerraVoice.FAN -> error("$voice returned above")
         }
         // A fixed level into Punch.saturate's nonlinearity, same reason
         // Thump.render normalizes raw before its own Punch call (Punch.kt's
@@ -285,7 +285,7 @@ object Terra {
             TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA, TerraVoice.DOUM,
             TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.TUN -> hand(voice, m, renderRate, inputsFor, velocity, headOnly = true)
             TerraVoice.ODAIKO, TerraVoice.NAGADO, TerraVoice.SHIME, TerraVoice.KA, TerraVoice.KANE,
-            TerraVoice.CHAPPA, TerraVoice.BINZASARA, TerraVoice.COWBELL, TerraVoice.WATER_DRUM -> stick(voice, m, renderRate, inputsFor, velocity, headOnly = true)
+            TerraVoice.CHAPPA, TerraVoice.BINZASARA, TerraVoice.COWBELL, TerraVoice.WATER_DRUM, TerraVoice.FAN -> stick(voice, m, renderRate, inputsFor, velocity, headOnly = true)
         }
     }
 
@@ -319,6 +319,20 @@ object Terra {
         require(inputs?.pitch == null) { "$voice has no droop line for a pitch curve to bend" }
         if (fitted) return TerraFitted.render(voice, m, rate, velocity, seedOf(noise, take), inputs?.level, headOnly)
         return TerraHands.render(voice, m, rate, velocity, structure, seedOf(noise, take), inputs?.level, headOnly)
+    }
+
+    /**
+     * A stick voice left to ring ([TerraArticulation.RING]): the hit itself, the same strike, notes and noise, printed
+     * for [TerraSticks.ringSeconds] instead of cut under the classifier's 1.5 s. Its first frames are the hit's up to the
+     * hit's own fade. Through the same output stage as the hit ([TerraBox.finish]).
+     */
+    internal fun renderRing(voice: TerraVoice, macros: Map<String, Float>, velocity: Float, take: Int): Snip {
+        require(voice in TerraSticks.VOICES) { "only TERRA's stick voices ring: $voice is a hit" }
+        require(take >= 0) { "a TERRA take is 0 or more, got $take" }
+        val m = settled(voice, macros)
+        val rate = RATE * Dsp.OVERSAMPLE
+        val raw = TerraSticks.render(voice, m, rate, velocity, take, seedOf(stickSeed(voice), take), ringSeconds = TerraSticks.ringSeconds(voice, m))
+        return Snip(TerraBox.finish(raw, rate), channels = 1, sampleRate = RATE)
     }
 
     /** A stick voice's noise seed ([TerraSticks]); its take re-seeds it as the hand drums' is. */

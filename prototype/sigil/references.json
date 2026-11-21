@@ -1,0 +1,1655 @@
+[
+ {
+  "name": "BBL_115_perc_loop_berlin5am_Am",
+  "pack": "BBL",
+  "bpm": 115,
+  "dur_s": 16.696,
+  "beats": 32.0,
+  "peak_dbfs": -0.5,
+  "rms_dbfs": -23.68,
+  "crest_db": 23.18,
+  "floor_db_under_rms": 14.8,
+  "bands": {
+   "20-60": 2.1,
+   "60-150": 2.4,
+   "150-400": 35.4,
+   "400-1000": 2.4,
+   "1000-3000": 18.4,
+   "3000-6000": 18.0,
+   "6000-12000": 19.8,
+   "12000-20000": 1.5
+  },
+  "centroid_hz": 3018,
+  "roll95_hz": 9582,
+  "roll99_hz": 12575,
+  "ceiling_60db_hz": 21103,
+  "onsets_per_beat": {
+   "all": 3.97,
+   "low": 3.53,
+   "mid": 2.97,
+   "high": 3.97
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 5.307108350586492,
+   "swing_pct_16th": 46.462585034013415,
+   "odd16_share": 0.5039370078740157
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 5.22626441881026,
+   "swing_pct_16th": 46.462585034013415,
+   "odd16_share": 0.5039370078740157
+  },
+  "attack_over_body_db": 14.9,
+  "near_peak_share": 0.002,
+  "flatness": 0.699,
+  "side_over_mid_db": -8.2,
+  "lr_corr": 0.736,
+  "top_pitch_classes": [
+   "F",
+   "G",
+   "D"
+  ],
+  "low_peak_hz": 172.3,
+  "hits": {
+   "S": {
+    "n": 62,
+    "peak_dbfs": -5.951168144035603,
+    "centroid_hz": 2223.569364632871,
+    "to_m20db_ms": 68.88888888888889
+   },
+   "H": {
+    "n": 46,
+    "peak_dbfs": -7.861003621086773,
+    "centroid_hz": 6120.581856623063,
+    "to_m20db_ms": 35.34013605442177
+   },
+   "T": {
+    "n": 19,
+    "peak_dbfs": -5.476165638865405,
+    "centroid_hz": 327.39729686112355,
+    "to_m20db_ms": 44.48979591836735
+   }
+  }
+ },
+ {
+  "name": "BBL_115_perc_loop_pray_two_F",
+  "pack": "BBL",
+  "bpm": 115,
+  "dur_s": 16.696,
+  "beats": 32.0,
+  "peak_dbfs": -0.5,
+  "rms_dbfs": -20.11,
+  "crest_db": 19.61,
+  "floor_db_under_rms": 18.5,
+  "bands": {
+   "20-60": 0.0,
+   "60-150": 64.9,
+   "150-400": 28.8,
+   "400-1000": 1.6,
+   "1000-3000": 3.2,
+   "3000-6000": 1.4,
+   "6000-12000": 0.2,
+   "12000-20000": 0.0
+  },
+  "centroid_hz": 279,
+  "roll95_hz": 517,
+  "roll99_hz": 3596,
+  "ceiling_60db_hz": 11843,
+  "onsets_per_beat": {
+   "all": 3.87,
+   "low": 2.72,
+   "mid": 3.5,
+   "high": 4.0
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 8.665582174898406,
+   "swing_pct_16th": 50.68480725623559,
+   "odd16_share": 0.47580645161290325
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 10.48802129547533,
+   "swing_pct_16th": 50.50037792894919,
+   "odd16_share": 0.4921875
+  },
+  "attack_over_body_db": 8.4,
+  "near_peak_share": 0.001,
+  "flatness": 0.233,
+  "side_over_mid_db": -9.7,
+  "lr_corr": 0.812,
+  "top_pitch_classes": [
+   "A",
+   "C",
+   "D"
+  ],
+  "low_peak_hz": 107.7,
+  "hits": {
+   "K": {
+    "n": 89,
+    "peak_dbfs": -11.887203416460643,
+    "centroid_hz": 149.982696770667,
+    "to_m20db_ms": 70.47619047619047,
+    "f0_attack_hz": 94.207763671875,
+    "f0_body_hz": 103.6285400390625,
+    "harmonics_over_fund_db": -14.953005451781875
+   },
+   "S": {
+    "n": 19,
+    "peak_dbfs": -12.970548127501226,
+    "centroid_hz": 1572.706049914871,
+    "to_m20db_ms": 71.70068027210884
+   },
+   "T": {
+    "n": 16,
+    "peak_dbfs": -11.503387999935555,
+    "centroid_hz": 406.11085132097304,
+    "to_m20db_ms": 50.35147392290249
+   }
+  }
+ },
+ {
+  "name": "BBL_115_perc_loop_wind_communicating",
+  "pack": "BBL",
+  "bpm": 115,
+  "dur_s": 16.696,
+  "beats": 32.0,
+  "peak_dbfs": -0.5,
+  "rms_dbfs": -31.47,
+  "crest_db": 30.97,
+  "floor_db_under_rms": 17.3,
+  "bands": {
+   "20-60": 0.2,
+   "60-150": 2.7,
+   "150-400": 20.3,
+   "400-1000": 7.1,
+   "1000-3000": 41.4,
+   "3000-6000": 25.6,
+   "6000-12000": 2.6,
+   "12000-20000": 0.0
+  },
+  "centroid_hz": 2133,
+  "roll95_hz": 5146,
+  "roll99_hz": 6848,
+  "ceiling_60db_hz": 16602,
+  "onsets_per_beat": {
+   "all": 2.19,
+   "low": 1.91,
+   "mid": 3.16,
+   "high": 1.62
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 5.0951395050783725,
+   "swing_pct_16th": 55.04308390022654,
+   "odd16_share": 0.22857142857142856
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 7.205954845707218,
+   "swing_pct_16th": 55.038548752833805,
+   "odd16_share": 0.25
+  },
+  "attack_over_body_db": 15.5,
+  "near_peak_share": 0.001,
+  "flatness": 0.273,
+  "side_over_mid_db": -7.4,
+  "lr_corr": 0.699,
+  "top_pitch_classes": [
+   "F",
+   "A",
+   "G"
+  ],
+  "low_peak_hz": 172.3,
+  "hits": {
+   "S": {
+    "n": 56,
+    "peak_dbfs": -10.863031412896579,
+    "centroid_hz": 1714.5068655384525,
+    "to_m20db_ms": 30.498866213151928
+   },
+   "H": {
+    "n": 2,
+    "peak_dbfs": -5.136655258798168,
+    "centroid_hz": 4087.3395914536977,
+    "to_m20db_ms": 22.596371882086167
+   },
+   "T": {
+    "n": 12,
+    "peak_dbfs": -15.858075985603715,
+    "centroid_hz": 243.82736255318096,
+    "to_m20db_ms": 17.369614512471657
+   }
+  }
+ },
+ {
+  "name": "BBL_75_hihat_loop_you_get_it",
+  "pack": "BBL",
+  "bpm": 75,
+  "dur_s": 25.6,
+  "beats": 32.0,
+  "peak_dbfs": -0.5,
+  "rms_dbfs": -23.37,
+  "crest_db": 22.87,
+  "floor_db_under_rms": 20.5,
+  "bands": {
+   "20-60": 0.1,
+   "60-150": 0.0,
+   "150-400": 0.1,
+   "400-1000": 0.8,
+   "1000-3000": 0.4,
+   "3000-6000": 41.3,
+   "6000-12000": 56.0,
+   "12000-20000": 1.2
+  },
+  "centroid_hz": 7143,
+  "roll95_hz": 10982,
+  "roll99_hz": 12145,
+  "ceiling_60db_hz": 22050,
+  "onsets_per_beat": {
+   "all": 4.22,
+   "low": 4.0,
+   "mid": 3.16,
+   "high": 4.31
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 34.41043083900297,
+   "swing_pct_16th": 48.11791383219942,
+   "odd16_share": 0.4
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 34.46712018140641,
+   "swing_pct_16th": 45.7596371882083,
+   "odd16_share": 0.41304347826086957
+  },
+  "attack_over_body_db": 16.5,
+  "near_peak_share": 0.002,
+  "flatness": 0.532,
+  "side_over_mid_db": -14.4,
+  "lr_corr": 0.945,
+  "top_pitch_classes": [
+   "C",
+   "B",
+   "A#"
+  ],
+  "low_peak_hz": 43.1,
+  "hits": {
+   "S": {
+    "n": 2,
+    "peak_dbfs": -13.727564848317893,
+    "centroid_hz": 3379.815223777262,
+    "to_m20db_ms": 101.99546485260771
+   },
+   "H": {
+    "n": 131,
+    "peak_dbfs": -6.793688115771028,
+    "centroid_hz": 7268.448913796264,
+    "to_m20db_ms": 56.91609977324263
+   },
+   "T": {
+    "n": 2,
+    "peak_dbfs": -27.372828854633745,
+    "centroid_hz": 710.9074971557733,
+    "to_m20db_ms": 86.40589569160998
+   }
+  }
+ },
+ {
+  "name": "BBL_75_perc_loop_all_people_bounce",
+  "pack": "BBL",
+  "bpm": 75,
+  "dur_s": 25.6,
+  "beats": 32.0,
+  "peak_dbfs": -0.5,
+  "rms_dbfs": -29.41,
+  "crest_db": 28.91,
+  "floor_db_under_rms": 17.8,
+  "bands": {
+   "20-60": 0.0,
+   "60-150": 0.0,
+   "150-400": 1.0,
+   "400-1000": 5.6,
+   "1000-3000": 53.2,
+   "3000-6000": 33.8,
+   "6000-12000": 6.3,
+   "12000-20000": 0.1
+  },
+  "centroid_hz": 3113,
+  "roll95_hz": 6223,
+  "roll99_hz": 7537,
+  "ceiling_60db_hz": 22050,
+  "onsets_per_beat": {
+   "all": 3.22,
+   "low": 3.69,
+   "mid": 3.78,
+   "high": 3.22
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 8.798185941043357,
+   "swing_pct_16th": 47.868480725623684,
+   "odd16_share": 0.46601941747572817
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 9.77324263038497,
+   "swing_pct_16th": 47.233560090702476,
+   "odd16_share": 0.46601941747572817
+  },
+  "attack_over_body_db": 18.2,
+  "near_peak_share": 0.003,
+  "flatness": 0.568,
+  "side_over_mid_db": -11.5,
+  "lr_corr": 0.882,
+  "top_pitch_classes": [
+   "A#",
+   "B",
+   "F#"
+  ],
+  "low_peak_hz": 193.8,
+  "hits": {
+   "S": {
+    "n": 36,
+    "peak_dbfs": -8.565093791090783,
+    "centroid_hz": 2580.7545390997334,
+    "to_m20db_ms": 15.396825396825397
+   },
+   "H": {
+    "n": 67,
+    "peak_dbfs": -8.998387620987387,
+    "centroid_hz": 4706.7934775784815,
+    "to_m20db_ms": 25.82766439909297
+   }
+  }
+ },
+ {
+  "name": "BBL_75_perc_loop_fathers_lullaby_C",
+  "pack": "BBL",
+  "bpm": 75,
+  "dur_s": 12.8,
+  "beats": 16.0,
+  "peak_dbfs": -0.5,
+  "rms_dbfs": -16.48,
+  "crest_db": 15.98,
+  "floor_db_under_rms": 6.4,
+  "bands": {
+   "20-60": 0.0,
+   "60-150": 7.1,
+   "150-400": 82.6,
+   "400-1000": 0.5,
+   "1000-3000": 8.3,
+   "3000-6000": 1.4,
+   "6000-12000": 0.1,
+   "12000-20000": 0.0
+  },
+  "centroid_hz": 418,
+  "roll95_hz": 2390,
+  "roll99_hz": 3252,
+  "ceiling_60db_hz": 10508,
+  "onsets_per_beat": {
+   "all": 2.0,
+   "low": 6.38,
+   "mid": 4.31,
+   "high": 1.12
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 17.551020408163254,
+   "swing_pct_16th": 56.41723356009094,
+   "odd16_share": 0.46875
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 16.927437641723486,
+   "swing_pct_16th": 55.87301587301599,
+   "odd16_share": 0.3888888888888889
+  },
+  "attack_over_body_db": 10.1,
+  "near_peak_share": 0.014,
+  "flatness": 0.153,
+  "side_over_mid_db": -4.4,
+  "lr_corr": 0.47,
+  "top_pitch_classes": [
+   "A",
+   "F",
+   "G"
+  ],
+  "low_peak_hz": 172.3,
+  "hits": {
+   "K": {
+    "n": 6,
+    "peak_dbfs": -7.982588095170368,
+    "centroid_hz": 205.47733736139224,
+    "to_m20db_ms": 51.06575963718821,
+    "f0_attack_hz": 126.507568359375,
+    "f0_body_hz": 172.265625,
+    "harmonics_over_fund_db": -27.388259985030466
+   },
+   "S": {
+    "n": 13,
+    "peak_dbfs": -1.6342962547623006,
+    "centroid_hz": 898.7722436756085,
+    "to_m20db_ms": 174.42176870748298
+   },
+   "T": {
+    "n": 13,
+    "peak_dbfs": -4.986035657073758,
+    "centroid_hz": 282.11714275039094,
+    "to_m20db_ms": 155.9183673469388
+   }
+  }
+ },
+ {
+  "name": "BBL_75_perc_loop_hungry_droan_E",
+  "pack": "BBL",
+  "bpm": 75,
+  "dur_s": 25.606,
+  "beats": 32.01,
+  "peak_dbfs": -0.5,
+  "rms_dbfs": -17.09,
+  "crest_db": 16.59,
+  "floor_db_under_rms": 9.7,
+  "bands": {
+   "20-60": 6.7,
+   "60-150": 31.0,
+   "150-400": 56.5,
+   "400-1000": 0.8,
+   "1000-3000": 1.5,
+   "3000-6000": 3.0,
+   "6000-12000": 0.4,
+   "12000-20000": 0.0
+  },
+  "centroid_hz": 325,
+  "roll95_hz": 883,
+  "roll99_hz": 4845,
+  "ceiling_60db_hz": 12705,
+  "onsets_per_beat": {
+   "all": 5.4,
+   "low": 5.31,
+   "mid": 4.62,
+   "high": 5.4
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 4.886621315193196,
+   "swing_pct_16th": 51.54195011337812,
+   "odd16_share": 0.4277456647398844
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 4.727891156462505,
+   "swing_pct_16th": 51.405895691609786,
+   "odd16_share": 0.4393063583815029
+  },
+  "attack_over_body_db": 9.5,
+  "near_peak_share": 0.017,
+  "flatness": 0.195,
+  "side_over_mid_db": -8.8,
+  "lr_corr": 0.769,
+  "top_pitch_classes": [
+   "F",
+   "D",
+   "C"
+  ],
+  "low_peak_hz": 172.3,
+  "hits": {
+   "K": {
+    "n": 18,
+    "peak_dbfs": -6.41365405841473,
+    "centroid_hz": 105.28461949039078,
+    "to_m20db_ms": 72.59637188208616,
+    "f0_attack_hz": 53.8330078125,
+    "f0_body_hz": 100.9368896484375,
+    "harmonics_over_fund_db": -2.7607325642013536
+   },
+   "S": {
+    "n": 15,
+    "peak_dbfs": -8.12848355210708,
+    "centroid_hz": 1417.4288488534762,
+    "to_m20db_ms": 52.35827664399093
+   },
+   "T": {
+    "n": 140,
+    "peak_dbfs": -7.647337043094283,
+    "centroid_hz": 216.78698329369263,
+    "to_m20db_ms": 85.69160997732426
+   }
+  }
+ },
+ {
+  "name": "BBL_75_perc_loop_pray_bells",
+  "pack": "BBL",
+  "bpm": 75,
+  "dur_s": 6.4,
+  "beats": 8.0,
+  "peak_dbfs": -0.5,
+  "rms_dbfs": -26.55,
+  "crest_db": 26.05,
+  "floor_db_under_rms": 5.8,
+  "bands": {
+   "20-60": 0.0,
+   "60-150": 1.0,
+   "150-400": 17.4,
+   "400-1000": 58.1,
+   "1000-3000": 22.0,
+   "3000-6000": 1.4,
+   "6000-12000": 0.0,
+   "12000-20000": 0.0
+  },
+  "centroid_hz": 872,
+  "roll95_hz": 2304,
+  "roll99_hz": 3381,
+  "ceiling_60db_hz": 10185,
+  "onsets_per_beat": {
+   "all": 3.75,
+   "low": 7.5,
+   "mid": 4.12,
+   "high": 3.5
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 14.104308390022304,
+   "swing_pct_16th": 45.124716553288025,
+   "odd16_share": 0.43333333333333335
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 14.104308390022304,
+   "swing_pct_16th": 49.31972789115658,
+   "odd16_share": 0.5
+  },
+  "attack_over_body_db": 11.4,
+  "near_peak_share": 0.004,
+  "flatness": 0.087,
+  "side_over_mid_db": -8.0,
+  "lr_corr": 0.73,
+  "top_pitch_classes": [
+   "G",
+   "A",
+   "F#"
+  ],
+  "low_peak_hz": 172.3,
+  "hits": {
+   "S": {
+    "n": 22,
+    "peak_dbfs": -15.72376254170028,
+    "centroid_hz": 1024.0088322550387,
+    "to_m20db_ms": 94.35374149659864
+   },
+   "T": {
+    "n": 7,
+    "peak_dbfs": -10.489486657098801,
+    "centroid_hz": 742.8383754272387,
+    "to_m20db_ms": 133.37868480725623
+   }
+  }
+ },
+ {
+  "name": "BBL_90_drum_loop_clash_slammed",
+  "pack": "BBL",
+  "bpm": 90,
+  "dur_s": 21.333,
+  "beats": 32.0,
+  "peak_dbfs": -0.5,
+  "rms_dbfs": -12.68,
+  "crest_db": 12.18,
+  "floor_db_under_rms": 47.0,
+  "bands": {
+   "20-60": 21.3,
+   "60-150": 50.4,
+   "150-400": 15.2,
+   "400-1000": 3.2,
+   "1000-3000": 3.8,
+   "3000-6000": 4.4,
+   "6000-12000": 1.6,
+   "12000-20000": 0.0
+  },
+  "centroid_hz": 501,
+  "roll95_hz": 3898,
+  "roll99_hz": 6848,
+  "ceiling_60db_hz": 16042,
+  "onsets_per_beat": {
+   "all": 2.12,
+   "low": 1.16,
+   "mid": 2.09,
+   "high": 2.12
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 7.482993197279223,
+   "swing_pct_16th": 52.081632653061405,
+   "odd16_share": 0.07352941176470588
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 7.097505668934781,
+   "swing_pct_16th": 51.78231292517008,
+   "odd16_share": 0.07352941176470588
+  },
+  "attack_over_body_db": 3.5,
+  "near_peak_share": 0.386,
+  "flatness": 0.573,
+  "side_over_mid_db": -21.2,
+  "lr_corr": 0.985,
+  "top_pitch_classes": [
+   "A",
+   "C",
+   "D"
+  ],
+  "low_peak_hz": 64.6,
+  "hits": {
+   "K": {
+    "n": 22,
+    "peak_dbfs": -0.5540039206506189,
+    "centroid_hz": 75.11226267051727,
+    "to_m20db_ms": 99.59183673469389,
+    "f0_attack_hz": 125.83465576171875,
+    "f0_body_hz": 37.68310546875,
+    "harmonics_over_fund_db": -9.973059872342052
+   },
+   "S": {
+    "n": 17,
+    "peak_dbfs": -0.7650565340359112,
+    "centroid_hz": 2365.4112702417356,
+    "to_m20db_ms": 92.10884353741497
+   },
+   "H": {
+    "n": 29,
+    "peak_dbfs": -3.9551531160790425,
+    "centroid_hz": 5939.270103447411,
+    "to_m20db_ms": 55.714285714285715
+   }
+  }
+ },
+ {
+  "name": "BBL_90_hihat_loop_social_voices",
+  "pack": "BBL",
+  "bpm": 90,
+  "dur_s": 21.333,
+  "beats": 32.0,
+  "peak_dbfs": -0.5,
+  "rms_dbfs": -21.36,
+  "crest_db": 20.86,
+  "floor_db_under_rms": 16.1,
+  "bands": {
+   "20-60": 0.1,
+   "60-150": 29.4,
+   "150-400": 13.5,
+   "400-1000": 1.5,
+   "1000-3000": 1.9,
+   "3000-6000": 18.7,
+   "6000-12000": 24.9,
+   "12000-20000": 10.0
+  },
+  "centroid_hz": 4551,
+  "roll95_hz": 13932,
+  "roll99_hz": 17205,
+  "ceiling_60db_hz": 21964,
+  "onsets_per_beat": {
+   "all": 3.69,
+   "low": 4.84,
+   "mid": 3.31,
+   "high": 4.09
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 8.276643990928534,
+   "swing_pct_16th": 51.89115646258524,
+   "odd16_share": 0.3559322033898305
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 8.571428571428896,
+   "swing_pct_16th": 51.15646258503421,
+   "odd16_share": 0.40458015267175573
+  },
+  "attack_over_body_db": 12.3,
+  "near_peak_share": 0.002,
+  "flatness": 0.595,
+  "side_over_mid_db": -10.4,
+  "lr_corr": 0.853,
+  "top_pitch_classes": [
+   "C",
+   "A",
+   "D"
+  ],
+  "low_peak_hz": 129.2,
+  "hits": {
+   "K": {
+    "n": 22,
+    "peak_dbfs": -4.786095040745356,
+    "centroid_hz": 657.6608577705283,
+    "to_m20db_ms": 64.19501133786848,
+    "f0_attack_hz": 126.507568359375,
+    "f0_body_hz": 119.7784423828125,
+    "harmonics_over_fund_db": -14.548030685429287
+   },
+   "S": {
+    "n": 15,
+    "peak_dbfs": -10.05185562779824,
+    "centroid_hz": 1901.1506886424827,
+    "to_m20db_ms": 61.42857142857143
+   },
+   "H": {
+    "n": 78,
+    "peak_dbfs": -5.324789085155301,
+    "centroid_hz": 5904.141471105556,
+    "to_m20db_ms": 134.70521541950114
+   },
+   "T": {
+    "n": 3,
+    "peak_dbfs": -1.805965750860177,
+    "centroid_hz": 265.2521961823007,
+    "to_m20db_ms": 66.93877551020408
+   }
+  }
+ },
+ {
+  "name": "BBL_90_perc_loop_chicken_and_chips",
+  "pack": "BBL",
+  "bpm": 90,
+  "dur_s": 21.333,
+  "beats": 32.0,
+  "peak_dbfs": -0.5,
+  "rms_dbfs": -28.0,
+  "crest_db": 27.5,
+  "floor_db_under_rms": 16.9,
+  "bands": {
+   "20-60": 0.0,
+   "60-150": 0.0,
+   "150-400": 0.2,
+   "400-1000": 1.2,
+   "1000-3000": 43.2,
+   "3000-6000": 45.1,
+   "6000-12000": 9.7,
+   "12000-20000": 0.6
+  },
+  "centroid_hz": 3710,
+  "roll95_hz": 7257,
+  "roll99_hz": 10767,
+  "ceiling_60db_hz": 20306,
+  "onsets_per_beat": {
+   "all": 3.5,
+   "low": 5.47,
+   "mid": 4.41,
+   "high": 3.5
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 8.877551020406807,
+   "swing_pct_16th": 52.91156462585036,
+   "odd16_share": 0.44642857142857145
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 9.43877551020596,
+   "swing_pct_16th": 53.06122448979593,
+   "odd16_share": 0.4107142857142857
+  },
+  "attack_over_body_db": 15.6,
+  "near_peak_share": 0.0,
+  "flatness": 0.588,
+  "side_over_mid_db": -0.9,
+  "lr_corr": 0.113,
+  "top_pitch_classes": [
+   "A#",
+   "A",
+   "B"
+  ],
+  "low_peak_hz": 150.7,
+  "hits": {
+   "S": {
+    "n": 99,
+    "peak_dbfs": -9.331158441961897,
+    "centroid_hz": 3974.928555493482,
+    "to_m20db_ms": 75.80498866213152
+   },
+   "H": {
+    "n": 13,
+    "peak_dbfs": -12.291293614473716,
+    "centroid_hz": 5830.181135267122,
+    "to_m20db_ms": 75.69160997732426
+   }
+  }
+ },
+ {
+  "name": "BBL_90_perc_loop_clock_hands",
+  "pack": "BBL",
+  "bpm": 90,
+  "dur_s": 21.333,
+  "beats": 32.0,
+  "peak_dbfs": -0.5,
+  "rms_dbfs": -31.87,
+  "crest_db": 31.37,
+  "floor_db_under_rms": 24.6,
+  "bands": {
+   "20-60": 0.1,
+   "60-150": 1.6,
+   "150-400": 19.9,
+   "400-1000": 7.8,
+   "1000-3000": 15.7,
+   "3000-6000": 23.9,
+   "6000-12000": 27.7,
+   "12000-20000": 3.3
+  },
+  "centroid_hz": 4286,
+  "roll95_hz": 11370,
+  "roll99_hz": 14169,
+  "ceiling_60db_hz": 22050,
+  "onsets_per_beat": {
+   "all": 3.0,
+   "low": 3.41,
+   "mid": 3.56,
+   "high": 3.31
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 4.637188208617063,
+   "swing_pct_16th": 53.006802721088775,
+   "odd16_share": 0.4270833333333333
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 5.430839002267558,
+   "swing_pct_16th": 57.578231292517046,
+   "odd16_share": 0.5
+  },
+  "attack_over_body_db": 17.6,
+  "near_peak_share": 0.0,
+  "flatness": 0.74,
+  "side_over_mid_db": -17.5,
+  "lr_corr": 0.965,
+  "top_pitch_classes": [
+   "D",
+   "A",
+   "F"
+  ],
+  "low_peak_hz": 172.3,
+  "hits": {
+   "S": {
+    "n": 23,
+    "peak_dbfs": -3.273784229380685,
+    "centroid_hz": 1766.531095189141,
+    "to_m20db_ms": 23.560090702947846
+   },
+   "H": {
+    "n": 73,
+    "peak_dbfs": -16.72388406214013,
+    "centroid_hz": 5888.9301422108065,
+    "to_m20db_ms": 14.058956916099774
+   }
+  }
+ },
+ {
+  "name": "BBL_90_perc_loop_daily_dose_Am",
+  "pack": "BBL",
+  "bpm": 90,
+  "dur_s": 21.333,
+  "beats": 32.0,
+  "peak_dbfs": -0.5,
+  "rms_dbfs": -22.72,
+  "crest_db": 22.22,
+  "floor_db_under_rms": 16.6,
+  "bands": {
+   "20-60": 8.2,
+   "60-150": 27.5,
+   "150-400": 3.4,
+   "400-1000": 6.7,
+   "1000-3000": 28.4,
+   "3000-6000": 16.4,
+   "6000-12000": 9.2,
+   "12000-20000": 0.2
+  },
+  "centroid_hz": 2151,
+  "roll95_hz": 6912,
+  "roll99_hz": 9711,
+  "ceiling_60db_hz": 19444,
+  "onsets_per_beat": {
+   "all": 3.78,
+   "low": 2.94,
+   "mid": 3.91,
+   "high": 3.84
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 5.022675736962393,
+   "swing_pct_16th": 50.19047619047576,
+   "odd16_share": 0.36363636363636365
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 5.226757369612756,
+   "swing_pct_16th": 50.190476190476474,
+   "odd16_share": 0.37398373983739835
+  },
+  "attack_over_body_db": 15.0,
+  "near_peak_share": 0.002,
+  "flatness": 0.59,
+  "side_over_mid_db": -6.8,
+  "lr_corr": 0.655,
+  "top_pitch_classes": [
+   "A",
+   "E",
+   "G"
+  ],
+  "low_peak_hz": 64.6,
+  "hits": {
+   "K": {
+    "n": 15,
+    "peak_dbfs": -8.785709737201755,
+    "centroid_hz": 174.18904180755948,
+    "to_m20db_ms": 147.9591836734694,
+    "f0_attack_hz": 61.907958984375,
+    "f0_body_hz": 61.23504638671875,
+    "harmonics_over_fund_db": -20.11133574311912
+   },
+   "S": {
+    "n": 90,
+    "peak_dbfs": -9.833715233710631,
+    "centroid_hz": 2753.688896735006,
+    "to_m20db_ms": 83.87755102040816
+   },
+   "H": {
+    "n": 16,
+    "peak_dbfs": -5.7589669218673745,
+    "centroid_hz": 4578.5302479782,
+    "to_m20db_ms": 91.98412698412699
+   }
+  }
+ },
+ {
+  "name": "BBL_90_perc_loop_holding_steady_C",
+  "pack": "BBL",
+  "bpm": 90,
+  "dur_s": 21.333,
+  "beats": 32.0,
+  "peak_dbfs": -0.5,
+  "rms_dbfs": -34.37,
+  "crest_db": 33.87,
+  "floor_db_under_rms": 17.7,
+  "bands": {
+   "20-60": 2.2,
+   "60-150": 5.4,
+   "150-400": 2.9,
+   "400-1000": 10.9,
+   "1000-3000": 29.0,
+   "3000-6000": 23.8,
+   "6000-12000": 25.5,
+   "12000-20000": 0.2
+  },
+  "centroid_hz": 3623,
+  "roll95_hz": 8269,
+  "roll99_hz": 10745,
+  "ceiling_60db_hz": 18346,
+  "onsets_per_beat": {
+   "all": 3.97,
+   "low": 1.69,
+   "mid": 4.12,
+   "high": 4.09
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 9.24603174603078,
+   "swing_pct_16th": 53.265306122449374,
+   "odd16_share": 0.44881889763779526
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 10.300453514738923,
+   "swing_pct_16th": 52.53061224489848,
+   "odd16_share": 0.5190839694656488
+  },
+  "attack_over_body_db": 15.8,
+  "near_peak_share": 0.0,
+  "flatness": 0.71,
+  "side_over_mid_db": -6.2,
+  "lr_corr": 0.615,
+  "top_pitch_classes": [
+   "A",
+   "D",
+   "E"
+  ],
+  "low_peak_hz": 64.6,
+  "hits": {
+   "K": {
+    "n": 3,
+    "peak_dbfs": -13.038231691452829,
+    "centroid_hz": 790.3365378741219,
+    "to_m20db_ms": 192.67573696145124,
+    "f0_attack_hz": 61.907958984375,
+    "f0_body_hz": 56.524658203125,
+    "harmonics_over_fund_db": -18.496127356466943
+   },
+   "S": {
+    "n": 10,
+    "peak_dbfs": -17.631488319512876,
+    "centroid_hz": 2845.620274780354,
+    "to_m20db_ms": 14.036281179138323
+   },
+   "H": {
+    "n": 114,
+    "peak_dbfs": -17.626967132079244,
+    "centroid_hz": 5544.255501857337,
+    "to_m20db_ms": 38.718820861678005
+   }
+  }
+ },
+ {
+  "name": "BBL_90_perc_loop_shakers_on_crack",
+  "pack": "BBL",
+  "bpm": 90,
+  "dur_s": 21.333,
+  "beats": 32.0,
+  "peak_dbfs": -0.5,
+  "rms_dbfs": -29.76,
+  "crest_db": 29.26,
+  "floor_db_under_rms": 20.6,
+  "bands": {
+   "20-60": 0.0,
+   "60-150": 0.0,
+   "150-400": 0.1,
+   "400-1000": 47.8,
+   "1000-3000": 12.3,
+   "3000-6000": 24.2,
+   "6000-12000": 15.6,
+   "12000-20000": 0.0
+  },
+  "centroid_hz": 2787,
+  "roll95_hz": 7343,
+  "roll99_hz": 9044,
+  "ceiling_60db_hz": 22050,
+  "onsets_per_beat": {
+   "all": 3.91,
+   "low": 1.88,
+   "mid": 3.44,
+   "high": 3.97
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 4.546485260770912,
+   "swing_pct_16th": 50.51700680272084,
+   "odd16_share": 0.392
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 5.770975056689072,
+   "swing_pct_16th": 50.353741496599014,
+   "odd16_share": 0.4015748031496063
+  },
+  "attack_over_body_db": 21.7,
+  "near_peak_share": 0.001,
+  "flatness": 0.614,
+  "side_over_mid_db": -6.3,
+  "lr_corr": 0.623,
+  "top_pitch_classes": [
+   "E",
+   "F",
+   "F#"
+  ],
+  "low_peak_hz": 193.8,
+  "hits": {
+   "S": {
+    "n": 62,
+    "peak_dbfs": -16.846997482125133,
+    "centroid_hz": 4160.041489941547,
+    "to_m20db_ms": 24.77324263038549
+   },
+   "H": {
+    "n": 55,
+    "peak_dbfs": -7.8788610472693446,
+    "centroid_hz": 5019.62705442075,
+    "to_m20db_ms": 18.276643990929706
+   },
+   "T": {
+    "n": 8,
+    "peak_dbfs": -4.5995880747513045,
+    "centroid_hz": 765.2186590463311,
+    "to_m20db_ms": 24.138321995464853
+   }
+  }
+ },
+ {
+  "name": "NH_UAS_70_drum_bigdogbreak",
+  "pack": "NH_UAS",
+  "bpm": 70,
+  "dur_s": 6.857,
+  "beats": 8.0,
+  "peak_dbfs": -1.0,
+  "rms_dbfs": -16.24,
+  "crest_db": 15.24,
+  "floor_db_under_rms": 24.8,
+  "bands": {
+   "20-60": 3.4,
+   "60-150": 56.4,
+   "150-400": 31.7,
+   "400-1000": 1.8,
+   "1000-3000": 4.5,
+   "3000-6000": 2.0,
+   "6000-12000": 0.2,
+   "12000-20000": 0.0
+  },
+  "centroid_hz": 319,
+  "roll95_hz": 2003,
+  "roll99_hz": 3639,
+  "ceiling_60db_hz": 17227,
+  "onsets_per_beat": {
+   "all": 3.25,
+   "low": 3.0,
+   "mid": 2.5,
+   "high": 2.25
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 3.594104308390022,
+   "swing_pct_16th": 50.30687830687821,
+   "odd16_share": 0.34615384615384615
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 2.8117913832198047,
+   "swing_pct_16th": null,
+   "odd16_share": 0.1111111111111111
+  },
+  "attack_over_body_db": 7.8,
+  "near_peak_share": 0.004,
+  "flatness": 0.177,
+  "side_over_mid_db": -30.9,
+  "lr_corr": 0.998,
+  "top_pitch_classes": [
+   "A",
+   "C",
+   "D"
+  ],
+  "low_peak_hz": 86.1,
+  "hits": {
+   "K": {
+    "n": 19,
+    "peak_dbfs": -4.255468479315641,
+    "centroid_hz": 121.40195404657172,
+    "to_m20db_ms": 73.01587301587303,
+    "f0_attack_hz": 107.666015625,
+    "f0_body_hz": 96.8994140625,
+    "harmonics_over_fund_db": -11.861830617422166
+   },
+   "S": {
+    "n": 7,
+    "peak_dbfs": -2.3140617849061345,
+    "centroid_hz": 1206.2994018252334,
+    "to_m20db_ms": 186.41723356009072
+   }
+  }
+ },
+ {
+  "name": "NH_UAS_70_drum_snaake",
+  "pack": "NH_UAS",
+  "bpm": 70,
+  "dur_s": 6.857,
+  "beats": 8.0,
+  "peak_dbfs": -1.0,
+  "rms_dbfs": -18.85,
+  "crest_db": 17.85,
+  "floor_db_under_rms": 36.8,
+  "bands": {
+   "20-60": 10.1,
+   "60-150": 70.0,
+   "150-400": 13.2,
+   "400-1000": 1.1,
+   "1000-3000": 1.0,
+   "3000-6000": 2.9,
+   "6000-12000": 1.6,
+   "12000-20000": 0.1
+  },
+  "centroid_hz": 387,
+  "roll95_hz": 2369,
+  "roll99_hz": 6783,
+  "ceiling_60db_hz": 20155,
+  "onsets_per_beat": {
+   "all": 2.88,
+   "low": 1.62,
+   "mid": 3.25,
+   "high": 2.62
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 3.2596371882085733,
+   "swing_pct_16th": 50.814814814814866,
+   "odd16_share": 0.34782608695652173
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 3.7244897959186773,
+   "swing_pct_16th": 51.19576719576724,
+   "odd16_share": 0.2857142857142857
+  },
+  "attack_over_body_db": 8.5,
+  "near_peak_share": 0.025,
+  "flatness": 0.294,
+  "side_over_mid_db": -16.6,
+  "lr_corr": 0.957,
+  "top_pitch_classes": [
+   "A",
+   "C",
+   "D"
+  ],
+  "low_peak_hz": 86.1,
+  "hits": {
+   "K": {
+    "n": 14,
+    "peak_dbfs": -2.6947399981988456,
+    "centroid_hz": 347.20930135199546,
+    "to_m20db_ms": 111.25850340136054,
+    "f0_attack_hz": 106.99310302734375,
+    "f0_body_hz": 57.8704833984375,
+    "harmonics_over_fund_db": -13.309149960679886
+   },
+   "S": {
+    "n": 1,
+    "peak_dbfs": -1.192777976112101,
+    "centroid_hz": 2856.664895834991,
+    "to_m20db_ms": 68.25396825396825
+   },
+   "H": {
+    "n": 8,
+    "peak_dbfs": -14.68316674172156,
+    "centroid_hz": 5954.8684429210725,
+    "to_m20db_ms": 197.09750566893422
+   }
+  }
+ },
+ {
+  "name": "NH_UAS_80_drum_blownspeaker",
+  "pack": "NH_UAS",
+  "bpm": 80,
+  "dur_s": 6.0,
+  "beats": 8.0,
+  "peak_dbfs": -1.0,
+  "rms_dbfs": -16.18,
+  "crest_db": 15.18,
+  "floor_db_under_rms": 62.7,
+  "bands": {
+   "20-60": 19.0,
+   "60-150": 57.7,
+   "150-400": 16.0,
+   "400-1000": 2.1,
+   "1000-3000": 1.9,
+   "3000-6000": 2.4,
+   "6000-12000": 0.9,
+   "12000-20000": 0.1
+  },
+  "centroid_hz": 318,
+  "roll95_hz": 1206,
+  "roll99_hz": 5922,
+  "ceiling_60db_hz": 19574,
+  "onsets_per_beat": {
+   "all": 1.62,
+   "low": 1.38,
+   "mid": 1.75,
+   "high": 1.12
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 2.2739512471655896,
+   "swing_pct_16th": null,
+   "odd16_share": 0.15384615384615385
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 3.581349206349116,
+   "swing_pct_16th": null,
+   "odd16_share": 0.1111111111111111
+  },
+  "attack_over_body_db": 8.9,
+  "near_peak_share": 0.007,
+  "flatness": 0.069,
+  "side_over_mid_db": -19.4,
+  "lr_corr": 0.977,
+  "top_pitch_classes": [
+   "A",
+   "C",
+   "D"
+  ],
+  "low_peak_hz": 64.6,
+  "hits": {
+   "K": {
+    "n": 7,
+    "peak_dbfs": -5.248109087773046,
+    "centroid_hz": 124.13455743094364,
+    "to_m20db_ms": 350.70294784580494,
+    "f0_attack_hz": 104.974365234375,
+    "f0_body_hz": 59.21630859375,
+    "harmonics_over_fund_db": -0.9118238281192815
+   },
+   "S": {
+    "n": 5,
+    "peak_dbfs": -3.0189850030612346,
+    "centroid_hz": 1099.078442182603,
+    "to_m20db_ms": 159.0702947845805
+   },
+   "H": {
+    "n": 1,
+    "peak_dbfs": -11.471946114760637,
+    "centroid_hz": 4026.7864858166836,
+    "to_m20db_ms": 357.14285714285717
+   }
+  }
+ },
+ {
+  "name": "NH_UAS_80_drum_drivingsnare",
+  "pack": "NH_UAS",
+  "bpm": 80,
+  "dur_s": 6.0,
+  "beats": 8.0,
+  "peak_dbfs": -1.0,
+  "rms_dbfs": -19.3,
+  "crest_db": 18.3,
+  "floor_db_under_rms": 25.9,
+  "bands": {
+   "20-60": 3.4,
+   "60-150": 56.9,
+   "150-400": 29.6,
+   "400-1000": 3.7,
+   "1000-3000": 2.0,
+   "3000-6000": 3.4,
+   "6000-12000": 0.9,
+   "12000-20000": 0.1
+  },
+  "centroid_hz": 408,
+  "roll95_hz": 2670,
+  "roll99_hz": 6008,
+  "ceiling_60db_hz": 18497,
+  "onsets_per_beat": {
+   "all": 2.0,
+   "low": 2.25,
+   "mid": 2.25,
+   "high": 1.88
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 3.008786848072653,
+   "swing_pct_16th": null,
+   "odd16_share": 0.0625
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 3.542375283446808,
+   "swing_pct_16th": null,
+   "odd16_share": 0.06666666666666667
+  },
+  "attack_over_body_db": 8.2,
+  "near_peak_share": 0.023,
+  "flatness": 0.527,
+  "side_over_mid_db": -14.6,
+  "lr_corr": 0.933,
+  "top_pitch_classes": [
+   "A",
+   "C",
+   "F"
+  ],
+  "low_peak_hz": 86.1,
+  "hits": {
+   "K": {
+    "n": 10,
+    "peak_dbfs": -1.5916150788021257,
+    "centroid_hz": 440.4237139824786,
+    "to_m20db_ms": 69.2063492063492,
+    "f0_attack_hz": 185.723876953125,
+    "f0_body_hz": 134.58251953125,
+    "harmonics_over_fund_db": -10.416648278808005
+   },
+   "S": {
+    "n": 1,
+    "peak_dbfs": -3.5242505171912866,
+    "centroid_hz": 1368.7077060563324,
+    "to_m20db_ms": 79.97732426303855
+   },
+   "H": {
+    "n": 5,
+    "peak_dbfs": -14.7174098640745,
+    "centroid_hz": 4943.257104180174,
+    "to_m20db_ms": 121.99546485260771
+   }
+  }
+ },
+ {
+  "name": "NH_UAS_90_drum_bellyroll",
+  "pack": "NH_UAS",
+  "bpm": 90,
+  "dur_s": 5.333,
+  "beats": 8.0,
+  "peak_dbfs": -1.0,
+  "rms_dbfs": -13.34,
+  "crest_db": 12.34,
+  "floor_db_under_rms": 45.8,
+  "bands": {
+   "20-60": 22.4,
+   "60-150": 58.3,
+   "150-400": 13.7,
+   "400-1000": 0.9,
+   "1000-3000": 1.2,
+   "3000-6000": 2.5,
+   "6000-12000": 1.0,
+   "12000-20000": 0.1
+  },
+  "centroid_hz": 317,
+  "roll95_hz": 603,
+  "roll99_hz": 6955,
+  "ceiling_60db_hz": 20607,
+  "onsets_per_beat": {
+   "all": 2.0,
+   "low": 1.5,
+   "mid": 2.25,
+   "high": 2.0
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 2.4829931972782937,
+   "swing_pct_16th": null,
+   "odd16_share": 0.0625
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 2.4829931972782937,
+   "swing_pct_16th": null,
+   "odd16_share": 0.0625
+  },
+  "attack_over_body_db": -4.0,
+  "near_peak_share": 0.442,
+  "flatness": 0.394,
+  "side_over_mid_db": -18.2,
+  "lr_corr": 0.97,
+  "top_pitch_classes": [
+   "C",
+   "D",
+   "A"
+  ],
+  "low_peak_hz": 64.6,
+  "hits": {
+   "K": {
+    "n": 8,
+    "peak_dbfs": -1.0536046307139624,
+    "centroid_hz": 263.3886528551144,
+    "to_m20db_ms": 151.6780045351474,
+    "f0_attack_hz": 133.2366943359375,
+    "f0_body_hz": 59.21630859375,
+    "harmonics_over_fund_db": -8.279368764248566
+   },
+   "H": {
+    "n": 8,
+    "peak_dbfs": -3.7801393925030187,
+    "centroid_hz": 6418.66908964066,
+    "to_m20db_ms": 49.77324263038549
+   }
+  }
+ },
+ {
+  "name": "NH_UAS_90_drum_headbob",
+  "pack": "NH_UAS",
+  "bpm": 90,
+  "dur_s": 5.333,
+  "beats": 8.0,
+  "peak_dbfs": -1.0,
+  "rms_dbfs": -20.23,
+  "crest_db": 19.23,
+  "floor_db_under_rms": 42.1,
+  "bands": {
+   "20-60": 17.1,
+   "60-150": 53.1,
+   "150-400": 26.7,
+   "400-1000": 0.7,
+   "1000-3000": 0.3,
+   "3000-6000": 1.0,
+   "6000-12000": 1.0,
+   "12000-20000": 0.0
+  },
+  "centroid_hz": 248,
+  "roll95_hz": 301,
+  "roll99_hz": 6094,
+  "ceiling_60db_hz": 15073,
+  "onsets_per_beat": {
+   "all": 2.12,
+   "low": 1.88,
+   "mid": 2.25,
+   "high": 2.12
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 2.7324263038538037,
+   "swing_pct_16th": null,
+   "odd16_share": 0.11764705882352941
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 2.7324263038538037,
+   "swing_pct_16th": null,
+   "odd16_share": 0.11764705882352941
+  },
+  "attack_over_body_db": 1.7,
+  "near_peak_share": 0.001,
+  "flatness": 0.477,
+  "side_over_mid_db": -18.5,
+  "lr_corr": 0.972,
+  "top_pitch_classes": [
+   "A",
+   "D",
+   "C"
+  ],
+  "low_peak_hz": 64.6,
+  "hits": {
+   "K": {
+    "n": 6,
+    "peak_dbfs": -5.611440191313159,
+    "centroid_hz": 90.57504372116075,
+    "to_m20db_ms": 123.87755102040816,
+    "f0_attack_hz": 119.7784423828125,
+    "f0_body_hz": 36.3372802734375,
+    "harmonics_over_fund_db": -5.088560700435286
+   },
+   "S": {
+    "n": 6,
+    "peak_dbfs": -3.5091577070364175,
+    "centroid_hz": 1831.3586322847318,
+    "to_m20db_ms": 50.54421768707483
+   },
+   "H": {
+    "n": 3,
+    "peak_dbfs": -22.097276031275083,
+    "centroid_hz": 9529.046189148443,
+    "to_m20db_ms": 60.8390022675737
+   },
+   "T": {
+    "n": 2,
+    "peak_dbfs": -18.976759963479125,
+    "centroid_hz": 745.190351671923,
+    "to_m20db_ms": 45.034013605442176
+   }
+  }
+ },
+ {
+  "name": "TVD_100_percussion_tape_vinyl_jungle",
+  "pack": "TVD",
+  "bpm": 100,
+  "dur_s": 9.6,
+  "beats": 16.0,
+  "peak_dbfs": -1.0,
+  "rms_dbfs": -20.66,
+  "crest_db": 19.66,
+  "floor_db_under_rms": 22.8,
+  "bands": {
+   "20-60": 0.2,
+   "60-150": 1.0,
+   "150-400": 49.5,
+   "400-1000": 10.3,
+   "1000-3000": 36.0,
+   "3000-6000": 2.9,
+   "6000-12000": 0.1,
+   "12000-20000": 0.0
+  },
+  "centroid_hz": 1030,
+  "roll95_hz": 2584,
+  "roll99_hz": 4242,
+  "ceiling_60db_hz": 12468,
+  "onsets_per_beat": {
+   "all": 1.81,
+   "low": 3.75,
+   "mid": 1.81,
+   "high": 1.81
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 16.935941043083957,
+   "swing_pct_16th": 66.79516250944823,
+   "odd16_share": 0.3103448275862069
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 17.440476190476062,
+   "swing_pct_16th": 66.4928193499624,
+   "odd16_share": 0.3103448275862069
+  },
+  "attack_over_body_db": 11.1,
+  "near_peak_share": 0.005,
+  "flatness": 0.204,
+  "side_over_mid_db": -21.3,
+  "lr_corr": 0.986,
+  "top_pitch_classes": [
+   "A#",
+   "A",
+   "B"
+  ],
+  "low_peak_hz": 193.8,
+  "hits": {
+   "S": {
+    "n": 24,
+    "peak_dbfs": -3.0024041163759074,
+    "centroid_hz": 973.7940712650634,
+    "to_m20db_ms": 85.64625850340137
+   },
+   "T": {
+    "n": 5,
+    "peak_dbfs": -14.587244404906365,
+    "centroid_hz": 300.9848718291312,
+    "to_m20db_ms": 84.17233560090703
+   }
+  }
+ },
+ {
+  "name": "TVD_85_drum_tape_vinyl_beaver_tambourine",
+  "pack": "TVD",
+  "bpm": 85,
+  "dur_s": 11.294,
+  "beats": 16.0,
+  "peak_dbfs": -15.6,
+  "rms_dbfs": -40.26,
+  "crest_db": 24.66,
+  "floor_db_under_rms": 17.0,
+  "bands": {
+   "20-60": 0.2,
+   "60-150": 0.1,
+   "150-400": 0.0,
+   "400-1000": 0.3,
+   "1000-3000": 2.3,
+   "3000-6000": 51.5,
+   "6000-12000": 45.3,
+   "12000-20000": 0.3
+  },
+  "centroid_hz": 5782,
+  "roll95_hz": 9711,
+  "roll99_hz": 11240,
+  "ceiling_60db_hz": 22050,
+  "onsets_per_beat": {
+   "all": 3.37,
+   "low": 4.62,
+   "mid": 3.44,
+   "high": 3.37
+  },
+  "groove_all": {
+   "median_abs_dev_ms": 8.638788848872238,
+   "swing_pct_16th": 48.69538926681756,
+   "odd16_share": 0.42592592592592593
+  },
+  "groove_high": {
+   "median_abs_dev_ms": 9.947312258237417,
+   "swing_pct_16th": 47.368102796674094,
+   "odd16_share": 0.42592592592592593
+  },
+  "attack_over_body_db": 7.7,
+  "near_peak_share": 0.0,
+  "flatness": 0.546,
+  "side_over_mid_db": -14.3,
+  "lr_corr": 0.93,
+  "top_pitch_classes": [
+   "A#",
+   "G",
+   "A"
+  ],
+  "low_peak_hz": 43.1,
+  "hits": {
+   "H": {
+    "n": 54,
+    "peak_dbfs": -25.100835965638066,
+    "centroid_hz": 5784.658741820094,
+    "to_m20db_ms": 80.02267573696145
+   }
+  }
+ }
+]

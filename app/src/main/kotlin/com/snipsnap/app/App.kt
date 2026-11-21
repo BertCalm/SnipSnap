@@ -137,6 +137,7 @@ import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitPad
 import com.snipsnap.kit.KitPreview
 import com.snipsnap.kit.KitStore
+import com.snipsnap.kit.Preflight
 import com.snipsnap.kit.isRobinChain
 import com.snipsnap.kit.Project
 import com.snipsnap.kit.ProjectStore
@@ -1084,6 +1085,21 @@ fun App(shelf: KitShelf) {
             dock.say(Copy.TAPE_STOPPED_ITSELF)
         }
     }
+    // An ARM that never became a session (UAT 2026-11 user states, S-1).
+    // The permission callback and the projection result below say
+    // SESSION_ARMED / APP_AUDIO_ARMED the moment they ask, before the
+    // service has opened anything; when the mic is held by another app or
+    // the platform refuses, this is the correction, the way `lastSnipError`
+    // corrects an optimistic SNIP. Baselined by attempt count, as above.
+    val armFailed by MicSessionService.armFailed.collectAsState()
+    var armFailedSeen by remember { mutableStateOf(MicSessionService.armFailed.value?.first) }
+    LaunchedEffect(armFailed) {
+        val (attempt, source) = armFailed ?: return@LaunchedEffect
+        if (attempt != armFailedSeen) {
+            armFailedSeen = attempt
+            dock.say(if (source == MicSessionService.Source.INSIDE) Copy.APP_AUDIO_WONT_START else Copy.MIC_WONT_START)
+        }
+    }
     // ARM APP AUDIO runs through the same RECORD_AUDIO request as ARM TAPE
     // (playback capture needs it too); this remembers which button asked,
     // so the permission callback below knows whether to arm the mic or
@@ -1135,7 +1151,10 @@ fun App(shelf: KitShelf) {
             } else {
                 haptics.arm()
                 MicSessionService.arm(context)
-                dock.say(Copy.SESSION_ARMED)
+                // A refused notification takes the notification's SNIP with it (UAT 2026-11
+                // user states, S-5); absent below Android 13, where nothing was asked.
+                val notificationsOff = results[Manifest.permission.POST_NOTIFICATIONS] == false
+                dock.say(if (notificationsOff) Copy.SESSION_ARMED_NO_NOTIFICATIONS else Copy.SESSION_ARMED)
             }
         } else {
             // A denied RECORD_AUDIO is not a DRM/dead-air refusal — see
@@ -1158,6 +1177,23 @@ fun App(shelf: KitShelf) {
     fun requestArmInside() {
         armInsidePending = true
         requestArm()
+    }
+
+    // Kit folders the last shelf read could not load (UAT 2026-11 user states, S-15). Every
+    // reload goes through `shelf.list`, which records them, and every reload lands in `kits`,
+    // so following `kits` keeps this current without a second read of the shelf.
+    var unreadableKits by remember { mutableStateOf<List<String>>(emptyList()) }
+    LaunchedEffect(kits) { unreadableKits = shelf.unreadable }
+    // A kit opening with pads whose sound file is gone says so once (S-15): such a pad was
+    // silent until export's preflight. `open` changes identity on every edit, so the kit and
+    // the slots last said are kept, and the same news is not said again until it changes.
+    var missingPadsSaid by remember { mutableStateOf<Pair<File, List<Int>>?>(null) }
+    LaunchedEffect(open) {
+        val entry = open ?: return@LaunchedEffect
+        val missing = withContext(Dispatchers.IO) { Preflight.missingFileSlots(entry.kit, entry.dir) }
+        val news = entry.dir to missing
+        if (missing.isNotEmpty() && news != missingPadsSaid) dock.say(Copy.padsMissingFiles(missing))
+        missingPadsSaid = news
     }
 
     LaunchedEffect(Unit) {
@@ -3316,6 +3352,8 @@ fun App(shelf: KitShelf) {
     // waiting, nothing busy), so it never pulls a user away from somewhere they went.
     // `startPicked` also holds the write below back until the pick has read the old value:
     // `project` starts null, and writing that first would forget it before it was read.
+    // CHOP's work in progress, held here so it outlives the CHOP screen (S-6).
+    val chopHold = remember { com.snipsnap.app.ui.ChopHold() }
     var startPicked by remember { mutableStateOf(false) }
     LaunchedEffect(kitsLoaded) {
         if (!kitsLoaded || startPicked) return@LaunchedEffect
@@ -3845,6 +3883,9 @@ fun App(shelf: KitShelf) {
                             // and a pick still pending for a pad survives it.
                             onBin = { nav.open(Bench.BIN) },
                             onToast = { dock.say(it) },
+                            // LISTEN · MIC on the empty list (D-6): the mic, as the button says, not
+                            // the dock's kept source; not offered while a session is already listening.
+                            onListen = if (armed) null else ({ requestArm() }),
                             onOpenInTape = { file ->
                                 nav.closeBench()
                                 tapeOpenOverride = file
@@ -3898,7 +3939,7 @@ fun App(shelf: KitShelf) {
                             backLabel = checkNotNull(nav.backChip) { "TRASH is a bench, so it has something to go back to" },
                             onBack = { nav.closeBench() },
                             onToast = { dock.say(it) },
-                            onKitRestored = {
+                            onKitRestored = { restored ->
                                 // The section already owns its own toast
                                 // and its own list refresh — this only
                                 // needs to catch the shelf back up, the
@@ -3909,6 +3950,14 @@ fun App(shelf: KitShelf) {
                                 // also what re-reads the bin count.
                                 scope.launch {
                                     kits = withContext(Dispatchers.IO) { shelf.list(shelfSort) }
+                                    // The open project's active kit coming back goes back
+                                    // on its grid (UAT 2026-11 user states, D-3): PADS and
+                                    // BEAT said it had no kit until it was reopened, and
+                                    // with nothing open the project was forgotten as the
+                                    // last one open. Read after the await, off the fresh list.
+                                    if (LastOpen.reopensOnRestore(project, open?.dir?.name, restored.dir.name)) {
+                                        open = kits.firstOrNull { it.dir == restored.dir } ?: restored
+                                    }
                                 }
                             },
                             // A snip back on its list changes nothing the
@@ -3938,6 +3987,8 @@ fun App(shelf: KitShelf) {
                             KitsScreen(
                                 kits = kits,
                                 projects = projects,
+                                listening = armed,
+                                unreadableKits = unreadableKits,
                                 onOpenProject = { openProject(it.project) },
                                 openProjectName = project?.name,
                                 onNewProject = ::newProject,
@@ -4536,6 +4587,7 @@ fun App(shelf: KitShelf) {
                             entry = open,
                             lastCommit = lastCommit,
                             shelf = shelf,
+                            hold = chopHold,
                             onToast = { dock.say(it) },
                             onSentToGrid = { newEntry, sent ->
                                 haptics.land()
@@ -4916,6 +4968,7 @@ fun App(shelf: KitShelf) {
                         top == null && location.place == Place.MAKE -> MakeList(
                             onOpen = { nav.open(it) }, hasKit = open != null, onMyVoice = { nav.open(Bench.MY_VOICE) },
                             kitName = open?.kit?.name,
+                            onOpenLibrary = { landOn(AppScreen.KITS) },
                         )
                         top == Bench.INSTRUMENTS -> InstrumentsBench(
                             instruments = instruments,
@@ -4930,6 +4983,7 @@ fun App(shelf: KitShelf) {
                             murmurInstrumentEnabled = busy == null,
                             roundRobinShelf = shelf.root,
                             onOpenRoundRobin = { openInstrument = null; openRoundRobin = it; landOn(AppScreen.KEYS) },
+                            onOpenSynth = { nav.open(Bench.SYNTH) },
                         )
                         // The pad editor benches (PAD SHEET, GRAIN FIELD,
                         // SPLICE, STACK, SPREAD) and SNAP's own panels (LIVE,

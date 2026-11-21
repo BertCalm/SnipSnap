@@ -33,7 +33,7 @@ internal object CausticHeld {
 
     fun probe(voice: CausticVoice, macros: Map<String, Float>, midi: Int, velocity: Float,
         model: Int, oversample: Int, normalize: Boolean, cancelled: () -> Boolean,
-        record: Boolean = true): CausticHeldProbe {
+        record: Boolean = true, human: CausticSustain.Human? = CausticInstrument.HELD_HUMAN): CausticHeldProbe {
         val started = System.nanoTime()
         fun checkWanted() {
             if (Thread.currentThread().isInterrupted || cancelled())
@@ -47,7 +47,7 @@ internal object CausticHeld {
         require(oversample == 4 || oversample == 16) { "CAUSTIC oversample must be 4 or 16" }
         val m = CausticInstrument.settled(voice, macros, model)
         val effort = (velocity.takeIf { it.isFinite() } ?: .75f).coerceIn(0f, 1f)
-        val trace = CausticSustain.held(voice, m, midi, effort.toDouble(), oversample, cancelled)
+        val trace = CausticSustain.held(voice, m, midi, effort.toDouble(), oversample, cancelled, human)
         val finishStarted = System.nanoTime()
         checkWanted()
         val originalStart = trace.loopStartFrame
