@@ -78,6 +78,8 @@ object StarterKits {
         val key: KeySpec? = null,
         /** Authored tempo, when timing is part of the kit recipe. */
         val tempoBpm: Float? = null,
+        /** The live whole-kit glue the kit carries in its kit.json ([com.snipsnap.kit.KitGlue]); null = none. */
+        val glue: com.snipsnap.kit.KitGlue? = null,
         /** Optional source payloads written before kit.json makes a kit visible. */
         private val prepare: ((directory: File) -> Unit)? = null,
         private val build: (seed: Int) -> List<ArrangedPad?>,
@@ -89,7 +91,7 @@ object StarterKits {
         fun render(name: String, dir: File, seed: Int = 0): Kit {
             require(Names.isMpcSafe(name)) { "kit name isn't MPC-safe: '$name'" }
             prepare?.invoke(dir)
-            val kit = KitAssembler.assembleArranged(name, build(seed), dir, key, tempoBpm = tempoBpm)
+            val kit = KitAssembler.assembleArranged(name, build(seed), dir, key, tempoBpm = tempoBpm, glue = glue)
             // BACKWASH, BREAKER and FIRED BRONZE pads carry their recipes; the shared robin deals each pad's
             // velocity zones and re-struck takes from it (FIRED BRONZE model 2 its own four strike layers), then
             // the pad keeps its recipe.
@@ -878,6 +880,45 @@ object StarterKits {
             "Toms and tone rebuilt by synthesis: pitched toms, sub notes, a crisp hat and a backbeat tambourine. Three touch zones, four takes; the Tom, World and Thin Perc grooves, hit for hit.",
             seeded = false, tempoBpm = com.snipsnap.synth.FacsimileKits.Kit.TEXTURE.bpm.toFloat(),
         ) { com.snipsnap.synth.FacsimileKits.build(com.snipsnap.synth.FacsimileKits.Kit.TEXTURE) },
+        // BOROUGH (docs/BOROUGH.md, round 3): generated in the app from the accepted recipes, each kit with the perc
+        // stack the owner heard it with on A13 to A16. Any other stack is BoroughKits.build(kit, stack). Each carries
+        // its live glue (round 3.1, BoroughKits.glueOf), which the pads' player switches on when the kit loads.
+        Starter(
+            "borough-stoop", "BOROUGH STOOP DUST",
+            "NYC boom bap, the middle of the six: a round falling kick with a knock, a papery snare crack with late wires, swung hats, through a dark driven record; a tambourine stack on top. Three touch zones, three takes; a snare roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.BoroughKits.Kit.STOOP.bpm.toFloat(),
+            glue = com.snipsnap.synth.BoroughKits.glueOf(com.snipsnap.synth.BoroughKits.Kit.STOOP),
+        ) { com.snipsnap.synth.BoroughKits.build(com.snipsnap.synth.BoroughKits.Kit.STOOP) },
+        Starter(
+            "borough-cellar", "BOROUGH CELLAR BOOM",
+            "Boom bap from below: a sub kick with a long tail, a tight dry snare, bright hats; a hands stack of shaker, bongos and block. Three touch zones, three takes; a snare roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.BoroughKits.Kit.CELLAR.bpm.toFloat(),
+            glue = com.snipsnap.synth.BoroughKits.glueOf(com.snipsnap.synth.BoroughKits.Kit.CELLAR),
+        ) { com.snipsnap.synth.BoroughKits.build(com.snipsnap.synth.BoroughKits.Kit.CELLAR) },
+        Starter(
+            "borough-cranked", "BOROUGH CRANKED",
+            "Driven and squashed: a high-knock kick, a cracking snare, dark buried hats; a tops stack of clap, ride, bell and sticks. Three touch zones, three takes; a snare roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.BoroughKits.Kit.CRANKED.bpm.toFloat(),
+            glue = com.snipsnap.synth.BoroughKits.glueOf(com.snipsnap.synth.BoroughKits.Kit.CRANKED),
+        ) { com.snipsnap.synth.BoroughKits.build(com.snipsnap.synth.BoroughKits.Kit.CRANKED) },
+        Starter(
+            "borough-wax", "BOROUGH WAX",
+            "Slow and dark at 80 BPM: the darkest top end, a fat low snare, a heavy drive; a bells stack of two bells, a jingle and a log. Three touch zones, three takes; a snare roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.BoroughKits.Kit.WAX.bpm.toFloat(),
+            glue = com.snipsnap.synth.BoroughKits.glueOf(com.snipsnap.synth.BoroughKits.Kit.WAX),
+        ) { com.snipsnap.synth.BoroughKits.build(com.snipsnap.synth.BoroughKits.Kit.WAX) },
+        Starter(
+            "borough-dry", "BOROUGH DRY ROOM",
+            "Gated and clean: a short kick, a short snare, silence between hits; a hands stack of shaker, bongos and block. Three touch zones, three takes; a snare roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.BoroughKits.Kit.DRY.bpm.toFloat(),
+            glue = com.snipsnap.synth.BoroughKits.glueOf(com.snipsnap.synth.BoroughKits.Kit.DRY),
+        ) { com.snipsnap.synth.BoroughKits.build(com.snipsnap.synth.BoroughKits.Kit.DRY) },
+        Starter(
+            "borough-rims", "BOROUGH RIDE AND RIMS",
+            "A rim-led snare and a ride where the hats were, the pedal hat on two and four, the most swing; a bells stack on top. Three touch zones, three takes; a snare roll.",
+            seeded = false, tempoBpm = com.snipsnap.synth.BoroughKits.Kit.RIMS.bpm.toFloat(),
+            glue = com.snipsnap.synth.BoroughKits.glueOf(com.snipsnap.synth.BoroughKits.Kit.RIMS),
+        ) { com.snipsnap.synth.BoroughKits.build(com.snipsnap.synth.BoroughKits.Kit.RIMS) },
         Starter(
             com.snipsnap.synth.BreakerKits.ID, "BREAKER",
             "Surf rock by way of boom bap: dusty drums through a spring tank, a crush and a surf amp. Three touch zones, three takes; a snare riser and a surf tom fill.",
@@ -953,6 +994,81 @@ object StarterKits {
             "Synthetic chops, hard and dirty: big kicks, a fat snare and a crash stack, the wash pushed and the knife sloppiest. Three touch zones, four takes; a snare roll and a crash riser.",
             seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.STOMP.bpm.toFloat(),
         ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.STOMP) },
+        Starter(
+            "kerf-rush", "KERF RUSH",
+            "Synthetic chops from the fast, bright breaks: short punchy kicks, crisp snares, quick bright hats, a tight knife. Three touch zones, four takes; a snare roll and an open hat riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.RUSH.bpm.toFloat(),
+        ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.RUSH) },
+        Starter(
+            "kerf-pocket", "KERF POCKET",
+            "Synthetic chops from the ghost-note breaks: deep round kicks, ghosts and four cymbals, a loose laid-back knife. Three touch zones, four takes; a ghost roll and a cymbal riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.POCKET.bpm.toFloat(),
+        ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.POCKET) },
+        Starter(
+            "kerf-murk", "KERF MURK",
+            "Synthetic chops from the darkest breaks: six snares, open cymbals and no closed hats, long decays, the wash pushed, tuned down. Three touch zones, four takes; a snare roll and a cymbal riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.MURK.bpm.toFloat(),
+        ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.MURK) },
+        Starter(
+            "kerf-chatter", "KERF CHATTER",
+            "Synthetic chops from the busiest breaks: hats and ghosts up front, tight kicks and snares, short decays. Three touch zones, four takes; a hat roll and a stack riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.CHATTER.bpm.toFloat(),
+        ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.CHATTER) },
+        Starter(
+            "kerf-jungle", "KERF JUNGLE",
+            "Synthetic chops from fast jungle breaks: short kicks, bright snares, a sloppy knife and heavy bleed, decays cut short. Three touch zones, four takes; a snare roll and an open hat riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.JUNGLE.bpm.toFloat(),
+        ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.JUNGLE) },
+        Starter(
+            "kerf-clang", "KERF CLANG",
+            "Synthetic chops from metal and percussion loops: struck clangs and shakes over three kicks, no snares or hats, a clean knife. Three touch zones, four takes; a clang roll and a long clang riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.CLANG.bpm.toFloat(),
+        ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.CLANG) },
+        Starter(
+            "kerf-house", "KERF HOUSE",
+            "Synthetic chops from bright four-on-the-floor loops: kicks, claps and tops, a clean knife and almost no bleed. Three touch zones, four takes; a snare roll and an open hat riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.HOUSE.bpm.toFloat(),
+        ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.HOUSE) },
+        Starter(
+            "kerf-deep", "KERF DEEP",
+            "Synthetic chops from dark, kick-led club loops: heavy kicks, dark snares, crisp hats, the wash up. Three touch zones, four takes; a hat roll and an open hat riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.DEEP.bpm.toFloat(),
+        ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.DEEP) },
+        Starter(
+            "kerf-sway", "KERF SWAY",
+            "Synthetic chops from swung, laid-back hip-hop loops: deep kicks, ghosts, long decays and a loose knife. Three touch zones, four takes; a ghost roll and an open hat riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.SWAY.bpm.toFloat(),
+        ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.SWAY) },
+        Starter(
+            "kerf-cassette", "KERF CASSETTE",
+            "Synthetic chops from the soul cassette breaks' unused hits: round kicks, hats and two open cymbals, the wash pushed. Three touch zones, four takes; a hat roll and a cymbal riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.CASSETTE.bpm.toFloat(),
+        ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.CASSETTE) },
+        Starter(
+            "kerf-boom", "KERF BOOM",
+            "Synthetic chops from the longest-ringing unused hits: big kicks and snares that ring, long decays, tuned down. Three touch zones, four takes; a snare roll and an open hat riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.BOOM.bpm.toFloat(),
+        ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.BOOM) },
+        Starter(
+            "kerf-tight", "KERF TIGHT",
+            "Synthetic chops from the shortest unused hits: tight kicks, snares and hats, short decays and a clean knife, a touch high. Three touch zones, four takes; a snare roll and an open hat riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfKits.Genre.TIGHT.bpm.toFloat(),
+        ) { com.snipsnap.synth.KerfKits.build(com.snipsnap.synth.KerfKits.Genre.TIGHT) },
+        Starter(
+            "kerf-metal", "KERF METAL",
+            "Pitched pads of struck metal bars and keys rebuilt from fitted numbers: sixteen notes of E-flat major, each ringing out past its cut. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfTonalKits.bpm(com.snipsnap.synth.KerfTonalKits.Kit.METAL).toFloat(),
+        ) { com.snipsnap.synth.KerfTonalKits.build(com.snipsnap.synth.KerfTonalKits.Kit.METAL) },
+        Starter(
+            "kerf-gong", "KERF GONG",
+            "Pitched pads of low gongs and tuned pans rebuilt from fitted numbers: sixteen notes of F minor, long and ringing. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfTonalKits.bpm(com.snipsnap.synth.KerfTonalKits.Kit.GONG).toFloat(),
+        ) { com.snipsnap.synth.KerfTonalKits.build(com.snipsnap.synth.KerfTonalKits.Kit.GONG) },
+        Starter(
+            "kerf-wood", "KERF WOOD",
+            "Pitched pads of wooden bars rebuilt from fitted numbers: sixteen notes of F minor, short and woody. Three touch zones, four takes.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfTonalKits.bpm(com.snipsnap.synth.KerfTonalKits.Kit.WOOD).toFloat(),
+        ) { com.snipsnap.synth.KerfTonalKits.build(com.snipsnap.synth.KerfTonalKits.Kit.WOOD) },
         Starter(
             MurmurKeptBank.ID, "MURMUR KEPT",
             "Kept plucks, vowel keys and lower-air choir. Held pads have a short delivery fade.",

@@ -587,7 +587,7 @@ tasks.register<JavaExec>("generateSootGenreKits") {
 
 tasks.register<JavaExec>("generateKerfKits") {
     group = "distribution"
-    description = "Build KERF's four genre kits, prove their velocity and round-robin grids through save, playback and MPC 3 export, and write the listening pack."
+    description = "Build every KERF kit (the sixteen genre kits and the pitched-pad kits), prove its velocity and round-robin grids through save, playback and MPC 3 export, and write the listening pack."
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("com.snipsnap.shell.KerfKitGenerator")
     workingDir = rootProject.projectDir
@@ -692,6 +692,16 @@ tasks.register<JavaExec>("generateKindredKits") {
     workingDir = rootProject.projectDir
     maxHeapSize = "2g"
     args(providers.gradleProperty("kindredKitsOutput").orNull ?: "${rootDir}/testkit/kindred-kits")
+}
+
+tasks.register<JavaExec>("generateBoroughKits") {
+    group = "distribution"
+    description = "Generate the six BOROUGH kits with their default perc stacks, prove every velocity and round-robin grid through save, playback and MPC 3 export, and write the listening pack."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.BoroughKitGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "2g"
+    args(providers.gradleProperty("boroughKitsOutput").orNull ?: "${rootDir}/testkit/borough-kits")
 }
 
 tasks.register<JavaExec>("generateEmberKits") {

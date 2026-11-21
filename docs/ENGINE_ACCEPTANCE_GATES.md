@@ -1276,12 +1276,14 @@ Source: the commits of round K3 (PR #1256). Details: [CONSORT](CONSORT.md). The 
 | Playable keygroups | The owner chose keys that sustain while held (2026-11-20). `ConsortKeys`/`ConsortPadMaker`: nine zones, three touch windows, two takes a window in the matching-window Cycle layout, each sample its attack then a two-second loop cut and guarded as BORE's. In held mode only, the slow motions and breath noise repeat every 2 s and each player is retuned to repeat, so sections line up at the splice. Zero refusals across 324 solo keys, every section preset's keys and every gesture. `ConsortPadMakerTest`: phone, MPC 3 and MPC 2 read-back of every loop and window, a key held 9 s at steady level, release. | Pass in software, kept by ear; open: phone, MPC |
 | Premade kit | CONSORT and CONSORT TAKES on the shelf with the winds. | Kept by ear (CONSORT TAKES T1 to T3); open: hardware |
 | Chord-tool compatibility | `ConsortChords`: all 960 chords keep their spacing, move by octaves; 956 inside each voice's two octaves, 4 one semitone past onto the edge zones. All 960 play and release on real CLARINET keys. A chord on a section stacks the section on every tone. | Pass in software, kept by ear (C1, C2); open: phone |
-| Appropriate HOLD | One-shots: HOLD is breath length, no loop. Keys: sustain while held, the owner's choice. | Pass in software, kept by ear (K1 to K7); open: phone |
+| Appropriate HOLD | One-shots: HOLD is breath length; its top step (0.99 and up) is a gated pad that sustains while held, one seamless loop on an 8 s cycle with the slow wanders 1.6x as deep, the owner's pick from 2, 6 and 8 s (2026-11-21, "I like c"; `ConsortSustainPinsTest`). Keys: sustain while held, the same deeper wanders on a 4 s cycle, the owner's middle ground on size (a solo instrument about 31 MB). | Pass in software, kept by ear (pads C1 to C4; keys on the owner's description, not yet heard as keys); open: phone |
 | Velocity | Breath effort in the render; three touch windows on keys (levelled, differ by timbre; never overblow) and three zones on CONSORT TAKES pads (the hard zone overblows). Save, reload, resolver and MPC 3/MPC 2 read-back proven for both. | Pass in software, kept by ear; open: hardware |
 | Round robin | ROBIN re-strikes CONSORT with the engine's own takes. Pads: two takes a zone, cycling proven through save, reload, resolver, MPC 3; MPC 2 keeps each touch's first take (the recorded format limit). Keys: two takes a window, dealt in turn by the phone cursor and written as MPC 3 and MPC 2 Cycle layers. | Pass in software, kept by ear; open: hardware |
 | App picker | On the SYNTH picker under WINDS & BRASS with TOUCH, TAKE, a SECTION editor and MAKE INSTRUMENT; `ConsortSynthScreenTest` for the emulator. Not compiled in the dev container. | Open: CI build, emulator, phone |
 
-Open: the picker, MAKE INSTRUMENT (and its render time) and ROBIN on a phone, and an MPC loading the kits and keys. Nothing here is a hardware claim.
+Render time (2026-11-21): the filters stop working through the silence after the breath (subnormal floats), the house band limit runs in one pass, and tanh goes through `Math.exp`: solo presets' median about 69 -> 56 -> 64 ms and sections' 134 -> 110 -> 131 ms on a noisier run (4 cores), still over the house's tens of milliseconds; what is left is the room, the decimator and the pipe. The first two left every compared render identical to the bit; the tanh moved three pinned one-shots by -177 dB, adopted by the owner on that measurement.
+
+Open: the picker, MAKE INSTRUMENT (and its render time with the 4 s keys) and ROBIN on a phone, the sustaining pads on a phone, and an MPC loading the kits and keys. Nothing here is a hardware claim.
 
 
 ## DRAWL (Kotlin port, round 1, 2026-11-21)
@@ -1309,9 +1311,10 @@ nobody has heard it.
 | Hardware | Not attempted. | Open |
 
 Nothing here is a completion claim.
-## KERF synthetic chops (rounds 1 to 4, sound approved, hardware confirmed: complete)
 
-Source: the commit that adds this entry. Details: [the KERF spec](superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md). KERF is a capture-side tool (SYNTH TWIN on the pad sheet, SYNTH TWIN ALL on the kit screen, `snipsnap kerf`) and, since round 4, a registered drum engine on the SYNTH picker (`Kerf`, six voices over the bank's 63 fitted hits) with four genre kits on FRESH TAPE (`KerfKits`).
+## KERF synthetic chops (rounds 1 to 4 complete; rounds 5 and 6 heard, phone and MPC open)
+
+Source: the commit that adds this entry. Details: [the KERF spec](superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md). KERF is a capture-side tool (SYNTH TWIN on the pad sheet, SYNTH TWIN ALL on the kit screen, `snipsnap kerf`) and, since round 4, a registered drum engine on the SYNTH picker (`Kerf`, six voices; model 2's pools hold 231 fitted hits, the first bank's 63 in place and then the 168 the owner heard in the genre kits of rounds 5 and 6; a model-1 save keeps the 63) with four genre kits on FRESH TAPE (`KerfKits`).
 
 | Gate | Current evidence | Status |
 |---|---|---|
@@ -1319,11 +1322,16 @@ Source: the commit that adds this entry. Details: [the KERF spec](superpowers/sp
 | Velocity (save, playback, export) | SOFT HITS on a twin writes the twin re-struck at 0.3 and 0.6, not the main take filtered (`KerfGateTest`). A twin's 3-zone × 4-take grid (`Robin.apply`) saves and reloads, `PadHit.resolve` picks the zone for all 127 velocities, MPC 2 and MPC 3 exports read back clean, and SFZ export and import keep the chain and the bytes. The owner reported phone and MPC good (2026-11-20). | Pass |
 | Round robin | Each take is the chop made again: the pad's own knife nudged by about a millisecond and a fresh noise draw, chosen among four for the band profile nearest the pad's (`KerfRecipe.take`). Takes are distinct and repeatable; after peak matching their energy spreads 0.8 dB median, 2.6 dB worst, over 48 takes. The kit's round robin keeps a twin a twin, re-cuts it under BLEED and SLOP, and its undo gives the capture back as take one (`KerfGateTest`). Heard by the owner, and played on phone and MPC: "Audition is good, phone/mpc is good" (2026-11-20). | Pass |
 | Drum genre kits | Four on the shelf under SKINS: KERF DUST (88 BPM), SOUL (94), FUNK (104) and STOMP (84). Each draws most of its hits from a different loop's bank and sets its own tuning, decay, wash, bleed and knife. Every pair shares at most three of fourteen hits and has a different lead kick, lead snare and tempo (`KerfKitsTest`). Each pad is 3 zones × 4 takes through saving, reloading, `PadHit.resolve` and MPC 3 export (`KerfKitTest`; `:shell:generateKerfKits` verifies all 64 pads). The owner heard the four kits (each kit's sixteen pads and a two-bar groove from them) and played them on phone and MPC: "Sounds good" on the round-4 page, confirmed as a listen ("1 yes I listen"), and "2 is complete" for phone and MPC playback (2026-11-21). | Pass: heard and played on phone and MPC |
-| Percussion roll/riser | Every kit: A15 a roll (sixteen strikes accelerating over one bar, each a fresh take), A16 a riser (twenty-four strikes tightening over one bar, rising seven semitones). Saved, played and exported with their grids (`KerfKitTest`). On the page the owner heard and on the kits they played (2026-11-21). | Pass: heard and played on phone and MPC |
-| Melodic, keygroups, chords, HOLD, STRUM | Not applicable: one-shot drum hits. | Not applicable |
+| Drum genre kits, round 5 | Four more under SKINS from hits the first four do not use, grouped by what their loops measure (`prototype/kerf/genre_bank.py`): KERF RUSH (115 BPM), POCKET (96), MURK (80) and CHATTER (90). Every pair of the eight kits shares at most three hits and has a different lead kick, lead snare and tempo (`KerfKitsTest`); `:shell:generateKerfKits` verified all 128 pads through saving, playback and MPC 3 export, and the first four kits' 64 pads are byte for byte as approved. The owner heard the four (each kit's sixteen pads and a two-bar groove from them): "These are great" (2026-11-21), MURK kept as its loops are, without closed hats. | Pass: heard; phone and MPC open |
+| Drum genre kits, round 6 | Eight more under SKINS: five from 31 new loops grouped by measurement (`prototype/kerf/genre_bank_r6.py`): KERF JUNGLE (172 BPM), CLANG (112, a percussion kit), HOUSE (124), DEEP (127), SWAY (86). Three from the first loops' leftovers: CASSETTE (92), BOOM (78), TIGHT (100). All sixteen kits differ pairwise in tempo, lead kick and lead snare, share at most three hits, and differ in at least three settings (`KerfKitsTest`). The owner heard the eight (each kit's sixteen pads and a two-bar groove in its style): "Those are great" (2026-11-21); CLANG stays a percussion kit. | Pass: heard; phone and MPC open |
+| Percussion roll/riser | Every kit, all sixteen: A15 a roll (sixteen strikes accelerating over one bar, each a fresh take), A16 a riser (twenty-four strikes tightening over one bar, rising seven semitones). Saved, played and exported with their grids (`KerfKitTest`). The first four kits' were on the page the owner heard and on the kits they played (2026-11-21); round 5's were on its own page, heard the same day ("These are great", 2026-11-21); round 6's on its own page, heard the same day ("Those are great" (2026-11-21)). | Pass: all sixteen heard; the first four played on phone and MPC, rounds 5 and 6's not yet |
+| Pitched pads (2026-11-21) | Three kits under METAL WOOD AND GLASS from the owner's melodic loops: KERF METAL (E-flat major), GONG (F minor), WOOD (F minor). Each is sixteen scale notes, rung out past the cut (`KerfRender.ring`), every pad a clear peak at its note (`KerfTonalKitsTest`), 3 zones × 4 takes through save, playback and MPC 3 (`KerfTonalKitTest`). | Built; not yet heard |
+| Melodic | Partly met: premade pitched-pad kits only (the owner's choice of pitched pads). No six voices with presets, no keygroups, no chord tools. HOLD is not applicable: struck one-shots. | Open |
+| Melodic, keygroups, chords, HOLD, STRUM (drum kits) | Not applicable: one-shot drum hits. | Not applicable |
 
 - **Presets and picker:** the 27 presets (one pool hit each, soft to hard) were on the same page the owner heard (2026-11-21). The SYNTH picker test (`NewEngineSynthScreenTest`) passed on CI's emulator.
-- **Overall: complete (2026-11-21).** The twins, the velocity layers and takes, the engine's presets, the four genre kits and their rolls and risers have all been heard by the owner, and played on phone and MPC: the twins on 2026-11-20, the kits on 2026-11-21. In software the kits are proved through MPC 3 export; MPC 2 export was proved for the twins (`KerfGateTest`) and not run on the kits. Preserve `Kerf.MODEL_VERSION` 1, `KerfKits.VERSION` 1, `KerfRender.MODEL_VERSION` 1 and `KerfVelocity.DEPTH` 3 as the accepted baseline.
+- **Round 5 (2026-11-21):** the owner heard the four new kits, their rolls and risers: "These are great" (2026-11-21). Phone and MPC playback of these four is open. The rows above them, and the overall line below, cover rounds 1 to 4.
+- **Overall: complete for rounds 1 to 4 (2026-11-21).** The twins, the velocity layers and takes, the engine's presets, the four genre kits and their rolls and risers have all been heard by the owner, and played on phone and MPC: the twins on 2026-11-20, the kits on 2026-11-21. In software the kits are proved through MPC 3 export; MPC 2 export was proved for the twins (`KerfGateTest`) and not run on the kits. Preserve `Kerf.MODEL_VERSION` 1, `KerfKits.VERSION` 1, `KerfRender.MODEL_VERSION` 1 and `KerfVelocity.DEPTH` 3 as the accepted baseline.
 
 ## TERRA stick voices: Japanese kits (complete, 2026-11-20: sound approved, phone and MPC reported good)
 
@@ -1363,3 +1371,40 @@ sounds good now" (2026-11-20); the Kotlin port matches it within the prototype's
 | Percussion: roll/riser | Built and heard | An accelerating snare roll landing on kick and snare on pad 17 of every kit, so no heard pad is given up |
 | Velocity and round robin: rendering | Pass in software | Soft zones are different strikes and, over their four takes, never brighter; four different strikes per zone; a groove's soft zone is a softer performance |
 | Velocity and round robin: saving, playback, export | Pass | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 68 pads in software; the owner played the kits on a phone and an MPC ("Phone and MPC are good", 2026-11-20). MPC 2 not written (format limit) |
+
+## BOROUGH kits (rounds 3 to 3.2: generated in Kotlin, on the shelf, with their own glue and a stack picker; accepted by ear 2026-11-21)
+
+Six boom-bap drum kits (A01-A12) and four perc stacks (A13-A16), generated in the app from the recipes of the round-2
+Python kits the owner accepted ("I think they are all ready", 2026-11-20), on top of EMBER. See [BOROUGH](BOROUGH.md),
+"Round 3: Kotlin port". Evidence: `BoroughParityTest`, `BoroughKitsTest`, `BoroughDspTest`, `BoroughKitTest`,
+`:shell:generateBoroughKits`.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Melodic, keygroups, chord tools, STRUM | Not applicable | Drum kits |
+| Drums: multiple distinct genre kits on the shelf | Built and accepted by ear ("Ready", 2026-11-21: the app's own pads through the native glue) | Six FRESH TAPE starters under SKINS, each with its default stack; 81 of 88 pads inside the spread of Python's own realisations, the rest within 0.45 dB of it |
+| Percussion: roll/riser | Built, finite | A snare roll (EMBER's press roll) on A12 of every kit |
+| Velocity and round robin: rendering | Pass in software | Three zones are different strikes on all 88 pads (gain-matched residual above -20 dB); three distinct takes per zone |
+| Velocity and round robin: saving, playback, export | Pass in software | Save, reload, the pad resolver at all 127 velocities, SFZ round trip and MPC 3 for a shelf kit; every kit by the generator (864 slices); a stack swapped in by the picker through save, reload, the resolver and MPC 3 (`BoroughStackSwapTest`, round 3.2); MPC 2 keeps each zone's first take (format limit). No phone or MPC playback yet |
+
+Round 3.1 (2026-11-21), the live glue: each kit's kit.json carries the chain the owner picked ("C for all except
+rides and rims"). The app's native bus (`GlueBus.h`: input trim, saturator, compressor, limiter) plays it when the kit
+loads and switches it off for every other kit. On each kit's demo groove the native bus matches the Python
+`model()` to -148 dB. The live trim adds +3.0 dB for a default pad's level. The glue changes no velocity or
+round-robin gate: it is a whole-kit bus after the pads, the pads on disk are not glued, and no export (MPC 3, MPC 2,
+SFZ, DecentSampler) applies it. The owner heard each kit's groove from the app's exported pads through the native
+glue (`glue_render`), beside the picks, level-matched, and answered "Ready" (2026-11-21). CI's android-build ran the
+app-side mapping test and `:app:assembleDebug`. No phone or MPC has played the kits.
+
+Round 3.2 (2026-11-21), the stack picker: the KIT screen's PERC STACK row (HANDS, TAMBOURINE, BELLS, TOPS) on an
+open BOROUGH kit re-renders only A13-A16 with `BoroughKits.stackPads(kit, stack)` for that kit, through the starter's
+own writer (`KitAssembler`: three zones of three takes as a chain). A01-A12, the glue and the rest of kit.json are
+kept. If A13-A16 differ from the stack as rendered (in kit.json or in the WAV), the app asks "Replace your changes on
+A13–A16?" before replacing them. The replaced files go to the trash, and VERSIONS rolls the swap back.
+`BoroughStackSwapTest` carries the velocity and round-robin gate through the swap for each other stack on STOOP DUST:
+PCM take for take, save and reload, the pad resolver's zones and take order, and an MPC 3 track read back. A01-A12
+stay byte-identical. The refusals (not a BOROUGH kit, the same stack, unconfirmed changes) write nothing. The row and
+its confirm are verified only by CI (android-build, and `PercStackRowTest` on the emulator); this session has no
+Android SDK. Nothing has been heard on a phone.
+
+Open: phone and MPC hardware; the picker heard and used on a phone.

@@ -14,7 +14,8 @@ import kotlin.test.assertTrue
 class KerfKitsTest {
     private val G = KerfKits.Genre.entries
 
-    private fun drums(g: KerfKits.Genre) = KerfKits.pads(g).map { it.voice to it.hit }
+    /** Each pad's fitted hit, by its seed: one identity across both banks. */
+    private fun drums(g: KerfKits.Genre) = KerfKits.pads(g).map { KerfKits.hitOf(g, it).patch.seed }
 
     @Test
     fun `every pair of kits has mostly different drums and a different kick and snare`() {
@@ -37,10 +38,24 @@ class KerfKitsTest {
             assertEquals(KerfKits.HITS, pads.size)
             val names = KerfKits.names(g)
             assertEquals(KerfKits.PADS, names.size); assertEquals(names.size, names.toSet().size, "$g pad names")
-            for (v in listOf(KerfVoice.KICK, KerfVoice.SNARE, KerfVoice.GHOST)) assertTrue(pads.count { it.voice == v } >= 2, "$g has two ${v}s")
+            if (g == KerfKits.Genre.CLANG) {
+                // a percussion kit: its loops are struck metal, tambourine and the like, with a few kicks and no snares
+                // or hats (genre_bank_r6.py), so it is held to that instead of a break's roles
+                assertTrue(pads.count { it.voice == KerfVoice.KICK } >= 2, "$g has two kicks")
+                assertTrue(pads.count { it.voice == KerfVoice.PERC } >= 8, "$g is mostly percussion")
+                assertEquals(pads.size, drums(g).toSet().size, "$g plays no hit twice")
+                continue
+            }
+            for (v in listOf(KerfVoice.KICK, KerfVoice.SNARE)) assertTrue(pads.count { it.voice == v } >= 2, "$g has two ${v}s")
+            // MURK's dark loops hold one usable ghost note (genre_bank.py), and the kit keeps what its loops have
+            assertTrue(pads.count { it.voice == KerfVoice.GHOST } >= 1, "$g has a ghost")
             assertTrue(pads.count { it.voice.drumClass == DrumClass.HAT_CLOSED || it.voice.drumClass == DrumClass.HAT_OPEN } >= 3, "$g has three hats")
-            assertEquals(pads.size, pads.map { it.voice to it.hit }.toSet().size, "$g plays no hit twice")
-            for (p in pads) assertTrue(p.hit in Kerf.pool(p.voice).indices, "$g ${p.name}")
+            assertEquals(pads.size, drums(g).toSet().size, "$g plays no hit twice")
+            for (p in pads) {
+                assertEquals(g.second, p.second, "$g ${p.name} reads its genre's bank")
+                if (p.second) assertTrue(p.hit in KerfBank.genreKits.getValue(g.name).indices, "$g ${p.name}")
+                else assertTrue(p.hit in Kerf.pool(p.voice, KerfKits.ENGINE_MODEL).indices, "$g ${p.name}")
+            }
             assertEquals(KerfVoice.KICK, pads[0].voice); assertEquals(KerfVoice.SNARE, pads[3].voice)
             // the kick and snare lead; hats and ghosts sit under them, as in the loops
             for (p in pads) if (p.voice == KerfVoice.HAT || p.voice == KerfVoice.GHOST) assertTrue(p.levelDb <= -5.0, "$g ${p.name} level")
@@ -59,7 +74,7 @@ class KerfKitsTest {
 
     @Test
     fun `the roll and the riser are one bar of fresh strikes that build, under the kit's tempo`() {
-        for (g in listOf(KerfKits.Genre.DUST, KerfKits.Genre.FUNK)) for (role in listOf(KerfKits.HITS, KerfKits.HITS + 1)) {
+        for (g in listOf(KerfKits.Genre.DUST, KerfKits.Genre.FUNK, KerfKits.Genre.RUSH, KerfKits.Genre.MURK)) for (role in listOf(KerfKits.HITS, KerfKits.HITS + 1)) {
             val hard = KerfKits.render(g, role, 1f, 0).samples
             assertEquals(((KerfKits.barSeconds(g) + KerfKits.TAIL_SECONDS) * Dsp.RATE).toInt(), hard.size, "$g $role length")
             assertTrue(hard.all { it.isFinite() })
@@ -74,6 +89,18 @@ class KerfKitsTest {
             var d = 0.0; var s = 0.0
             for (i in hard.indices) { val e = (hard[i] - other[i]).toDouble(); d += e * e; s += hard[i].toDouble() * hard[i] }
             assertTrue(10 * log10(d / s) > -20, "$g $role take 1 is other strikes (${10 * log10(d / s)} dB)")
+        }
+    }
+
+    @Test
+    fun `the genre kits play only hits the first bank and model 1's pools do not hold`() {
+        val first = KerfBank.kits.values.flatten().map { it.patch.seed }.toSet()
+        val pools = KerfVoice.entries.flatMap { Kerf.pool(it, 1) }.map { it.patch.seed }.toSet()
+        assertEquals(63, pools.size, "model 1's pools are still the first bank's 63 hits")
+        for (g in KerfKits.Genre.entries.filter { it.second }) {
+            assertEquals(KerfKits.HITS, KerfBank.genreKits.getValue(g.name).size, "$g bank")
+            for (seed in drums(g)) { assertTrue(seed !in first, "$g reuses a first-bank hit"); assertTrue(seed !in pools) }
+            for (p in KerfBank.genreKits.getValue(g.name)) assertTrue(p.patch.seconds <= Kerf.MAX_SECONDS, "$g pad ${p.pad}")
         }
     }
 }

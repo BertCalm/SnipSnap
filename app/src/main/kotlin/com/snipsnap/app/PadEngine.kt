@@ -119,7 +119,7 @@ class PadEngine(preferredSampleRate: Int) {
     }
 
     /**
-     * The whole-kit glue ([GlueSettings]): a compressor and limiter across
+     * The whole-kit glue ([GlueSettings]): trim, saturator, compressor and limiter across
      * the kit's mix, before the Aquarium bus and the master gain. True queued
      * now; false keeps the latest request for the frame-rate drain to retry,
      * unless already closed. Enabling, disabling and edits glide over 20 ms.
@@ -147,7 +147,8 @@ class PadEngine(preferredSampleRate: Int) {
         if (!gluePending) return true
         val g = glueWanted
         val accepted = NativePads.configureGlue(
-            handle, g.enabled, g.thresholdDbfs, g.ratio, g.makeupDb, g.driveDb, g.ceilingDbfs,
+            handle, g.enabled, g.inputTrimDb, g.saturate, g.saturationDb,
+            g.thresholdDbfs, g.ratio, g.makeupDb, g.driveDb, g.ceilingDbfs,
         )
         if (accepted) gluePending = false
         return accepted
@@ -235,6 +236,9 @@ class PadEngine(preferredSampleRate: Int) {
      * [extras] are sounds from outside this kit - AUDITION's candidates -
      * that no pad names. They go into this same bank build for the reason
      * the count-in clicks do, and are addressed by [extraKey].
+     *
+     * With the bank goes the kit's whole-kit glue: [GlueSettings.forKit],
+     * on for a kit that carries one (BOROUGH's), off for every other.
      */
     fun load(entry: KitShelf.Entry, extras: List<File> = emptyList()) =
         synchronized(bankLock) { loadLocked(entry, extras) }
@@ -318,6 +322,12 @@ class PadEngine(preferredSampleRate: Int) {
             clickSampleIndex = regularIdx
             clickAccentFrames = accentClick.frameCount.toLong()
             clickFrames = regularClick.frameCount.toLong()
+            // The kit's own glue with its bank: a BOROUGH kit's chain on, every
+            // other kit's off (GlueSettings.forKit). Queued in the same breath
+            // as the commit, so the new bank does not play through the last
+            // kit's glue for longer than a callback; a refusal is kept for
+            // the frame-rate drain to retry, like any other glue request.
+            configureGlue(GlueSettings.forKit(entry.kit))
         }
     }
 

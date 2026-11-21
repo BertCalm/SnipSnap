@@ -24,11 +24,17 @@ object KerfKitGenerator {
         val root = File(args.firstOrNull() ?: "testkit/kerf-kits").absoluteFile.apply { deleteRecursively(); mkdirs() }
         val clips = mutableListOf<String>()
         val proof = StringBuilder("kit,pad,name,class,velocity_zones,takes_per_zone,saved_pcm,exported_pcm,playback_cycles,mpc3_track,build_ms\n")
-        for (g in Genre.entries) {
+        // the genre kits, then the pitched-pad kits: one proof and one listening pack for every KERF kit on the shelf
+        class Spec(val id: String, val title: String, val bpm: Int, val build: () -> List<com.snipsnap.kit.ArrangedPad>)
+        val specs = Genre.entries.map { g -> Spec(g.id, g.title, g.bpm) { KerfKits.build(g) } } +
+            com.snipsnap.synth.KerfTonalKits.Kit.entries.map { k ->
+                Spec(k.id, k.title, com.snipsnap.synth.KerfTonalKits.bpm(k)) { com.snipsnap.synth.KerfTonalKits.build(k) }
+            }
+        for (g in specs) {
             val folder = File(root, g.id)
             val staging = File(folder, "native")
             val began = System.nanoTime()
-            val pads = KerfKits.build(g)
+            val pads = g.build()
             val buildMs = (System.nanoTime() - began) / 1_000_000
             val kit = KitAssembler.assembleArranged("Kerf ${g.title}", pads, staging, tempoBpm = g.bpm.toFloat())
             val exported = Mpc3Exporter.exportTrack(kit, staging, File(folder, "mpc"), overwrite = true)
