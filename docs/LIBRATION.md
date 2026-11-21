@@ -1,5 +1,8 @@
 # Libration — finite instrument
 
+LIBRATION has seven voices: GATHER, TWINS and DEPARTURE (below), and CHIME, STRUM, ROTOR and HOLLOW, kept in
+libration-voices-1 on 20 Nov 2026 (see "Kept voices" at the end; held ROTOR and HOLLOW are still open).
+
 This milestone adapts the supplied Libration engineering proposal to SnipSnap's offline
 Kotlin synthesis path. It implements GATHER, TWINS and DEPARTURE for an initial listening
 study. Model 3 develops those three voices into twelve finite presets, playability
@@ -375,3 +378,68 @@ examples LOOP; their engine intent is TONAL and their WAVs play once.
 - A bounded screen cache reuses physical work and revisited audio while keeping
   the saved recipe independent. The phone benchmark separates those gains from
   the still-expensive fresh render, so the next speed decision has evidence.
+
+## Kept voices: CHIME, STRUM, ROTOR, HOLLOW (round libration-voices-1, 2026-11-20)
+
+Status: **kept by ear**. Round libration-voices-1 (20 Nov 2026): CHIME, STRUM, ROTOR and HOLLOW all KEEP, on
+both the range clip (C2, C3, C5, C6 at the default touch) and the touch clip (C4 soft, medium, hard), no notes.
+LIBRATION now has seven voices.
+
+They are appended to `LibrationVoice` after DEPARTURE, so saved names and ordinals do not move.
+`Libration.KEPT_VOICES` is all seven, and the app's voice picker reads it. `Libration.CLOUD_VOICES` is GATHER,
+TWINS and DEPARTURE: the cloud renderer, and the only voices with a held instrument, touch keys, keygroups and
+the starter kit. Each new voice has one factory preset, named after it: its default controls at C3, the
+default touch (.8) and the six-second note, which is the C3 note of its heard range clip. There is no new
+starter; the LIBRATION starter is unchanged. The heard renders (the four range notes and the three touches of
+each voice, 28 in all) are pinned in `libration/kept-voices-v1.sha256`, and the cloud voices' renders (finite
+models 1 to 3, held, and presets) are pinned against the build before the round, both in
+`LibrationCandidateVoicesTest`. The code is `LibrationCandidates.kt` (it keeps its round-time name).
+
+**Still open: held ROTOR and HOLLOW.** ROTOR and HOLLOW are sustained voices but are finite only for now: a
+held (HOLD) version of each still has to be built and heard before either counts as a held instrument. CHIME
+and STRUM are struck and are complete as finite notes.
+
+GATHER, TWINS and DEPARTURE are one cloud renderer at three settings of REGION. Each candidate reads something in
+the solved trajectories that the cloud never uses.
+
+- **CHIME** reads *when* a body crosses the axis through its equilibrium. The note strikes every bar at once (bars
+  sit at whole multiples of the root; each bar has a free bar's modes at 1, 2.76 and 5.40), then each body strikes
+  its own bar again whenever it crosses, at most once every .35 s and eight times a note. On the triangles the
+  crossings follow the long libration period, so the afterstrikes arrive in loose groups about every two seconds.
+- **STRUM** reads *when* a body gets clear of its equilibrium (a fiftieth of the family's neighbourhood), counted
+  from the first body to go. The root
+  string is plucked with the note and every other string is plucked as its body goes. On the L2 saddle (the
+  default) NUDGE's kick decides the spacing: at the default the thirteen strings roll over .18 s, at NUDGE .2 over
+  .19 s, at NUDGE 1 within .02 s (a block chord). On L3 every body starts clear, so the chord is plucked at once;
+  on L4 the roll spreads over a second. Strings sit on 1, 2, 3, 4, 6 and 8 times the root.
+- **ROTOR** turns the rotating frame back into the fixed one. Each body is an organ pipe that circles past a
+  listener three radii out at the frame's own rate (2.9 Hz on the triangles, a sixth of a hertz on L1 and L2):
+  nearer is louder, approaching is sharper (5 cents at most). Each pipe's libration pushes it ahead of and behind
+  the turning frame, so the pipes drift in and out of step instead of pulsing together. Tall pipes swing wide and
+  low ones barely move.
+- **HOLLOW** is the spare: the kept cloud mapping (pitch offset, brightness, breath rate, leaving) with odd-only
+  pipes and partials and a slower, rounder breath, resting on L3, where no kept voice sits.
+
+All four are sums of sinusoids written at the output rate; no partial is written above 12 kHz and partials fade
+from 5 kHz, which keeps the top octave from turning glassy. Every strike and pluck starts at phase zero under a
+rounded onset of 2 to 6.5 ms (shorter for a harder touch), and the last half second of every note is a cosine
+fade. Touch changes tone in each: mallet hardness and upper bar modes (CHIME), pluck position and slope (STRUM),
+pipe balance, speech and a short second-harmonic ping (ROTOR), upper odd partials and speech (HOLLOW).
+
+**Finite only.** The held instrument (`LibrationHeld`), the touch keys and the keygroup maker refuse the four
+(`LibrationKeys.supports`), so MAKE INSTRUMENT stays off for them. ROTOR and HOLLOW are sustained voices, so
+their held versions are open (above); CHIME and STRUM are struck and are complete as finite notes.
+RESONANCE is the ring length for CHIME and STRUM and the release length for ROTOR and HOLLOW.
+
+Measured before the round (Kotlin, `LibrationCandidateVoicesTest`): finite, under the .94 ceiling,
+deterministic, silent at zero velocity, first sample closed and last half second faded at C2 to C6 and three
+touches, and at every family with one body or the full swarm. Root within 1 cent at C2 to C6 for all four. At
+least 3.7 dB from every other voice by level-matched third-octave shape at C3 and C4: the nearest pair is CHIME and
+STRUM at 14.0 dB (C4), and the nearest candidate to a kept voice is CHIME to GATHER at 16.1 dB (C3). Level-matched
+touch steps (soft to medium, medium to hard): CHIME 4.5 and 3.9 dB, STRUM 4.1 and 4.9 dB, ROTOR 2.5 and 2.0 dB,
+HOLLOW 1.7 and 1.2 dB. ROTOR's sixth partial swells five times in 1.6 s. A candidate note renders in about .3 s.
+
+Weak spots named before the round (the owner kept all four with no note on them): CHIME's afterstrikes come in groups (about .2 to .6 s, 2 to 2.9 s and
+4.1 to 5 s after the strike at the default), which may read as a pattern; ROTOR's turn is a fixed 2.9 Hz on the
+triangles, with only the pipes' drift against each other to keep it from sounding like a motor, and its tall pipes
+swing by 12 dB; HOLLOW is a recolouring of the kept cloud.

@@ -1,5 +1,5 @@
 {
- "about": "FACSIMILE round 0: four kits replicated (synthesized from fitted numeric models, no reference samples) from nine reference loops. Each pad stacks one or more fitted drums ('layers', drum ids from models/<loop>.json). A pad's 'velocity' below 1 is a ghost-note pad: the same drum struck softer, which changes its character, not only its level. Phrase pads re-perform a reference loop with the replica drums at the loop's own tempo and measured micro-timing. Roles were named by hand from each drum's NMFD template and its pattern on the 16th grid; they are a first reading, to be corrected by ear.",
+ "about": "FACSIMILE: four kits replicated (synthesized from fitted numeric models, no reference samples) from nine reference loops. Each pad stacks one or more fitted drums ('layers', drum ids from models/<loop>.json). A pad's 'velocity' below 1 is a ghost-note pad: the same drum struck softer, which changes its character, not only its level. Phrase pads re-perform a reference loop with the replica drums at the loop's own tempo and measured micro-timing. Roles were named by hand from each drum's NMFD template and its pattern on the 16th grid; they are a first reading, to be corrected by ear.",
  "choke": {
   "154": [
    "154-d5"
@@ -20,8 +20,7 @@
      "name": "Alley Kick",
      "class": "KICK",
      "layers": [
-      "90-d4",
-      "90-d5"
+      "90-k0"
      ]
     },
     {
@@ -86,8 +85,9 @@
      "name": "Ghost Thud",
      "class": "KICK",
      "layers": [
-      "90-d1"
-     ]
+      "90-k0"
+     ],
+     "velocity": 0.45
     },
     {
      "pad": "A10",
@@ -153,38 +153,39 @@
     "113",
     "106"
    ],
-   "character": "Punchy mid-tempo: a short hard kick with a knock layer and a sub drop, a flammed snare, light swing.",
+   "character": "Punchy mid-tempo: a short hard kick with a long pulsing boom, a snare with a room that blooms behind it and drag notes before beat four, light swing.",
    "pads": [
     {
      "pad": "A01",
      "name": "Knock Kick",
      "class": "KICK",
      "layers": [
-      "113-d6"
+      "113-k0"
      ]
     },
     {
      "pad": "A02",
-     "name": "Second Kick",
-     "class": "KICK",
+     "name": "Snare Room",
+     "class": "SNARE",
      "layers": [
-      "113-d5"
+      "113-d2"
      ]
     },
     {
      "pad": "A03",
-     "name": "Body Knock",
-     "class": "PERC",
+     "name": "Ghost Kick",
+     "class": "KICK",
      "layers": [
-      "113-d4"
-     ]
+      "113-k0"
+     ],
+     "velocity": 0.45
     },
     {
      "pad": "A04",
-     "name": "Sub Drop",
-     "class": "KICK",
+     "name": "Snare Body",
+     "class": "SNARE",
      "layers": [
-      "113-d1"
+      "113-d0"
      ]
     },
     {
@@ -312,7 +313,7 @@
     },
     {
      "pad": "A03",
-     "name": "Doves 808",
+     "name": "Doves Sub",
      "class": "KICK",
      "layers": [
       "127-d3"
@@ -320,7 +321,7 @@
     },
     {
      "pad": "A04",
-     "name": "Doves 808 Low",
+     "name": "Doves Sub Low",
      "class": "KICK",
      "layers": [
       "127-d1"
@@ -328,7 +329,7 @@
     },
     {
      "pad": "A05",
-     "name": "Mover 808",
+     "name": "Mover Sub",
      "class": "KICK",
      "layers": [
       "154-d5"
@@ -429,11 +430,11 @@
     "163",
     "102"
    ],
-   "character": "Toms and tone: big pitched toms on the backbeat, several 808 notes, ringing snares, and the thin perc loop as a phrase.",
+   "character": "Toms and tone: big pitched toms on the backbeat, several 808 notes, ringing snares, a crisp hat with a tambourine on the backbeat, and the thin perc loop as a phrase.",
    "pads": [
     {
      "pad": "A01",
-     "name": "Tom Beat 808",
+     "name": "Tom Beat Sub",
      "class": "KICK",
      "layers": [
       "134-d5"
@@ -489,7 +490,7 @@
     },
     {
      "pad": "A08",
-     "name": "World 808",
+     "name": "World Sub",
      "class": "KICK",
      "layers": [
       "163-d5"
@@ -497,10 +498,10 @@
     },
     {
      "pad": "A09",
-     "name": "World 808 High",
-     "class": "KICK",
+     "name": "World Tambourine",
+     "class": "PERC",
      "layers": [
-      "163-d6"
+      "163-d8"
      ]
     },
     {
@@ -531,7 +532,7 @@
     {
      "pad": "A13",
      "name": "World Hat",
-     "class": "HAT_OPEN",
+     "class": "HAT_CLOSED",
      "layers": [
       "163-d1"
      ]
@@ -557,5 +558,62 @@
    ]
   }
  ],
- "choke_note": "Decided by measurement (round 0): with every 808 group choked, the 808 lanes of loops 127, 134 and 163 rendered 3 to 7 dB under their separated references and 1.9 to 4.4 dB closer without the choke, so their 808 notes ring over each other in the references. Only loop 154's 808 measured closer choked (-0.5 dB against +1.6 dB)."
+ "choke_note": "Decided by measurement (round 0): with every 808 group choked, the 808 lanes of loops 127, 134 and 163 rendered 3 to 7 dB under their separated references and 1.9 to 4.4 dB closer without the choke, so their 808 notes ring over each other in the references. Only loop 154's 808 measured closer choked (-0.5 dB against +1.6 dB).",
+ "glue": {
+  "90": {
+   "threshold_db": -6.37,
+   "ratio": 4.0,
+   "attack_ms": 2.0,
+   "makeup_db": 4.26
+  },
+  "102": {
+   "threshold_db": -14.53,
+   "ratio": 4.0,
+   "attack_ms": 2.0,
+   "makeup_db": 7.28
+  },
+  "103": {
+   "threshold_db": -10.1,
+   "ratio": 4.0,
+   "attack_ms": 2.0,
+   "makeup_db": 5.67
+  },
+  "106": {
+   "threshold_db": -8.31,
+   "ratio": 4.0,
+   "attack_ms": 1.0,
+   "makeup_db": 4.45
+  },
+  "113": {
+   "threshold_db": -17.3,
+   "ratio": 4.0,
+   "attack_ms": 1.0,
+   "makeup_db": 9.58
+  },
+  "127": {
+   "threshold_db": -12.49,
+   "ratio": 4.0,
+   "attack_ms": 0.3,
+   "makeup_db": 11.2
+  },
+  "134": {
+   "threshold_db": -12.7,
+   "ratio": 4.0,
+   "attack_ms": 0.5,
+   "makeup_db": 8.52
+  },
+  "154": {
+   "threshold_db": -7.97,
+   "ratio": 4.0,
+   "attack_ms": 2.0,
+   "makeup_db": 3.07
+  },
+  "163": {
+   "threshold_db": -13.99,
+   "ratio": 4.0,
+   "attack_ms": 2.0,
+   "makeup_db": 7.87
+  }
+ },
+ "glue_note": "Bus compression per groove (groove.glue), fitted by fit_glue.py to the reference's crest factor: 4:1, release 120 ms, 6 dB soft knee, attack and threshold fitted (a slow attack made the grooves peakier); the makeup gain matches the reference's RMS level."
 }

@@ -55,7 +55,7 @@ class CausticPadMakerTest {
     private fun fixtures(spec: CausticPadMaker.Spec) = CausticPadMaker.zoneMidis(spec).map(::fixture)
 
     @Test fun `every voice tiles a clipped native keyboard span around its saved root`() {
-        for (voice in CausticVoice.entries) for (root in listOf(36, 37, 60, 83, 84)) {
+        for (voice in CausticInstrument.HELD_VOICES) for (root in listOf(36, 37, 60, 83, 84)) {
             val spec = CausticPadMaker.Spec(patch(voice, root))
             val midis = CausticPadMaker.zoneMidis(spec)
             assertEquals(maxOf(36, root - 12), midis.first())
@@ -77,7 +77,7 @@ class CausticPadMakerTest {
     }
 
     @Test fun `all voices retain root loop release and source recipe in every package representation`() {
-        for ((index, voice) in CausticVoice.entries.withIndex()) {
+        for ((index, voice) in CausticInstrument.HELD_VOICES.withIndex()) {
             val patch = patch(voice)
             val before = patch.toJsonText()
             val spec = CausticPadMaker.Spec(patch, .4f)
@@ -162,7 +162,7 @@ class CausticPadMakerTest {
     }
 
     @Test fun `actual held zones preserve every saved voice and control without changing the source recipe`() {
-        for (voice in CausticVoice.entries) {
+        for (voice in CausticInstrument.HELD_VOICES) {
             val patch = patch(voice)
             val before = patch.toJsonText()
             val spec = CausticPadMaker.Spec(patch)
@@ -200,11 +200,18 @@ class CausticPadMakerTest {
     @Test fun `legacy models bad releases invalid captures and collisions refuse without partial packages`() {
         val patch = patch()
         assertTrue(CausticPadMaker.supports(patch))
-        for (voice in CausticVoice.entries) {
+        for (voice in CausticInstrument.KEPT_VOICES) {
             val old = CausticPatch("Old vessel", voice, CausticInstrument.defaults(voice, 1), model = 1)
             assertFalse(CausticPadMaker.supports(old))
             assertFailsWith<IllegalArgumentException> { CausticPadMaker.Spec(old) }
             assertEquals(1, old.model)
+        }
+        // BOWL, SCATTER and TONGUE (kept 20 Nov 2026) are finite only: no held instrument yet.
+        for (voice in CausticInstrument.KEPT_VOICES - CausticInstrument.HELD_VOICES.toSet()) {
+            val finite = CausticPatch("Finite only", voice, CausticInstrument.defaults(voice))
+            assertFalse(CausticPadMaker.supports(finite))
+            val error = assertFailsWith<IllegalArgumentException> { CausticPadMaker.Spec(finite) }
+            assertTrue(error.message.orEmpty().contains("no held key"), error.message)
         }
         for (release in listOf(.01f, 1.6f, Float.NaN, Float.POSITIVE_INFINITY))
             assertFailsWith<IllegalArgumentException> { CausticPadMaker.Spec(patch, release) }

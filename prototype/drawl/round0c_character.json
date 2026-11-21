@@ -1,0 +1,240 @@
+{
+ "before": {
+  "CONE": {
+   "medium": {
+    "boing_cents": 8.7,
+    "attack_band_db": -12.6,
+    "sustain_band_db": -25.4,
+    "highs_hold_db": -13.5
+   },
+   "hard": {
+    "boing_cents": 15.4,
+    "attack_band_db": -11.7,
+    "sustain_band_db": -25.0,
+    "highs_hold_db": -13.1
+   },
+   "vibrato_hz_w1": null,
+   "vibrato_hz_w05": 6.24,
+   "vibrato_note": "W1 not measurable: the pitch tracker holds CONE for under 0.15 s at a full-width shake; the rate law is shared with BOTTLE, LAP and STEEL. W.5 measured at RING 1."
+  },
+  "BOTTLE": {
+   "medium": {
+    "boing_cents": 4.1,
+    "attack_band_db": -3.7,
+    "sustain_band_db": -14.3,
+    "highs_hold_db": -16.8
+   },
+   "hard": {
+    "boing_cents": 7.2,
+    "attack_band_db": -3.4,
+    "sustain_band_db": -14.5,
+    "highs_hold_db": -17.3
+   },
+   "vibrato_hz_w1": 7.45,
+   "vibrato_hz_w05": 6.19
+  },
+  "LAP": {
+   "medium": {
+    "boing_cents": 4.1,
+    "attack_band_db": -26.1,
+    "sustain_band_db": -60.1,
+    "highs_hold_db": -59.1
+   },
+   "hard": {
+    "boing_cents": 7.2,
+    "attack_band_db": -23.9,
+    "sustain_band_db": -57.9,
+    "highs_hold_db": -56.4
+   },
+   "vibrato_hz_w1": 7.63,
+   "vibrato_hz_w05": 6.32
+  },
+  "STEEL": {
+   "medium": {
+    "boing_cents": 3.0,
+    "attack_band_db": -5.3,
+    "sustain_band_db": -28.9,
+    "highs_hold_db": -30.9
+   },
+   "hard": {
+    "boing_cents": null,
+    "attack_band_db": -5.4,
+    "sustain_band_db": -28.3,
+    "highs_hold_db": -29.9
+   },
+   "vibrato_hz_w1": 7.71,
+   "vibrato_hz_w05": 6.39
+  }
+ },
+ "after": {
+  "CONE": {
+   "medium": {
+    "boing_cents": 8.7,
+    "attack_band_db": -12.6,
+    "sustain_band_db": -25.4,
+    "highs_hold_db": -13.5
+   },
+   "hard": {
+    "boing_cents": 15.4,
+    "attack_band_db": -11.7,
+    "sustain_band_db": -25.0,
+    "highs_hold_db": -13.1
+   },
+   "vibrato_hz_w1": null,
+   "vibrato_hz_w05": 6.05,
+   "vibrato_note": "W1 not measurable: the pitch tracker holds CONE for under 0.15 s at a full-width shake; the rate law is shared with BOTTLE, LAP and STEEL. W.5 measured at RING 1."
+  },
+  "BOTTLE": {
+   "medium": {
+    "boing_cents": 4.1,
+    "attack_band_db": -3.7,
+    "sustain_band_db": -14.3,
+    "highs_hold_db": -16.8
+   },
+   "hard": {
+    "boing_cents": 7.2,
+    "attack_band_db": -3.4,
+    "sustain_band_db": -14.5,
+    "highs_hold_db": -17.3
+   },
+   "vibrato_hz_w1": 6.68,
+   "vibrato_hz_w05": 5.99
+  },
+  "LAP": {
+   "medium": {
+    "boing_cents": 4.1,
+    "attack_band_db": -11.0,
+    "sustain_band_db": -23.8,
+    "highs_hold_db": -20.2
+   },
+   "hard": {
+    "boing_cents": 7.3,
+    "attack_band_db": -9.8,
+    "sustain_band_db": -22.9,
+    "highs_hold_db": -20.2
+   },
+   "vibrato_hz_w1": 6.84,
+   "vibrato_hz_w05": 6.13
+  },
+  "STEEL": {
+   "medium": {
+    "boing_cents": 3.0,
+    "attack_band_db": -5.3,
+    "sustain_band_db": -28.9,
+    "highs_hold_db": -30.9
+   },
+   "hard": {
+    "boing_cents": null,
+    "attack_band_db": -5.4,
+    "sustain_band_db": -28.3,
+    "highs_hold_db": -29.9
+   },
+   "vibrato_hz_w1": 6.9,
+   "vibrato_hz_w05": 6.19
+  }
+ },
+ "manifest": {
+  "id": "0C",
+  "title": "Your notes, before and after",
+  "intro": "\"Better. I did mean lap as well. The vibrato on the long slide vibrato should be a smidge slower.\" The resonator's twang and the electric slide's whine stay as you heard them. Each pair plays the version you heard, then the change.",
+  "groups": [
+   {
+    "title": "LAP \u00b7 the whine, kept the darker slide",
+    "what": "The string keeps its top, a resonant pickup peak at 2.2 kHz (lower and softer than the electric slide's 2.6 kHz), more amp sustain, and the bar 25 % slower. It now rings longer than your one lap-steel loop; say if that is too much.",
+    "rows": [
+     [
+      "Default",
+      "lap-default"
+     ],
+     [
+      "Hard pick",
+      "lap-hard"
+     ],
+     [
+      "Long slide, wide vibrato",
+      "lap-slide"
+     ],
+     [
+      "Strum, D minor",
+      "lap-strum"
+     ]
+    ],
+    "probes": [
+     [
+      "Sustain energy 1 to 4 kHz",
+      "LAP",
+      "medium",
+      "sustain_band_db",
+      "dB of total"
+     ],
+     [
+      "Upper harmonics vs root after 1 s",
+      "LAP",
+      "medium",
+      "highs_hold_db",
+      "dB"
+     ],
+     [
+      "Attack energy 1.5 to 4 kHz",
+      "LAP",
+      "medium",
+      "attack_band_db",
+      "dB of total"
+     ]
+    ]
+   },
+   {
+    "title": "Wide vibrato \u00b7 a smidge slower, every voice",
+    "what": "A wider shake moves more of the arm, so its speed now levels off as it widens: full WAVER goes from 7.6 to 6.8 shakes a second, half WAVER only from 6.3 to 6.05. The width is unchanged.",
+    "rows": [
+     [
+      "LAP long slide",
+      "lap-slide"
+     ],
+     [
+      "BOTTLE long slide",
+      "bottle-slide"
+     ],
+     [
+      "CONE long slide",
+      "cone-slide"
+     ],
+     [
+      "STEEL long slide",
+      "steel-slide"
+     ]
+    ],
+    "probes": [
+     [
+      "Full WAVER, BOTTLE",
+      "BOTTLE",
+      null,
+      "vibrato_hz_w1",
+      "Hz"
+     ],
+     [
+      "Full WAVER, LAP",
+      "LAP",
+      null,
+      "vibrato_hz_w1",
+      "Hz"
+     ],
+     [
+      "Full WAVER, STEEL",
+      "STEEL",
+      null,
+      "vibrato_hz_w1",
+      "Hz"
+     ],
+     [
+      "Half WAVER, CONE",
+      "CONE",
+      null,
+      "vibrato_hz_w05",
+      "Hz"
+     ]
+    ]
+   }
+  ]
+ }
+}

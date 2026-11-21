@@ -35,6 +35,9 @@ import kotlin.test.assertTrue
  */
 class HeldStartTest {
 
+    /** The most a played loop's level stands over its own mean: ARCO's swell and hand together ([Arco.PLAYER_SWELL_DB], [Arco.PLAYER_HAND_DB]). */
+    private val PLAYED_LEVEL_DB = Arco.PLAYER_SWELL_DB + Arco.PLAYER_HAND_DB
+
     private companion object {
         val RATE = Dsp.RATE
 
@@ -42,12 +45,12 @@ class HeldStartTest {
             val shaped: KeyNote = HeldStart.shape(full, HeldStart.SHORT)
         }
 
-        /** Every zone of ARCO and BORE, both layers, at the defaults: the zone as first built, and shaped. */
+        /** Every zone of ARCO and BORE that is offered on held keys (the first voices: ArcoPadMaker.VOICES, BorePadMaker.VOICES), both layers, at the defaults: the zone as first built, and shaped. */
         val cases: List<Case> by lazy {
             val jobs = ArrayList<() -> Case>()
-            for (voice in ArcoVoice.entries) for (midi in ArcoKeys.zoneMidis(voice)) for (layer in ArcoKeys.Layer.entries)
+            for (voice in ArcoMeasure.FIRST_VOICES) for (midi in ArcoKeys.zoneMidis(voice)) for (layer in ArcoKeys.Layer.entries)
                 jobs += { Case("ARCO $voice ${Scales.nameOf(midi)} ${layer.name.lowercase()}", ArcoKeys.padMeasured(voice, Arco.defaults(voice), midi, layer).note) }
-            for (voice in BoreVoice.entries) for (midi in BoreKeys.padMidis(voice))
+            for (voice in BoreMeasure.FIRST_VOICES) for (midi in BoreKeys.padMidis(voice))
                 BoreKeys.layerBreaths(voice, Bore.defaults(voice)).forEachIndexed { layer, breath ->
                     jobs += { Case("BORE $voice ${Scales.nameOf(midi)} ${if (layer == 0) "soft" else "hard"}", BoreKeys.padMeasured(voice, Bore.defaults(voice), midi, breath).note) }
                 }
@@ -139,7 +142,9 @@ class HeldStartTest {
             fullWorst = max(fullWorst, full)
         }
         println("HeldStart: at 0.30 to 0.40 s the centroid sits within %.1f %% of the loop's (worst %s); the whole start's, up to %.1f %% off".format(Locale.ROOT, 100 * worst, worstLabel, 100 * fullWorst))
-        assertTrue(worst < 0.10, "$worstLabel: the centroid after the handover is ${100 * worst} % off the loop's")
+        // 15 percent since 2026-11-20 (10 before): the loop carries a player, so its colour at the moment the handover lands is not its
+        // colour on average (BORE SAX C3's hard layer read 11.4 percent off; the breath drifts). The whole start is still over 30.
+        assertTrue(worst < 0.15, "$worstLabel: the centroid after the handover is ${100 * worst} % off the loop's")
         assertTrue(fullWorst > 0.30, "control: the whole start is within ${100 * fullWorst} % of the loop at 0.3 s everywhere, so the check cannot fail")
     }
 
@@ -181,7 +186,9 @@ class HeldStartTest {
         // level so far, so it does not sag where the low strings catch); the handover runs at most a dB over the louder of the
         // whole start and the loop, and at most 2 dB under the whole start (measured 0.88 and 1.77 dB at the build).
         assertTrue(rows.all { it.lag <= 0.02 }, "a shaped swell arrives late: ${rows.filter { it.lag > 0.02 }.joinToString { it.label }}")
-        assertTrue(rows.all { it.over < 1.0 }, "a handover swells: ${rows.filter { it.over >= 1.0 }.joinToString { "${it.label} ${it.over}" }}")
+        // Since 2026-11-20 the loop carries a player whose level swells by up to [PLAYED_LEVEL_DB] over its own mean on purpose, and the
+        // handover can land on that swell (ARCO CELLO C2's soft layer read 1.36 dB over), so the bar is the old dB and that.
+        assertTrue(rows.all { it.over < 1.0 + PLAYED_LEVEL_DB }, "a handover swells: ${rows.filter { it.over >= 1.0 + PLAYED_LEVEL_DB }.joinToString { "${it.label} ${it.over}" }}")
         assertTrue(rows.all { it.dip > -2.0 }, "a handover dips: ${rows.filter { it.dip <= -2.0 }.joinToString { "${it.label} ${it.dip}" }}")
     }
 

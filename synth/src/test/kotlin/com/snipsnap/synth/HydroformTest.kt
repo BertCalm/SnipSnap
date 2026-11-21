@@ -51,9 +51,38 @@ class HydroformTest {
         }
         val durations = listOf(0f, .25f, .5f, .75f, 1f).map(::duration)
         assertTrue(durations.zipWithNext().all { (a,b) -> a > b })
+    }
+
+    /**
+     * The owner called the shortest presets abrupt (20 Nov 2026): at ARREST 1 the strike was cut
+     * from full level in 1.5 ms, 88 ms in. Up to ARREST .8 the gate is the accepted quick cut.
+     * Above it the gate starts closing at the same instant and takes up to 90 ms longer.
+     */
+    @Test fun `the top of ARREST damps the strike where it used to chop it and the rest of the travel is the accepted cut`() {
+        fun gate(arrest: Float): Pair<Double, Double> {
+            val raw = Hydroform.raw(HydroformVoice.DOME, mapOf("ARREST" to arrest))
+            val a = .75 * arrest
+            val stop = .65 * (.045 / .65).pow(a)
+            val quick = .0015 + .020 * (1 - a).pow(2)
+            val last = raw.indexOfLast { abs(it) > 1e-8 }.toDouble() / Hydroform.INTERNAL_RATE
+            return (last - (stop - quick)) to quick
+        }
+        for (arrest in listOf(0f, .3f, .65f, .75f, .8f)) {
+            val (closing, quick) = gate(arrest)
+            assertTrue(abs(closing - quick) < .0005, "ARREST $arrest must keep its accepted quick cut: $closing vs $quick")
+        }
+        val (closing, quick) = gate(1f)
+        assertTrue(abs(closing - (quick + Hydroform.ARREST_RELEASE)) < .003, "ARREST 1 closes over ${quick + Hydroform.ARREST_RELEASE} s: $closing")
+        assertTrue(gate(.9f).first in .03.. .06, "ARREST .9 is half way into the damped ending")
+        // The damped ending falls smoothly: 10 ms into its closing it has lost under 1 dB, where the quick cut was already silent.
         val raw = Hydroform.raw(HydroformVoice.DOME, mapOf("ARREST" to 1f))
-        val last = raw.indexOfLast { abs(it) > 1e-8 }.toDouble() / Hydroform.INTERNAL_RATE
-        assertTrue(last in .087.. .089, "R2 maximum changed: $last")
+        fun level(seconds: Double): Double {
+            val at = (seconds * Hydroform.INTERNAL_RATE).toInt(); val w = Hydroform.INTERNAL_RATE / 100
+            return sqrt((at until at + w).sumOf { raw[it].toDouble().pow(2) } / w)
+        }
+        val start = .65 * (.045 / .65).pow(.75) - .0015
+        assertTrue(level(start + .005) > .5 * level(start - .012), "the damped ending must not open with a drop")
+        assertTrue(level(start + .075) < .1 * level(start - .012), "the damped ending must be nearly closed after 75 ms")
     }
 
     @Test fun `settling ignores unknown keys and repairs nonfinite macros while recipes preserve touch`() {

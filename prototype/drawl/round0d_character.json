@@ -1,0 +1,254 @@
+{
+ "before": {
+  "CONE": {
+   "medium": {
+    "boing_cents": 8.7,
+    "attack_band_db": -12.6,
+    "sustain_band_db": -25.4,
+    "highs_hold_db": -13.5
+   },
+   "hard": {
+    "boing_cents": 15.4,
+    "attack_band_db": -11.7,
+    "sustain_band_db": -25.0,
+    "highs_hold_db": -13.1
+   },
+   "vibrato_hz_w1": 3.0,
+   "vibrato_pp_default": 95,
+   "vibrato_pp_w05": 108,
+   "vibrato_pp_w1": null
+  },
+  "BOTTLE": {
+   "medium": {
+    "boing_cents": 4.1,
+    "attack_band_db": -3.7,
+    "sustain_band_db": -14.3,
+    "highs_hold_db": -16.8
+   },
+   "hard": {
+    "boing_cents": 7.2,
+    "attack_band_db": -3.4,
+    "sustain_band_db": -14.5,
+    "highs_hold_db": -17.3
+   },
+   "vibrato_hz_w1": 6.68,
+   "vibrato_pp_default": 134,
+   "vibrato_pp_w05": 106,
+   "vibrato_pp_w1": 259
+  },
+  "LAP": {
+   "medium": {
+    "boing_cents": 4.1,
+    "attack_band_db": -11.0,
+    "sustain_band_db": -23.8,
+    "highs_hold_db": -20.2
+   },
+   "hard": {
+    "boing_cents": 7.3,
+    "attack_band_db": -9.8,
+    "sustain_band_db": -22.9,
+    "highs_hold_db": -20.2
+   },
+   "vibrato_hz_w1": 6.84,
+   "vibrato_pp_default": 80,
+   "vibrato_pp_w05": 105,
+   "vibrato_pp_w1": 253
+  },
+  "STEEL": {
+   "medium": {
+    "boing_cents": 3.0,
+    "attack_band_db": -5.3,
+    "sustain_band_db": -28.9,
+    "highs_hold_db": -30.9
+   },
+   "hard": {
+    "boing_cents": null,
+    "attack_band_db": -5.4,
+    "sustain_band_db": -28.3,
+    "highs_hold_db": -29.9
+   },
+   "vibrato_hz_w1": 6.9,
+   "vibrato_pp_default": 28,
+   "vibrato_pp_w05": 54,
+   "vibrato_pp_w1": 130
+  }
+ },
+ "after": {
+  "CONE": {
+   "medium": {
+    "boing_cents": 8.7,
+    "attack_band_db": -12.6,
+    "sustain_band_db": -25.4,
+    "highs_hold_db": -13.5
+   },
+   "hard": {
+    "boing_cents": 15.4,
+    "attack_band_db": -11.7,
+    "sustain_band_db": -25.0,
+    "highs_hold_db": -13.1
+   },
+   "vibrato_hz_w1": 6.64,
+   "vibrato_pp_default": 86,
+   "vibrato_pp_w05": 97,
+   "vibrato_pp_w1": 211
+  },
+  "BOTTLE": {
+   "medium": {
+    "boing_cents": 4.1,
+    "attack_band_db": -3.7,
+    "sustain_band_db": -14.3,
+    "highs_hold_db": -16.8
+   },
+   "hard": {
+    "boing_cents": 7.2,
+    "attack_band_db": -3.4,
+    "sustain_band_db": -14.5,
+    "highs_hold_db": -17.3
+   },
+   "vibrato_hz_w1": 6.69,
+   "vibrato_pp_default": 118,
+   "vibrato_pp_w05": 95,
+   "vibrato_pp_w1": 206
+  },
+  "LAP": {
+   "medium": {
+    "boing_cents": 4.1,
+    "attack_band_db": -11.0,
+    "sustain_band_db": -23.8,
+    "highs_hold_db": -20.2
+   },
+   "hard": {
+    "boing_cents": 7.3,
+    "attack_band_db": -9.8,
+    "sustain_band_db": -22.9,
+    "highs_hold_db": -20.2
+   },
+   "vibrato_hz_w1": 6.84,
+   "vibrato_pp_default": 73,
+   "vibrato_pp_w05": 95,
+   "vibrato_pp_w1": 203
+  },
+  "STEEL": {
+   "medium": {
+    "boing_cents": 3.0,
+    "attack_band_db": -5.3,
+    "sustain_band_db": -28.9,
+    "highs_hold_db": -30.9
+   },
+   "hard": {
+    "boing_cents": null,
+    "attack_band_db": -5.4,
+    "sustain_band_db": -28.3,
+    "highs_hold_db": -29.9
+   },
+   "vibrato_hz_w1": 6.9,
+   "vibrato_pp_default": 27,
+   "vibrato_pp_w05": 49,
+   "vibrato_pp_w1": 104
+  }
+ },
+ "manifest": {
+  "id": "0D",
+  "title": "Your note, before and after",
+  "intro": "\"Better, but maybe the vibrato needs to be a tad shallower.\" Trimmed most where the shake is widest: about 20 % at full WAVER, about 10 % at the defaults. The speed you approved is unchanged. Each pair plays the version you heard, then the change.",
+  "groups": [
+   {
+    "title": "Long slide, full WAVER",
+    "what": "Where the vibrato was furthest past your slide loops (250 to 260 cents peak to peak against their 140 to 190).",
+    "rows": [
+     [
+      "LAP",
+      "lap-slide"
+     ],
+     [
+      "BOTTLE",
+      "bottle-slide"
+     ],
+     [
+      "CONE",
+      "cone-slide"
+     ],
+     [
+      "STEEL",
+      "steel-slide"
+     ]
+    ],
+    "probes": [
+     [
+      "BOTTLE, full WAVER",
+      "BOTTLE",
+      null,
+      "vibrato_pp_w1",
+      "cents p-p"
+     ],
+     [
+      "LAP, full WAVER",
+      "LAP",
+      null,
+      "vibrato_pp_w1",
+      "cents p-p"
+     ],
+     [
+      "STEEL, full WAVER",
+      "STEEL",
+      null,
+      "vibrato_pp_w1",
+      "cents p-p"
+     ],
+     [
+      "CONE, full WAVER",
+      "CONE",
+      null,
+      "vibrato_pp_w1",
+      "cents p-p"
+     ]
+    ]
+   },
+   {
+    "title": "Default notes",
+    "what": "A smaller trim, so the defaults stay near your loops.",
+    "rows": [
+     [
+      "BOTTLE",
+      "bottle-default"
+     ],
+     [
+      "LAP",
+      "lap-default"
+     ],
+     [
+      "CONE",
+      "cone-default"
+     ],
+     [
+      "STEEL",
+      "steel-default"
+     ]
+    ],
+    "probes": [
+     [
+      "BOTTLE, default",
+      "BOTTLE",
+      null,
+      "vibrato_pp_default",
+      "cents p-p"
+     ],
+     [
+      "LAP, default",
+      "LAP",
+      null,
+      "vibrato_pp_default",
+      "cents p-p"
+     ],
+     [
+      "CONE, default",
+      "CONE",
+      null,
+      "vibrato_pp_default",
+      "cents p-p"
+     ]
+    ]
+   }
+  ]
+ }
+}

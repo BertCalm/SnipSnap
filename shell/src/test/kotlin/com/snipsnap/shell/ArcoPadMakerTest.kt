@@ -14,6 +14,7 @@ import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -41,14 +42,17 @@ class ArcoPadMakerTest {
 
     @Test
     fun `the zones are absolute, each voice's own plan, and TUNE does not move them`() {
-        for (voice in ArcoVoice.entries) {
+        for (voice in ArcoPadMaker.VOICES) {
             val at = listOf(0f, 0.5f, 1f).map { tune -> ArcoPadMaker.zoneMidis(ArcoPadMaker.Spec(ArcoPatch("T", voice, Arco.defaults(voice) + ("TUNE" to tune)))) }
             assertTrue(at.all { it == at.first() }, "$voice: TUNE moved the zones: $at")
         }
         assertEquals(listOf(36, 39, 42, 45, 48, 51, 54, 57, 60), ArcoPadMaker.zoneMidis(ArcoPadMaker.Spec(ArcoPatch("C", ArcoVoice.CELLO, Arco.defaults(ArcoVoice.CELLO)))))
         assertEquals(listOf(62, 65, 68, 71, 74, 77, 80, 81), ArcoPadMaker.zoneMidis(spec))
         assertEquals(listOf(50, 53, 56, 59, 62, 65, 68, 71, 74), ArcoPadMaker.zoneMidis(ArcoPadMaker.Spec(ArcoPatch("S", ArcoVoice.SARANGI, Arco.defaults(ArcoVoice.SARANGI)))))
-        for (preset in ArcoPresets.all()) assertTrue(ArcoPadMaker.supports(preset), preset.name)
+        for (preset in ArcoPresets.all()) assertEquals(preset.voice in ArcoPadMaker.VOICES, ArcoPadMaker.supports(preset), preset.name)
+        // The four voices kept on 2026-11-20 are offered as one-shots and LOOPs, not yet on held keys.
+        assertEquals(Arco.KEPT_VOICES.take(3).toSet(), ArcoPadMaker.VOICES)
+        for (voice in Arco.KEPT_VOICES.drop(3)) assertFalse(ArcoPadMaker.supports(ArcoPatch("N", voice, Arco.defaults(voice))), "$voice is offered held")
     }
 
     /**

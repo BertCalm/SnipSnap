@@ -24,6 +24,13 @@ import kotlin.math.sqrt
  */
 internal object BoreMeasure {
 
+    /**
+     * FLUTE and SAX: BORE's voices before HOLLOW, SHAWM, SHAKU, PANPIPE and VESSEL joined [Bore.KEPT_VOICES] on 2026-11-20. The tests that
+     * measure, tune or pin these two walk this list; the new voices' own claims are in BoreCandidateVoicesTest, and the product-wide checks
+     * (loop fuzz, held starts, determinism, the shipped pins, the held maker) walk [Bore.KEPT_VOICES].
+     */
+    val FIRST_VOICES: List<BoreVoice> = listOf(BoreVoice.FLUTE, BoreVoice.SAX)
+
     val RAW_RATE = Dsp.RATE * Dsp.OVERSAMPLE
 
     fun acRms(x: FloatArray, from: Float, to: Float, rate: Int = RAW_RATE): Double {

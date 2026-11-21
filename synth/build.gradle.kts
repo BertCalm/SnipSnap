@@ -3431,6 +3431,16 @@ tasks.register<JavaExec>("generateKerfFit") {
     args(providers.gradleProperty("kerfInput").orNull ?: "", providers.gradleProperty("kerfOutput").orNull ?: "${rootDir}/testkit/kerf-audition/fit")
 }
 
+tasks.register<JavaExec>("generateKerfEngineAudition") {
+    group = "distribution"
+    description = "Render KERF's round-4 engine pack: every preset as the SYNTH picker plays it, and struck at the kits' three touch zones."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.KerfEngineAuditionGenerator")
+    workingDir = rootProject.projectDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("kerfEngineOutput").orNull ?: "${rootDir}/testkit/kerf-engine-audition")
+}
+
 tasks.register<JavaExec>("generateKerfAudition") {
     group = "distribution"
     description = "Render KERF's round-1 listening pack: the four fitted chop kits from the Kotlin port, clean and chopped."
