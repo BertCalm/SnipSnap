@@ -936,6 +936,7 @@ owner picked fresh hits, four kits, and genres measured from the loops (2026-11-
 - **Proof.** `KerfKitTest` builds all eight kits and pushes a hit, the roll and the riser of each
   through save, reload, `PadHit.resolve` and MPC 3 export. `:shell:generateKerfKits` verified all
   128 pads (1,536 slices).
-- **Not yet.** The owner has not heard the four new kits; the audition page went to them on
-  2026-11-21. Phone and MPC playback of these four is open.
+- **Heard.** The owner heard the round-5 page (each new kit's sixteen pads and a two-bar groove):
+  "These are great" (2026-11-21). MURK stays as its loops are, without closed hats. Phone and
+  MPC playback of these four is open.
 
