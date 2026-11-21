@@ -63,6 +63,21 @@ object GrooveEdit {
     /** [LANE_SLOT] in [Lane] order — the lane map of a pattern nobody has reassigned. */
     val DEFAULT_LANE_PADS: List<Int> = Lane.entries.map { LANE_SLOT.getValue(it) }
 
+    /**
+     * The lanes the step editor draws (UAT 2026-11 user states, D-9, ruled 2026-11-21: a lane
+     * whose pad is empty is hidden). A one-pad kit used to show all seven lanes, six of them
+     * pointing at empty pads and making no sound. A lane is drawn when its pad ([pads], this
+     * pattern's lane map) is one of [filledSlots], or when the clip still has notes on it: notes
+     * on a pad that has since been emptied are kept in view rather than hidden, since a hidden
+     * note is lost work. When that leaves nothing, every lane is drawn, so a kit whose pads all
+     * sit off the lane slots can still have a lane reassigned. [Lane] order throughout.
+     */
+    fun visibleLanes(clip: Mpc3Clip, pads: List<Int>, filledSlots: Set<Int>): List<Lane> {
+        val played = clip.notes.mapTo(HashSet()) { it.note }
+        val shown = Lane.entries.filter { pads[it.ordinal] in filledSlots || noteFor(it, pads) in played }
+        return shown.ifEmpty { Lane.entries }
+    }
+
     /** Pads a lane can be given: bank A, the sixteen on the screen. */
     const val PAD_COUNT = 16
 
