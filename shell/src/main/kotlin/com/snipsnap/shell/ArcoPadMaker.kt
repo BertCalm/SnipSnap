@@ -55,12 +55,11 @@ object ArcoPadMaker {
     }
 
     /**
-     * The voices offered on held keys: CELLO, ERHU and SARANGI. WHEEL, BAR, GLASS and VIOL joined [Arco.KEPT_VOICES] on 2026-11-20 as
-     * one-shots and LOOPs, which is what the owner heard (arco-voices-1, touch-arco-1); their held keys are not offered until they are
-     * heard (WHEEL's D4 hard key also starts later than its whole stroke, against HeldStartTest's bar), as LIBRATION's new voices stay
-     * finite only.
+     * The voices offered on held keys: every kept voice ([Arco.KEPT_VOICES]). CELLO, ERHU and SARANGI were heard and kept held; WHEEL, BAR,
+     * GLASS and VIOL joined the engine on 2026-11-20 as one-shots and LOOPs and are offered held since 2026-11-21, their soft layer the soft
+     * touch the owner kept ([ArcoKeys.CANDIDATE_SOFT_SHARE], [com.snipsnap.synth.ArcoCandidates.HELD_TOUCH]), heard in round held-ab-1.
      */
-    val VOICES: Set<ArcoVoice> = setOf(ArcoVoice.CELLO, ArcoVoice.ERHU, ArcoVoice.SARANGI)
+    val VOICES: Set<ArcoVoice> = Arco.KEPT_VOICES.toSet()
 
     /** Whether [patch]'s voice is offered held: one of [VOICES], with a held zone plan. */
     fun supports(patch: ArcoPatch): Boolean = patch.voice in VOICES && ArcoKeys.zoneMidis(patch.voice).isNotEmpty()

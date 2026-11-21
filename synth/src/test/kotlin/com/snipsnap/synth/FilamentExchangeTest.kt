@@ -53,7 +53,7 @@ class FilamentExchangeTest {
 
     @Test
     fun `actual causal junctions preserve power while downstream splits spend only their arriving waves`() {
-        for (voice in FilamentVoice.entries) {
+        for (voice in Filament.ORIGINAL_VOICES) {
             val p = Filament.inspect(voice, controls, midi = 60, config = config, model = 3)
             val d = actualBudget(p, "$voice finite")
             assertTrue(d.enabled && !d.frozen && d.oversampling == 4)

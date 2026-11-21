@@ -36,7 +36,7 @@ import kotlin.math.sqrt
  * where that is done (near 0.3 s, not 1.8 s), the loop after it the same loop turned. The join above is the loop's, so its
  * guards still hold.
  *
- * Two BREATH layers per zone ([layerBreaths]): the patch's own BREATH as the hard layer, and [SOFT_BREATH_SHARE] of it as
+ * Two BREATH layers per zone ([layerBreaths]): the patch's own BREATH as the hard layer, and [softShare] of it as
  * the soft one. BREATH is mapped onto each voice's measured speaking window (`Bore.reedPressure`, `Bore.flutePressure`), so
  * BREATH 0 is the softest note that speaks and a soft layer can never be air: RESIN's held-pad decision 2, "a soft layer
  * that does not speak is a hole". The host applies the key's velocity as gain, once (the BELLOWS rule), so both layers are
@@ -72,8 +72,19 @@ object BoreKeys {
     /** The two layers' BREATH, soft first, for a patch with [macros] (an absent or non-finite BREATH is the default). */
     fun layerBreaths(voice: BoreVoice, macros: Map<String, Float>): List<Float> {
         val hard = Bore.settled(macros, voice).getValue("BREATH")
-        return listOf(hard * SOFT_BREATH_SHARE, hard)
+        return listOf(hard * softShare(voice), hard)
     }
+
+    /**
+     * The soft layer's share of BREATH for a candidate (HOLLOW, SHAWM, SHAKU, PANPIPE, VESSEL): the soft note the owner heard and kept
+     * (round touch-ab-1, 20 Nov 2026), whose BREATH was 0.3 of the way from [SOFT_BREATH_SHARE] to the whole of it, 0.615. A soft key
+     * is then that note's breath, darkened and slowed as that note was ([BoreCandidates.heldTouched]): not a breath gentler than
+     * anything heard. FLUTE's and SAX's soft layers stay at [SOFT_BREATH_SHARE], as heard and kept on their held keys.
+     */
+    val CANDIDATE_SOFT_BREATH_SHARE: Float = Dsp.lin(0.3f, SOFT_BREATH_SHARE, 1f)
+
+    /** The soft layer's share of BREATH for [voice]: [CANDIDATE_SOFT_BREATH_SHARE] on a candidate, [SOFT_BREATH_SHARE] otherwise. */
+    fun softShare(voice: BoreVoice): Float = if (BoreCandidates.of(voice) != null) CANDIDATE_SOFT_BREATH_SHARE else SOFT_BREATH_SHARE
 
     /** One zone's two layers at [midi], soft first, each its attack then its loop ([padLayer]), each start shaped by [hit]. */
     fun pad(
@@ -116,7 +127,12 @@ object BoreKeys {
         checkCancelled(cancelled, name)
         // With a player on the note the loop is four seconds, not two, and the player's movements are fitted to that ([Bore.heldLoopSeconds]).
         val loopSeconds = Bore.heldLoopSeconds(human)
-        val x = Bore.heldNote(voice, m, human, loopSeconds, opening)
+        val note = Bore.heldNote(voice, m, human, loopSeconds, opening)
+        // A candidate blown softer than its default BREATH is darker and slower to speak on a held key too ([BoreCandidates.heldTouched]);
+        // its level is the player's velocity. A kept voice is not touched.
+        val x = if (BoreCandidates.of(voice) != null) {
+            BoreCandidates.heldTouched(note, Bore.tunedHz(voice, Bore.frequencyFor(voice, m.getValue("TUNE"))), breath)
+        } else note
         checkCancelled(cancelled, name)
         return cutHeld(x, Bore.heldUsableEnd(x, m, loopSeconds), name, loopSeconds, human)
     }
@@ -140,21 +156,34 @@ object BoreKeys {
      * from where Round 1.7's are, the ones its 1,071 corners measured.
      * How long: [Bore.bestLength] from the reference, which correlates the reference with the [Bore.LOOP_BLEND_SECONDS]
      * that follow the length, the loop's last blend's worth.
+     * [fixedFrom], when given, replaces that search: the blend's reference starts there (CONSORT's held note, whose slow
+     * motions are periodic, so it has no level to settle; [settledFrames][Bore.LoopJoin.settledFrames] then reads it), and
+     * the dip is read against the note itself ([sourceDipDb]), since such a note's own level moves with its period.
      * Then [assembleTail], the dip read on the loop turned so its blend comes first (the shape [Bore.blendDipDb] reads), the
      * level (the loop at the melodic target, the attack wherever it falls against it, under [PEAK_CEILING]: loud where it is
      * held), and the join's steps read off the result.
      */
-    internal fun cutHeld(x: FloatArray, usableEnd: Int, name: String, loopSeconds: Float = Bore.LOOP_SECONDS, human: Float = Humanize.OFF): Held {
+    internal fun cutHeld(
+        x: FloatArray, usableEnd: Int, name: String, loopSeconds: Float = Bore.LOOP_SECONDS, human: Float = Humanize.OFF,
+        fixedFrom: Int? = null, minCorrelation: Double = Bore.LOOP_MIN_CORRELATION,
+    ): Held {
         val blend = Bore.LOOP_BLEND_FRAMES
         val lengths = Bore.loopLengthFrames(loopSeconds)
-        val (from, settledAt) = Bore.loopStart(x, usableEnd, lengths.last, blend, name, Bore.settleDb(human))
+        val (from, settledAt) = if (fixedFrom == null) Bore.loopStart(x, usableEnd, lengths.last, blend, name, Bore.settleDb(human))
+        else {
+            // A note built to repeat (CONSORT's held note) has no level to wait for: its reference starts where its maker says.
+            require(fixedFrom + blend + lengths.last + blend <= usableEnd) { "$name: no room for a loop from frame $fixedFrom" }
+            fixedFrom to fixedFrom
+        }
         val (length, correlation) = Bore.bestLength(x, from, blend, lengths.first, lengths.last)
         val start = from + blend
         val end = start + length
         val out = assembleTail(x, start, length, blend, correlation)
 
-        val turned = FloatArray(length) { out[if (it < blend) end - blend + it else start + it - blend] }
-        val dip = Bore.blendDipDb(turned, blend)
+        val dip = if (fixedFrom == null) {
+            val turned = FloatArray(length) { out[if (it < blend) end - blend + it else start + it - blend] }
+            Bore.blendDipDb(turned, blend)
+        } else sourceDipDb(x, out, end - blend, blend)
         val gain = levelOn(out, start, end)
 
         val steps = FloatArray(length - 1) { abs(out[start + it + 1] - out[start + it]) }
@@ -169,8 +198,28 @@ object BoreKeys {
             junctionStep = abs(out[start] - out[end - 1]).toDouble(),
             steepestStep = steps[((steps.size - 1) * 0.999).toInt()].toDouble(),
         )
-        Bore.checkJoin(name, join, maxDipDb = Bore.maxDipDb(human))
+        Bore.checkJoin(name, join, minCorrelation, Bore.maxDipDb(human))
         return Held(KeyNote(Snip(out, channels = 1, sampleRate = RATE), loopStartFrame = start.toLong()), join, name, gain)
+    }
+
+    /**
+     * What the blend itself does to the level: the quietest 50 ms of [out]'s blend, [from] for [blend] frames, against
+     * the same 50 ms of the note [x] it was blended from, in dB (0 is no change, negative a dip). For a note whose own
+     * level moves with its period (CONSORT's: the room's reflections fade harmonics in and out as the vibrato sweeps
+     * them), [Bore.blendDipDb]'s comparison with the loop's median reads that motion as a dip; this reads only the blend.
+     */
+    internal fun sourceDipDb(x: FloatArray, out: FloatArray, from: Int, blend: Int): Double {
+        val w = (0.05 * RATE).toInt()
+        var worst = 0.0
+        var at = from
+        while (at + w <= from + blend) {
+            var a = 0.0
+            var b = 0.0
+            for (i in at until at + w) { a += out[i].toDouble() * out[i]; b += x[i].toDouble() * x[i] }
+            if (b > 1e-18) worst = minOf(worst, 10.0 * Math.log10(maxOf(a, 1e-30) / b))
+            at += w / 2
+        }
+        return worst
     }
 
     /**

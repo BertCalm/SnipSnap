@@ -129,14 +129,26 @@ internal object ArcoCandidates {
      * The candidates' touch ([CandidateTouch]; the owner on every soft, medium, hard clip: "All sound the same"). A bow lighter than
      * [Arco.DEFAULT_BOW] is a slower, lighter stroke further from the bridge: fewer upper partials, less level, a slower start. The
      * clips' soft touch (BOW at about half the default, depth 0.5) loses 20 dB above two and a half times the note, is 7 dB quieter
-     * before that and takes 0.4 s to rise; the held keys' soft layer (BOW at [ArcoKeys.SOFT_SHARE] of itself, depth 0.72) would lose
-     * 29 dB. At the default BOW and above, the kept sound.
+     * before that and takes 0.4 s to rise; a candidate's held soft layer is bowed at that same touch ([ArcoKeys.CANDIDATE_SOFT_SHARE]) and
+     * shaped by [HELD_TOUCH]. At the default BOW and above, the kept sound.
      */
     val TOUCH = CandidateTouch.Lean(shelfDbPerDepth = 40f, levelDbPerDepth = 14f, riseSecondsPerDepth = 0.8f, cornerRatio = 2.5f)
 
     /** A candidate's one-shot [x] at [hz] as bowed at [bow] ([TOUCH]). */
     fun touched(x: FloatArray, hz: Float, bow: Float): FloatArray =
         CandidateTouch.touched(x, hz, CandidateTouch.depth(bow, Arco.DEFAULT_BOW), TOUCH)
+
+    /**
+     * [TOUCH] on a held key ([Arco.renderHeldMeasured], `ArcoKeys`): the same darker shelf and the same slower rise, no level. A held key's
+     * level is the player's velocity, once, in the host (velocity is timbre, never level, in every house keygroup), so the zone is
+     * levelled on its loop after the touch, as every zone is. The rise is over the stroke only, long before the loop, and the shelf
+     * is a fixed filter on the whole stretch, so the loop is still the same loop and still closes ([Keys.seamError]).
+     */
+    val HELD_TOUCH = CandidateTouch.Lean(shelfDbPerDepth = TOUCH.shelfDbPerDepth, levelDbPerDepth = 0f, riseSecondsPerDepth = TOUCH.riseSecondsPerDepth, cornerRatio = TOUCH.cornerRatio)
+
+    /** A candidate's held stretch [x] at [hz] as bowed at [bow] ([HELD_TOUCH]); untouched at the default BOW and above. */
+    fun heldTouched(x: FloatArray, hz: Float, bow: Float): FloatArray =
+        CandidateTouch.touched(x, hz, CandidateTouch.depth(bow, Arco.DEFAULT_BOW), HELD_TOUCH)
 
     /** What the bow drags for [s] at [hz], with the bridge's corner at [corner] and the tuning [share]. */
     fun bowed(s: Spec, hz: Float, corner: Float, share: Float, grip: Float, rate: Int): Bowed = when (s.kind) {

@@ -189,7 +189,17 @@ class ExportSession(val dir: File, val kit: Kit, val model: ExportWizardModel) {
  * [card] is carried rather than re-read at the tap, so an offer made
  * about one card can never be spent on another.
  */
-data class CardPending(val outcome: ExportOutcome, val card: Uri, val what: String)
+data class CardPending(
+    val outcome: ExportOutcome,
+    val card: Uri,
+    val what: String,
+    /**
+     * The card refused the copy after the phone write landed (UAT 2026-11 user states, S-4): the
+     * offer is TRY THE CARD AGAIN, not a replace. Last, with its default, so the callers that build
+     * this by position keep their order.
+     */
+    val refused: Boolean = false,
+)
 
 /**
  * EXPORT: the wizard's Compose surface over `ExportWizardModel`'s tested
@@ -676,6 +686,27 @@ private fun ExportContent(
         }
     }
 
+    // The card leg threw after the phone write had landed (UAT 2026-11 user states, S-4). It used
+    // to fall through to the dub's own catch and read "EXPORT failed. Check your storage", which
+    // says nothing about the card and denies the copy the phone already holds. The stamp is still
+    // the DUBBED one written before the copy, so the shelf says the same. Two cases: the folder
+    // grant is gone (a retry cannot work, so the CARD row is named), or the card itself said no
+    // (pulled, full, read-only), which a retry can answer.
+    suspend fun cardFailed(outcome: ExportOutcome, card: Uri, e: Exception) {
+        Log.e(TAG, "card copy failed", e)
+        val granted = runCatching {
+            context.contentResolver.persistedUriPermissions.any { it.uri == card && it.isWritePermission }
+        }.getOrDefault(true)
+        if (granted) {
+            session.cardPending = CardPending(outcome, card, what = "", refused = true)
+            onToast(Copy.DUB_DONE_CARD_REFUSED)
+        } else {
+            session.cardPending = null
+            onToast(Copy.DUB_DONE_CARD_GRANT_GONE)
+        }
+        landedNote(outcome, onCard = false, where = outcome.primary.absolutePath)
+    }
+
     // The offer `dubCardWouldReplace` held back, taken. Reads the pending
     // copy live rather than closing over a captured one, same as `eject()`
     // and `shareExport()` below.
@@ -690,8 +721,8 @@ private fun ExportContent(
                 copyToCard(pending.outcome, pending.card)
             } catch (e: Exception) {
                 if (e is CancellationException) throw e
-                Log.e(TAG, "putOnCard: card copy failed", e)
-                onNote(LandingNote.dubFailed())
+                // The phone copy landed long before this tap; only the card leg failed (S-4).
+                cardFailed(pending.outcome, pending.card, e)
             } finally {
                 session.busy = false
                 revision++
@@ -760,7 +791,14 @@ private fun ExportContent(
                                 )
                             }
                             if (standing.isEmpty()) {
-                                copyToCard(result.outcome, card)
+                                // Its own catch (S-4): the phone write has landed, so a card
+                                // that refuses is a card failure, not a failed EXPORT.
+                                try {
+                                    copyToCard(result.outcome, card)
+                                } catch (e: Exception) {
+                                    if (e is CancellationException) throw e
+                                    cardFailed(result.outcome, card, e)
+                                }
                             } else {
                                 // Held. The phone copy has landed and the
                                 // stamp above says so; the card is
@@ -912,7 +950,7 @@ private fun ExportContent(
                 // again would be a second way to lose the same files.
                 session.cardPending?.let { pending ->
                     ActionButton(
-                        Copy.putOnCardOver(pending.what),
+                        if (pending.refused) Copy.CARD_TRY_AGAIN else Copy.putOnCardOver(pending.what),
                         scheme,
                         enabled = !session.busy,
                         modifier = Modifier.fillMaxWidth(),

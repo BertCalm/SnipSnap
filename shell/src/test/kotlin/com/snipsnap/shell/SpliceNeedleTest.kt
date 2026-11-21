@@ -79,4 +79,14 @@ class SpliceNeedleTest {
         assertEquals(0, SpliceNeedle.snap(-50, 999, mono, IntArray(0), mono, IntArray(0), rate))
         assertEquals(999, SpliceNeedle.snap(5_000, 999, mono, IntArray(0), mono, IntArray(0), rate))
     }
+
+    /** UAT 2026-11 user states, S-8: CUT EARLIER and CUT LATER move the cut 10 ms, exactly, and stop at the ends. */
+    @Test
+    fun `a nudge moves the needle ten milliseconds, unsnapped, and stops at either end`() {
+        assertEquals(10_441, SpliceNeedle.nudge(10_000, 1, 44_100, 100_000))
+        assertEquals(9_559, SpliceNeedle.nudge(10_000, -1, 44_100, 100_000))
+        assertEquals(10_480, SpliceNeedle.nudge(10_000, 1, 48_000, 100_000))
+        assertEquals(0, SpliceNeedle.nudge(200, -1, 44_100, 100_000))
+        assertEquals(100_000, SpliceNeedle.nudge(99_900, 1, 44_100, 100_000))
+    }
 }

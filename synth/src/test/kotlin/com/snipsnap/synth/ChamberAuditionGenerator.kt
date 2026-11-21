@@ -355,7 +355,7 @@ object ChamberAuditionGenerator {
         val revisedModel = if (boost) 3 else 2
         val study = if (boost) "timpani-boost" else "timpani"
         val revisedLabel = if (boost) "boosted" else "revised"
-        for (voice in ChamberVoice.entries) for (midi in listOf(48, 60)) {
+        for (voice in Chamber.ORIGINAL_VOICES) for (midi in listOf(48, 60)) {
             val slug = voice.name.lowercase(Locale.ROOT)
             val note = if (midi == 48) "C3" else "C4"
             val base = defaultRoom(voice).copy(midi = midi, model = revisedModel)
@@ -452,7 +452,7 @@ object ChamberAuditionGenerator {
     private fun defaultRoom(voice: ChamberVoice) = ChamberPatch(ChamberPresets.forVoice(voice).first().name, voice, Chamber.defaults(voice), model = 3)
 
     private fun cases(finite: Boolean = false): List<Case> = buildList {
-        for (voice in ChamberVoice.entries) {
+        for (voice in Chamber.ORIGINAL_VOICES) {
             val slug = voice.name.lowercase(Locale.ROOT)
             val defaults = defaultRoom(voice)
             val room = if (voice == ChamberVoice.HYBRID) "two wood and two glass walls, with independent floor and ceiling"

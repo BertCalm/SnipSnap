@@ -42,7 +42,7 @@ class FilamentKeysTest {
 
     @Test
     fun `three keyboard roots retain a real onset and close against separately synthesized cycles after PCM encoding`() {
-        for (voice in FilamentVoice.entries) for (midi in listOf(48, 60, 72)) {
+        for (voice in Filament.ORIGINAL_VOICES) for (midi in listOf(48, 60, 72)) {
             // The upper fixture also exercises authored, non-default strand geometry.
             val patch = patch(voice).copy(midi = midi, config = if (midi == 72)
                 FilamentConfig(seed = Int.MIN_VALUE + 29, profile = FilamentProfile.LATE) else patch(voice).config)
@@ -108,7 +108,7 @@ class FilamentKeysTest {
 
     @Test
     fun `sample layers remove one native velocity gain while retaining the played source`() {
-        for (voice in FilamentVoice.entries) {
+        for (voice in Filament.ORIGINAL_VOICES) {
             val patch = patch(voice).copy(midi = 60, velocity = .35f)
             val native = FilamentKeys.note(patch)
             val layer = FilamentKeys.layer(patch)
@@ -125,7 +125,7 @@ class FilamentKeysTest {
 
     @Test
     fun `every current voice is supported while old models and out of range notes refuse before rendering`() {
-        for (voice in FilamentVoice.entries) {
+        for (voice in Filament.ORIGINAL_VOICES) {
             val patch = patch(voice)
             assertTrue(FilamentKeys.supports(patch))
             for (model in listOf(Filament.ORIGINAL_MODEL, Filament.CHARACTER_MODEL)) {
@@ -140,7 +140,7 @@ class FilamentKeysTest {
 
     @Test
     fun `cancellation stops before or during source work and zero velocity remains silent`() {
-        for (voice in FilamentVoice.entries) {
+        for (voice in Filament.ORIGINAL_VOICES) {
             val patch = patch(voice)
             assertFailsWith<CancellationException> { FilamentKeys.note(patch, cancelled = { true }) }
             var checks = 0

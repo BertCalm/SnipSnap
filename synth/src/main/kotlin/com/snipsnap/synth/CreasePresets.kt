@@ -28,7 +28,8 @@ data class CreasePreset(
     fun toPatch(): CreasePatch = CreasePatch(name, voice, macros, midi, velocity, model)
 }
 
-/** Six original listening positions: a fast and a slower evolving role for each voice. */
+/** Six original listening positions (a fast and a slower evolving role for ROUND, PINCH and RUBBER),
+ * then one position for each voice kept later. */
 object CreasePresets {
     const val MODEL_VERSION = 3
 
@@ -64,7 +65,21 @@ object CreasePresets {
         p("ink-ribbon", "Ink Ribbon", CreaseVoice.RUBBER, "Texture",
             "A sustained vowel-like shape with a long, gently clearing afterimage.",
             .68f, .55f, .30f, .35f, .90f, .60f),
+        // Kept in round crease-voices-1 (20 Nov 2026), each at the default performance the owner heard:
+        // default controls, C3, the engine's default touch.
+        kept("vowel-fold", "Vowel Fold", CreaseVoice.PLEAT, "Vocal",
+            "A talking fold: two resonances move like a mouth, from \"oo\" toward \"ah\", as the note is pressed."),
+        kept("snap-pick", "Snap Pick", CreaseVoice.SNAP, "Plucked",
+            "A plucked snap like a clavinet or mandolin; held, an uneven tremolo of picks."),
+        kept("octave-reed", "Octave Reed", CreaseVoice.TWOFOLD, "Reed",
+            "A reed organ with an octave stop that blooms in when the note is pushed harder."),
+        kept("hollow-cup", "Hollow Cup", CreaseVoice.CUP, "Woodwind",
+            "A hollow, slightly square woodwind tone, like a low clarinet, with a wandering breath when held."),
     )
+
+    private fun kept(id: String, name: String, voice: CreaseVoice, family: String, description: String) =
+        CreasePreset(id, name, voice, Crease.defaults(voice, MODEL_VERSION), family, description,
+            midi = Crease.DEFAULT_MIDI, velocity = .75f, model = MODEL_VERSION)
 
     fun all(): List<CreasePreset> = roster
     fun forVoice(voice: CreaseVoice): List<CreasePreset> = roster.filter { it.voice == voice }
