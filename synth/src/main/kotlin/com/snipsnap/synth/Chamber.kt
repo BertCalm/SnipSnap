@@ -6,7 +6,9 @@ import java.util.concurrent.CancellationException
 import kotlin.math.*
 import kotlin.random.Random
 
-enum class ChamberVoice { HYBRID, AQUARIUM }
+/** HYBRID and AQUARIUM came first; GLAZE, TIMBER, MASS, ALLOY and BOUNCE ([ChamberCandidates]) were kept on 21 Nov 2026 and are
+ * appended after them so saved names and ordinals never move. */
+enum class ChamberVoice { HYBRID, AQUARIUM, TIMBER, MASS, ALLOY, GLAZE, BOUNCE }
 
 /**
  * A finite, single-strike quartet in a room with separately addressed boundaries.
@@ -41,6 +43,16 @@ object Chamber {
     const val REGISTER_MODEL = 5
     const val MAX_MODEL_VERSION = REGISTER_MODEL
     const val MAX_SECONDS = 6f
+
+    /**
+     * The voices players are offered: presets and pickers read this. GLAZE was kept in round voices-chamber-1 and TIMBER,
+     * MASS, ALLOY and BOUNCE, reworked, in fix-chamber-voices-1 (both 21 Nov 2026). They render on the register model only.
+     */
+    val KEPT_VOICES: List<ChamberVoice> = listOf(ChamberVoice.HYBRID, ChamberVoice.AQUARIUM, ChamberVoice.GLAZE,
+        ChamberVoice.TIMBER, ChamberVoice.MASS, ChamberVoice.ALLOY, ChamberVoice.BOUNCE)
+
+    /** The two rooms CHAMBER shipped with, which every model plays: the kit, the six room recipes and the room studies are theirs. */
+    val ORIGINAL_VOICES: List<ChamberVoice> = listOf(ChamberVoice.HYBRID, ChamberVoice.AQUARIUM)
     private const val IR = RATE * Dsp.OVERSAMPLE
     private const val TAU = 2.0 * PI
     private const val AUDIO_GAIN = 38.0
@@ -86,10 +98,13 @@ object Chamber {
     private const val TOUCH_LEAN = 1.6
     /** Level after leveling follows (velocity / normal) to this power: 6 dB down at .3, 1.9 dB up at 1. */
     private const val TOUCH_LEVEL = .75
+    /** Candidates' loudness at the default touch: the house melodic target, 2 dB under so a hard strike keeps its peak. */
+    private val CANDIDATE_LOUDNESS = Dsp.MELODIC_LOUDNESS_TARGET*10.0.pow(-2.0/20)
 
     fun macrosFor(voice: ChamberVoice): List<MacroSpec> {
         val d = if (voice == ChamberVoice.HYBRID) floatArrayOf(.50f,.45f,.40f,.90f,.60f)
-            else floatArrayOf(.35f,.60f,.95f,.80f,.70f)
+            else if (voice == ChamberVoice.AQUARIUM) floatArrayOf(.35f,.60f,.95f,.80f,.70f)
+            else ChamberCandidates.defaults(voice)
         return listOf(MacroSpec("STRIKE", d[0], .35f), MacroSpec("BALANCE", d[1], .4f),
             MacroSpec("MATERIAL", d[2], .4f), MacroSpec("DIVIDE", d[3], .4f),
             MacroSpec("PLACEMENT", d[4], .4f), MacroSpec("HOLD", 0f, 0f))
@@ -292,6 +307,25 @@ object Chamber {
         return Bank(frequencies,decay,weights,rate)
     }
 
+    /** A candidate's own instrument ([ChamberCandidates.Instrument]); the kept quartet never comes here. */
+    private fun candidateInstrument(index: Int, hz: Double, ratio: Double, hardness: Double, rate: Int, seed: Long,
+        spectralTilt: Double, spec: ChamberCandidates.Instrument): Bank {
+        val random=Random(Dsp.seedFor("CHAMBER", 1,seed,index))
+        val f=ArrayList<Double>(); val t=ArrayList<Double>(); val w=ArrayList<Double>()
+        for(j in spec.ratios.indices) {
+            val mode=hz*ratio*spec.ratios[j]*(if(j==0) 1.0 else 1+random.nextDouble(-.001,.001))
+            val decay=spec.t60/(1+spec.decaySlope*j)*(.94+.12*random.nextDouble())
+            // Modes high in the air are rolled off, so the top of the range never turns shrill.
+            val weight=spec.weights[j]*exp(-j*(spec.soft-spec.hard*hardness))*exp(j*spectralTilt)/(1+(mode/spec.rolloffHz).pow(2))
+            if(spec.pairWeight>0.0) {
+                // A pair split evenly about the mode, so the pair's centre stays on the mode.
+                val half=spec.pair*(1+.3*j)/2
+                if(mode*(1+half)<17000.0) { f+=mode*(1-half); t+=decay; w+=weight; f+=mode*(1+half); t+=decay*.92; w+=weight*spec.pairWeight }
+            } else if(mode<17000.0) { f+=mode; t+=decay; w+=weight }
+        }
+        return Bank(f.toDoubleArray(),t.toDoubleArray(),w.toDoubleArray(),rate)
+    }
+
     private val surfaceHz = arrayOf(
         doubleArrayOf(155.0,431.0,1127.0), doubleArrayOf(92.0,247.0,613.0),
         doubleArrayOf(379.0,997.0,2111.0), doubleArrayOf(643.0,1439.0,2933.0),
@@ -366,7 +400,8 @@ object Chamber {
     private data class PreparedStrike(val lengths: IntArray, val strengths: DoubleArray, val workBudget: Double)
     /** Keep parameter preparation out of the near-limit HotSpot render method. */
     private fun prepareStrike(m: Map<String,Float>, midi: Int, velocity: Float, hardness: Double,
-        configuration: ChamberConfig, rate: Int, isolated: Int?, profile: ChamberWideRange.Profile?, model: Int): PreparedStrike {
+        configuration: ChamberConfig, rate: Int, isolated: Int?, profile: ChamberWideRange.Profile?, model: Int,
+        lean: Double = TOUCH_LEAN, touch: Double = touch(velocity)): PreparedStrike {
         val legacyMinimum=(.0005*rate).toInt()
         val minimum=if(model==REGISTER_MODEL) ChamberRegister.minimumContactFrames(legacyMinimum,midi) else legacyMinimum
         val lengths=IntArray(4) { i ->
@@ -382,9 +417,8 @@ object Chamber {
         val strengths=DoubleArray(4) { i -> floor+(1.0-floor)*exp(-.5*((balance-i)/width).pow(2)) }
         val norm=sqrt(strengths.sumOf { it*it })
         val strength=velocity.toDouble().pow(.72)*(.32+.95*m.getValue("STRIKE"))
-        val touch=touch(velocity)
         for(i in 0..3) strengths[i] = strengths[i]/norm*strength*
-            doubleArrayOf(1.08,1.23,.92,.88)[i]*exp(TOUCH_LEAN*touch*i/3.0)*
+            doubleArrayOf(1.08,1.23,.92,.88)[i]*exp(lean*touch*i/3.0)*
             (if(isolated==null || isolated==i) 1.0 else 0.0)*
             (if(configuration.instrumentEnabled[i]) 1.0 else 0.0)
         // The force sum is the same independent upper bound used by models 1–3.
@@ -432,6 +466,8 @@ object Chamber {
         require(options.oversample==4 || options.oversample==8)
         val m=settled(voice,macros)
         require(m.getValue("HOLD")==0f) { "CHAMBER model $model supports finite strikes only; HOLD must be 0" }
+        val shape=ChamberCandidates.shape(voice)
+        require(shape==null || model==REGISTER_MODEL) { "CHAMBER $voice is a model $REGISTER_MODEL voice" }
         val profile=if(model==WIDE_RANGE_MODEL || model==REGISTER_MODEL) ChamberWideRange.resolve(voice,m) else null
         val preparationStart=System.nanoTime()
         val rate=RATE*options.oversample
@@ -441,15 +477,19 @@ object Chamber {
         val registerPressure=if(model==REGISTER_MODEL) ChamberRegister.pressureScale(midi) else 1.0
         val observerGain=AUDIO_GAIN*sqrt(rate.toDouble()/IR)*registerPressure
         val geometry=ChamberWideRange.geometry(configuration,m.getValue("MATERIAL"),m.getValue("DIVIDE"),m.getValue("PLACEMENT"),profile)
-        val touch=touch(velocity)
-        val hardness=(.12+.75*m.getValue("STRIKE")+.13*velocity+TOUCH_HARDNESS*touch).coerceIn(0.0,1.0)
+        val touch=if(shape==null) touch(velocity) else ChamberCandidates.touch(velocity)
+        val hardness=if(shape==null) (.12+.75*m.getValue("STRIKE")+.13*velocity+TOUCH_HARDNESS*touch).coerceIn(0.0,1.0)
+            else (.12+.75*m.getValue("STRIKE")+.13*NORMAL_VELOCITY+shape.touch.hardness*touch).coerceIn(0.0,1.0)
         val triangleRootWeight=if(model==REGISTER_MODEL) ChamberRegister.triangleRootWeight(midi) else 1.0
-        val banks=Array(4) { i -> instrument(i,Keys.midiHz(midi).toDouble(),configuration.tuningRatios[i].toDouble(),hardness,rate,seed,model,
-            (profile?.spectralTilt ?: 0.0)+TOUCH_TILT*touch,if(i==3) triangleRootWeight else 1.0) }
+        val banks=Array(4) { i -> val spec=shape?.instruments?.get(i)
+            if(spec!=null) candidateInstrument(i,Keys.midiHz(midi).toDouble(),configuration.tuningRatios[i].toDouble(),hardness,rate,seed,
+                (profile?.spectralTilt ?: 0.0)+ChamberCandidates.tilt(shape,touch),spec)
+            else instrument(i,Keys.midiHz(midi).toDouble(),configuration.tuningRatios[i].toDouble(),hardness,rate,seed,model,
+            (profile?.spectralTilt ?: 0.0)+(if(shape==null) TOUCH_TILT*touch else ChamberCandidates.tilt(shape,touch)),if(i==3) triangleRootWeight else 1.0) }
         val average=averageMaterials(geometry)
         val materials=if(options.averageSurfaces) List(10) { average } else geometry.regionMaterialWeights
         val boundaryScale=if(model==REGISTER_MODEL) ChamberRegister.boundaryFrequencyScale(midi) else 1.0
-        val sympatheticWeight=if(model==REGISTER_MODEL) ChamberRegister.sympatheticWeight(midi) else 0.0
+        val sympatheticWeight=if(model==REGISTER_MODEL) maxOf(ChamberRegister.sympatheticWeight(midi),shape?.resonator ?: 0.0) else 0.0
         val boundaries=Array(10) { boundary(it,materials[it],rate,profile,boundaryScale,
             Keys.midiHz(midi).toDouble(),sympatheticWeight) }
         val edges=Array(4) { source -> Array(10) { region ->
@@ -464,7 +504,7 @@ object Chamber {
         val field=Array(8) { i -> Delay(doubleArrayOf(.0233,.0297,.0371,.0419,.0473,.0539,.0611,.0677)[i],rate,.973,options.recordDiagnostics) }
         val allDelays=outgoing.flatMap { it.toList() }+returning.flatMap { it.toList() }+
             regionToField.toList()+fieldToRegion.toList()+field.toList()
-        val sourceS=DoubleArray(4) { sqrt(2*doubleArrayOf(if(model==1) 12.0 else MEMBRANE_PORT_RATE,BAR_PORT_RATE,15.0,8.0)[it]/rate) }
+        val sourceS=DoubleArray(4) { sqrt(2*(shape?.ports ?: doubleArrayOf(if(model==1) 12.0 else MEMBRANE_PORT_RATE,BAR_PORT_RATE,15.0,8.0))[it]/rate) }
         val sourceC=DoubleArray(4) { sqrt(1-sourceS[it]*sourceS[it]) }
         val boundaryS=sqrt(2*28.0/rate); val boundaryC=sqrt(1-boundaryS*boundaryS)
         val sourceTaps=Array(4) { Tap(geometry.directPaths[it].delaySeconds.toDouble(),rate) }
@@ -473,12 +513,12 @@ object Chamber {
         val reflectionTaps=Array(geometry.reflections.size) { Tap(geometry.reflections[it].delaySeconds.toDouble(),rate) }
         val reflections=Array(geometry.reflections.size) { Reflection(if(options.averageSurfaces) average else geometry.reflections[it].materialWeights,rate,profile?.reflectionCutoffScale ?: 1.0) }
         val reflectionGains=reflectionGains(geometry)
-        val earlyGain=EARLY_GAIN*(profile?.roomPresence ?: 1.0)
+        val earlyGain=EARLY_GAIN*(profile?.roomPresence ?: 1.0)*(shape?.roomGain ?: 1.0)
         // Register voicing exposes the restored passive answer. This observer
         // calibration never enters the network or raises the direct/early hit.
         val roomPickup=if(model==REGISTER_MODEL) ChamberRegister.roomPickupScale(midi) else 1.0
-        val surfaceGain=SURFACE_GAIN*(profile?.roomPresence ?: 1.0)*roomPickup
-        val lateGain=LATE_GAIN*(profile?.roomPresence ?: 1.0)*roomPickup
+        val surfaceGain=SURFACE_GAIN*(profile?.roomPresence ?: 1.0)*roomPickup*(shape?.roomGain ?: 1.0)
+        val lateGain=LATE_GAIN*(profile?.roomPresence ?: 1.0)*roomPickup*(shape?.roomGain ?: 1.0)
         // Each region has one fixed radiation centre; moving the membrane cannot
         // accidentally move the pickup of the other three instruments' boundaries.
         val surfaceDistances=DoubleArray(10) { r ->
@@ -494,7 +534,11 @@ object Chamber {
         val fluidStepSinA=DoubleArray(10) { sin(TAU*(.31+.017*it)/rate) }
         val fluidStepCosA=DoubleArray(10) { cos(TAU*(.31+.017*it)/rate) }
         val fluidStepSinB=sin(TAU*.47/rate); val fluidStepCosB=cos(TAU*.47/rate)
-        val strike=prepareStrike(m,midi,velocity,hardness,configuration,rate,options.isolatedInstrument,profile,model)
+        val strike=if(shape==null) prepareStrike(m,midi,velocity,hardness,configuration,rate,options.isolatedInstrument,profile,model)
+            else prepareStrike(m,midi,NORMAL_VELOCITY,hardness,configuration,rate,options.isolatedInstrument,profile,model,0.0,touch)
+        // The string throws the hammer back: each return lands on a whole number of the note's periods.
+        val bounceStarts=shape?.bounces?.map { (max(1.0,(it.first*Keys.midiHz(midi)).roundToInt().toDouble())*rate/Keys.midiHz(midi)).roundToInt() }?.toIntArray()
+        val bounceStrengths=shape?.bounces?.map { it.second }?.toDoubleArray()
         val strikeLengths=strike.lengths
         val sourceStrength=strike.strengths
         val sourceWorkBudget=strike.workBudget
@@ -540,6 +584,14 @@ object Chamber {
                     if(strikeStarts[s]<0) strikeStarts[s]=frame
                     frameWork += banks[s].strike(delta).coerceAtLeast(0.0)
                 }
+                if(bounceStarts!=null && sourceStrength[s]>0) for(b in bounceStarts.indices) {
+                    // The hammer comes back: the same half-sine contact, later and lighter.
+                    val at=frame-bounceStarts[b]
+                    if(at>=0 && at<strikeLengths[s]) {
+                        val pulse=sin(PI*(at+.5)/strikeLengths[s])
+                        frameWork += banks[s].strike(sourceStrength[s]*bounceStrengths!![b]*PI/(2*strikeLengths[s])*pulse).coerceAtLeast(0.0)
+                    }
+                }
                 val v=banks[s].port()
                 var incoming=0.0
                 if(options.roomEnabled) for(r in 0..9) incoming += sourceWeights[s][r]*sourceIncoming[s][r]
@@ -553,6 +605,7 @@ object Chamber {
                 }
                 banks[s].step()
                 sourceWave[s]=banks[s].port()*sourceS[s]*observerGain*(when {
+                    shape!=null -> shape.pressure[s]
                     s==1 -> BAR_PRESSURE_CALIBRATION
                     s==0 && model>=3 -> MEMBRANE_PRESSURE_CALIBRATION*MEMBRANE_MIX_LIFT
                     s==0 && model==2 -> MEMBRANE_PRESSURE_CALIBRATION
@@ -638,7 +691,15 @@ object Chamber {
         val surface=finish(rawSurface,rate,cancelled);val late=finish(rawLate,rate,cancelled)
         val stems=finishStems(instrumentTaps,rate,cancelled);val surfaces=finishStems(surfaceStems,rate,cancelled)
         val samples=finished.copyOf()
-        if(options.normalize && velocity>0f) {
+        if(shape!=null && options.normalize && velocity>0f) {
+            // A candidate ends on a release, is leveled by loudness, then touched, then kept under the ceiling.
+            if(ChamberCandidateLayers.layered(voice)) ChamberCandidateLayers.apply(voice,samples,midi,touch,seed)
+            Dsp.fadeTailCosine(samples,shape.releaseSeconds)
+            val loud=com.snipsnap.audio.Loudness.of(samples,1,RATE)
+            val gain=if(loud>1e-6f) (CANDIDATE_LOUDNESS/loud*10.0.pow(ChamberCandidates.levelDb(shape,touch)/20)).toFloat() else 1f
+            for(i in samples.indices) samples[i] *= gain
+            Dsp.limitPeak(samples,.99f)
+        } else if(options.normalize && velocity>0f) {
             Dsp.levelTo(samples,RATE,Dsp.MELODIC_LOUDNESS_TARGET)
             if(velocity!=NORMAL_VELOCITY) {
                 val gain=(velocity/NORMAL_VELOCITY).toDouble().pow(TOUCH_LEVEL).toFloat()

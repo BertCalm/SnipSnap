@@ -6969,7 +6969,8 @@ private enum class Engine {
         // BRAID, HALO and SPRING followed in their reworked form in round fix-filament-voices-1 (21 Nov 2026).
         FILAMENT -> Filament.KEPT_VOICES
         TIDAL -> TidalVoice.entries
-        CHAMBER -> ChamberVoice.entries
+        // HYBRID and AQUARIUM, then GLAZE, TIMBER, MASS, ALLOY and BOUNCE, kept in voices-chamber-1 and fix-chamber-voices-1 (21 Nov 2026).
+        CHAMBER -> Chamber.KEPT_VOICES
         MERIDIAN -> MeridianVoice.entries
         // GROTTO (saved model 8) joined after BUBBLE once the owner kept round nacre-grotto-1 (15 Nov 2026);
         // CONCH (saved model 9) followed GROTTO once the owner kept round nacre-conch-1 (16 Nov 2026).
