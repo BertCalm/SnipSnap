@@ -1,9 +1,9 @@
 # DRAWL Engine: Engineering Specification
 
 Version 0.1 · 2026-11-20
-Status: proposed. Round 0 (a Python prototype) is built, measured and published for listening; the
-owner heard it and asked for changes, made in rounds 0b, 0c and 0d (§18). No Kotlin exists. No acceptance gate
-is passed by this document.
+Status: round 1 built. The owner kept all six voices of the Python prototype after rounds 0b to 0d
+(§18); the native Kotlin engine is built and probed and awaits its first listen (As built). No
+acceptance gate is passed yet.
 Repository truth: read at `7fd194f1`. APIs grepped: `Strings.Loop` and `Strings.Loop.retune`
 (`Strings.kt:529`, `:675`), `Strings.tune` (`:101`), `Strings.pluckExciter` (`:366`), `Strings.pickup`
 (`:401`), `Strings.bodyRing` (`:1321`), `Restrike.canRestrike` (`Restrike.kt:35`), `OsteriaStrum`
@@ -341,8 +341,9 @@ emmons, sho-bud, and "national" only as `national\s*reso` (the word alone is ord
 | Round 0 as a whole | heard, owner, 20 Nov 2026 | "Resonator could use more twang, slide a bit more whine." No other note |
 | CONE's twang and BOTTLE's whine as changed in 0b | heard, owner, 20 Nov 2026 | "Better." |
 | LAP's whine and the slower wide vibrato (0c) | heard, owner, 20 Nov 2026 | "Better, but maybe the vibrato needs to be a tad shallower." |
-| The shallower vibrato (0d) | not heard | a stitched A/B sent to the owner; the page's daily upload cap delayed its A/B |
-| Any voice sounds right enough to keep | not heard | the owner's keep or change per voice |
+| The shallower vibrato (0d) | heard, owner, 21 Nov 2026 | "Yes" |
+| All six voices of the Python prototype (round 0d) | kept by ear, owner, 21 Nov 2026 | "Keep all" |
+| The native Kotlin engine (round 1) sounds like what was kept | measured, not heard | `round1_compare_kotlin.json`; the round-1 listening page |
 
 ## 17. Why it is built this way
 
@@ -421,4 +422,59 @@ Python harness). Every probe still passes on all six voices (`round0d_report.jso
 
 ## As built
 
-(Appended by the implementing session, in the same commit as the code.)
+### Round 1: the native engine (21 Nov 2026)
+
+The owner kept all six voices of the round-0d prototype ("1. Yes 2. Keep all"). Round 1 ports it to
+Kotlin. Nobody has heard the native renders; the round-1 listening page pairs each with the clip it
+was ported from.
+
+Built: `Drawl.kt` (the engine), `DrawlPatch.kt` (the patch: the BorePatch shape plus `velocity` and
+`take`, each written only when not its default), the registration rows (`Patches.fromJsonValue`,
+`Velocity.macroSpecsFor` and `touchedRender`, `SynthRoot`'s TUNE mapping), `PatchTypes.PROTOTYPES`
+(no factory presets until the native renders are kept), hand-built entries in `PatchesTest` and
+`PadRecipeTest`, a `DeterminismTest` canary over every voice with velocity and take, `DrawlTest`,
+and `DrawlAuditionGenerator` with `./gradlew :synth:generateDrawlAudition`. Not built in round 1: STRUM,
+the kit, presets, keygroups, the picker (rounds 2 to 4, §13).
+
+Changed against this design, each measured:
+
+- **The string read.** §6.2 planned the house `Strings.Loop`. The prototype the owner heard used a
+  Lagrange read, and the house loop's two-tap average darkens every trip: within 1.1 dB on every
+  probe, but on STEEL it moved the render further (spectral distance 2.52) than STEEL's own takes
+  differ (0.99 to 2.15). DRAWL keeps the heard read in a private class (`Drawl.Read`, about 40
+  lines, not a copy of toolkit code).
+- **The pick.** §6.3 planned a new `Strings` function. Nothing else needs it yet, so it lives in
+  `Drawl.pick`; it moves to `Strings` when a second engine asks for it.
+- **Control rate.** The path, tuning budget, loop gains and scrape filter are worked out every 16
+  samples (11 kHz) and interpolated, instead of per-sample arrays: memory stays flat with HOLD and a
+  default note renders in 68 ms on a desktop JVM after warm-up (`DrawlTest`).
+- **Noise, level and the speaker band.** Noise comes from `Dsp.Noise` and `kotlin.random.Random`, so
+  no native render matches a Python one sample for sample. The level is the house loudness target,
+  one gain per sound shared by every velocity and take (§9). The electric speaker band is two
+  cascaded second-order sections; in the prototype that swap moved BOTTLE's 1 to 4 kHz band by
+  0.0 dB.
+
+Measured against the heard prototype (`compare_kotlin.py`, `round1_compare_kotlin.json`; the same
+probes on both; Python harness measuring the Kotlin WAVs):
+
+| Voice | Centroid, heard / native (Hz) | Decay (dB/s) | Wide vibrato (cents p-p, Hz) | Hard over soft (dB) |
+|---|---|---|---|---|
+| CONE | 669 / 677 | −21.9 / −21.6 | 215, 6.63 / 212, 6.71 | 6.1 / 5.7 |
+| BOTTLE | 762 / 724 | −8.4 / −8.5 | 202, 6.67 / 200, 6.86 | 4.9 / 4.5 |
+| LAP | 592 / 604 | −12.2 / −11.7 | 199, 6.84 / 201, 6.70 | 5.3 / 5.2 |
+| STEEL | 597 / 578 | −6.4 / −6.3 | 106, 6.88 / 106, 6.93 | 8.4 / 8.3 |
+| FLATTOP | 351 / 352 | −17.0 / −17.2 | 36, 6.82 / 35, 6.74 | 9.3 / 9.2 |
+| GUT | 266 / 236 | −23.6 / −23.2 | not trackable on either | 9.4 / 9.3 |
+
+The resonance peaks match on LAP and STEEL exactly and share three of four on the rest. The largest
+gap is BOTTLE's whine band: across its four takes the heard set read −11.5 to −15.6 dB of 1 to 4 kHz
+in the sustain and the native set −13.9 to −17.0 (mean 1.4 dB lower); the take the owner heard by
+default was the brightest of its four. Not a design gap (the speaker-filter test above), and left
+to the owner's ear.
+
+`DrawlTest` (Kotlin, desktop JVM): roots within 1 cent at TUNE .25/.5/.75 with pitch confidence
+0.97 to 0.99 on all six voices; a full slide starts over 300 cents low and lands within 10; every
+macro moves the render, an unknown key does not, a NaN falls back; WAVER's pitch spread grows with
+the knob; a harder pick is louder and has a brighter level-matched onset on every voice; four takes
+are four distinct strikes in tune; render length equals `renderFrames` and the class is LOOP, never
+a drum; the tail decays under half the strike; JSON round-trips; scramble stays in bounds.

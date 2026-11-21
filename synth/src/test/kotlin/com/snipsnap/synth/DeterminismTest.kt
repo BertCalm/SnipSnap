@@ -460,6 +460,15 @@ class DeterminismTest {
     }
 
     @Test
+    fun `DRAWL retains its velocity and take across renders`() {
+        for (voice in DrawlVoice.entries) {
+            val patch = DrawlPatch("Drawl canary", voice, mapOf("SLIDE" to .7f), velocity = .4f, take = 3)
+            assertContentEquals(patch.render().samples, patch.render().samples, "$voice")
+            assertContentEquals(patch.render().samples, Patches.fromJsonText(patch.toJsonText()).render().samples, "$voice")
+        }
+    }
+
+    @Test
     fun `CONSORT retains its section velocity and take across renders`() {
         val patch = ConsortPatch("Section canary", ConsortVoice.CLARINET, mapOf("HOLD" to 0.2f),
             chairs = listOf(ConsortChair(ConsortVoice.FLUTE, ConsortInterval.OCT_UP), ConsortChair(ConsortVoice.BASSOON, ConsortInterval.OCT_DOWN)),

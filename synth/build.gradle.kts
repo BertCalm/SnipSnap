@@ -3359,6 +3359,17 @@ tasks.register<JavaExec>("generateConsortKit") {
     args("${rootDir}/testkit")
 }
 
+/** Render DRAWL's Kotlin audition under the Python prototype's clip names, for compare_kotlin.py and the owner's listen. See DrawlAuditionGenerator. */
+tasks.register<JavaExec>("generateDrawlAudition") {
+    group = "distribution"
+    description = "Render the DRAWL slide and steel string audition clips and their recipes."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.synth.DrawlAuditionGenerator")
+    workingDir = rootDir
+    maxHeapSize = "768m"
+    args(providers.gradleProperty("drawlOutput").orNull ?: "${rootDir}/testkit/drawl-audition")
+}
+
 /** Render CONSORT's Kotlin audition: clips, recipes, metrics and a listening page under testkit/consort-audition/. See ConsortAuditionGenerator. */
 tasks.register<JavaExec>("generateConsortAudition") {
     group = "distribution"
