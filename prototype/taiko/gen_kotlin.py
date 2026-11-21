@@ -45,7 +45,10 @@ SECS = {"ODAIKO_A": 1.45, "ODAIKO_B": 1.45, "NAGADO": 1.2, "SHIME": 0.8, "SHIME_
 strokes = {}
 for name, secs in SECS.items(): strokes[name], _ = simple(name, secs)
 strokes["CLAPPER"] = clapper(); strokes["COWBELL"] = cowbell()
-for name in ("CLAPPER", "COWBELL"):       # level these two to a unit peak as well
+# the fan (round 7): its gestures are fitted directly as stroke tables
+for fan in ("FAN", "FAN_SWEEP"):
+    if fan + "_STROKE" in models: strokes[fan] = {k: (v if k != "hits" else [dict(h) for h in v]) for k, v in models[fan + "_STROKE"].items()}
+for name in [n for n in ("CLAPPER", "COWBELL", "FAN", "FAN_SWEEP") if n in strokes]:       # level these to a unit peak as well
     pk = float(np.max(np.abs(py_render(strokes[name], 1.45 if name == "COWBELL" else 0.5))))
     for h in strokes[name]["hits"]:
         h["sin"] = np.array(h["sin"]) / pk; h["cos"] = np.array(h["cos"]) / pk; h["bands"] = [[lo, hi, a / pk, T] for lo, hi, a, T in h["bands"]]

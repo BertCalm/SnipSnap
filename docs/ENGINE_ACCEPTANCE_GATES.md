@@ -1300,6 +1300,31 @@ Source: the commit that adds this entry. Details: [the KERF spec](superpowers/sp
 - **Presets and picker:** the 27 presets (one pool hit each, soft to hard) were on the same page the owner heard (2026-11-21). The SYNTH picker test (`NewEngineSynthScreenTest`) passed on CI's emulator.
 - **Overall: complete (2026-11-21).** The twins, the velocity layers and takes, the engine's presets, the four genre kits and their rolls and risers have all been heard by the owner, and played on phone and MPC: the twins on 2026-11-20, the kits on 2026-11-21. In software the kits are proved through MPC 3 export; MPC 2 export was proved for the twins (`KerfGateTest`) and not run on the kits. Preserve `Kerf.MODEL_VERSION` 1, `KerfKits.VERSION` 1, `KerfRender.MODEL_VERSION` 1 and `KerfVelocity.DEPTH` 3 as the accepted baseline.
 
+## TERRA stick voices: Japanese kits (complete, 2026-11-20: sound approved, phone and MPC reported good)
+
+Ten TERRA voices (ODAIKO, NAGADO, SHIME, KA, KANE, CHAPPA, BINZASARA, COWBELL,
+WATER_DRUM, FAN), the first nine picked by ear from Python renders over six rounds; details in
+[TERRA_STICKS](TERRA_STICKS.md).
+
+| Gate | Status |
+|---|---|
+| Melodic, keygroups, chord tools, STRUM | Not applicable: drum and percussion voices |
+| Percussion: authored roll/riser | Pass: ROLL and RISER saved in the recipe, in all four kits; sound approved 2026-11-20 |
+| Drums: multiple distinct genre kits | Pass: TERRA MATSURI, THUNDER, BON and the processed DUSK. The owner approved their sound on 2026-11-20 ("Sounds good, I like"); every pad is pinned as heard (`TerraStickKitsPinsTest`) |
+| Velocity levels | Pass, automated: timbral touches through render, save, MPC 3, MPC 2, SFZ and playback (`TerraStickKitsTest`, `TerraStickKitsRoundTripTest`) |
+| Round robin | Pass, automated: four takes per touch through render, save, MPC 3, SFZ and playback; MPC 2 keeps each zone's first take under the owner's 2026-11-14 format limit |
+| Hardware | Pass, owner's report (2026-11-20): asked to check that repeated hits cycle and soft hits sound softer on phone and MPC, the owner answered "Is good". Kits and MPC export format played were not stated |
+
+Complete against the applicable gates as of 2026-11-20. The forty stick-voice
+presets were kept by the owner the same day ("Ok, they are good") and are pinned
+in `TerraPresetsTest`.
+
+Round 8 (2026-11-21): six pads ring past the hit's cut, three DUSK pads run the new
+GRAIN section, and every roll and riser is locked to its kit's tempo. The owner heard
+each beside the approved pad and took all of them ("Everything sounds great"); the
+kits are re-pinned as heard. The gates above stand.
+
+
 ## FACSIMILE kits (Kotlin built and heard, 2026-11-20)
 
 Four drum kits replicated by synthesis from nine of the owner's reference loops: SHUFFLE, KNOCK, HALF-TIME, TEXTURE.

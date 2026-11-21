@@ -1,15 +1,15 @@
 package com.snipsnap.synth
 
 /**
- * TERRA's factory bank: four presets on each of its twenty-one playing voices (COMPOUND_MEMBRANE is retired and has none).
+ * TERRA's factory bank: four presets on each of its twenty-two playing voices (COMPOUND_MEMBRANE is retired and has none).
  *
  * The sixteen pads of [TerraKits.classic], which the owner kept in full (round terra-kit-1, 2026-11-14), are filed
  * here under their own names and macros, so each is the kept pad byte for byte. The other thirty-two are new settings
  * of the same voices, written out in full so no preset moves with a voice's defaults. The owner kept the forty presets
  * of the first ten voices in round terra-presets-1 (W1–W10, 2026-11-15); BAYAN's and TUN's new three were reworked
  * after that round, and the owner kept both reworked sets in round terra-presets-2 (Z2 and Z4, 2026-11-15). Those 48 are
- * pinned in `TerraPresetsTest`. See docs/TERRA_PROMOTION.md. The nine stick voices' thirty-six (2026-11-20,
- * docs/TERRA_STICKS.md) are provisional: written from the prototype's rounds, not yet heard from the app, not pinned.
+ * pinned in `TerraPresetsTest`. See docs/TERRA_PROMOTION.md. The ten stick voices' forty (docs/TERRA_STICKS.md)
+ * the owner kept on 2026-11-20 after hearing each from the app at a soft and a full touch; they are pinned there too.
  *
  * Names describe the drum and the stroke; none names a pitch it does not have. Every name fits a pad label (14).
  */
@@ -230,6 +230,16 @@ object TerraPresets {
             p("Water Tap", TerraVoice.WATER_DRUM, "TUNE" to 0.5f, "DECAY" to 0f, "FORCE" to 1f, "ATTACK" to 0.8f),
             // A little higher, a soft stick.
             p("Water Soft", TerraVoice.WATER_DRUM, "TUNE" to 0.7f, "DECAY" to 0.5f, "FORCE" to 0f, "ATTACK" to 0.2f),
+        )
+        TerraVoice.FAN -> listOf(
+            // The slap as fitted: flaps dying away over 106 ms.
+            p("Fan Slap", TerraVoice.FAN, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "ATTACK" to 0.5f, "SWEEP" to 0f),
+            // The swish as fitted: flaps swelling to their peak at 66 ms.
+            p("Fan Swish", TerraVoice.FAN, "TUNE" to 0.5f, "DECAY" to 0.5f, "FORCE" to 0.5f, "ATTACK" to 0.5f, "SWEEP" to 1f),
+            // A smaller fan snapped hard: higher, shorter, more attack.
+            p("Fan Snap", TerraVoice.FAN, "TUNE" to 0.9f, "DECAY" to 0.15f, "FORCE" to 1f, "ATTACK" to 0.8f, "SWEEP" to 0f),
+            // A large fan waved softly: lower, longer, between the slap and the swish.
+            p("Fan Wave", TerraVoice.FAN, "TUNE" to 0.1f, "DECAY" to 0.9f, "FORCE" to 0.2f, "ATTACK" to 0.3f, "SWEEP" to 0.6f),
         )
     }
 }
