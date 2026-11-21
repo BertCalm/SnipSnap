@@ -109,8 +109,12 @@ HOLD's top step (0.99 and up) makes a gated pad that sustains while held: one se
 held note. The owner heard it on a two-second cycle and asked for more humanization, then chose,
 from a 2 s, a 6 s and an 8 s cycle, the 8 s cycle with the slow wanders (breath, pitch drift, vibrato
 speed and depth, air) 1.6 times as deep ("I like c"). `ConsortSustainPinsTest` pins those loops. The
-keyboard's held keys keep the two-second cycle kept in round K3; whether they follow is the owner's
-call. Every HOLD under the step renders as before.
+keyboard's held keys followed the same day ("Keys should be like held"): each key is its attack, then
+a loop on the same eight-second cycle. A key sample is about 8.3 s instead of 2.3 s, so a solo
+instrument is roughly 60 MB of PCM24 instead of 16, and making one takes a bit over twice as long
+(a CLARINET instrument's test: 67 s against 29 s on a desktop). `ConsortK3PinsTest` moved to
+`k3-heard-v2.sha256`: the key lines changed, every other line is version 1's. Every HOLD under the
+step renders as before.
 
 The same day's speed pass stopped the filters working through the silence after the breath (subnormal
 floats) and fused the house band limit's four passes into one: the default OBOE note went from 92 to

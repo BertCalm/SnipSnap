@@ -979,7 +979,10 @@ object Consort {
         val usableFrames: Int get() = ((seconds - 0.08f - Bore.LOOP_MARGIN_SECONDS) * RATE).toInt()
     }
 
-    /** The keys' held note, kept by ear in round K3: a two-second period, BORE's held length, the one-shot's wanders. */
+    /**
+     * The held note kept by ear in round K3: a two-second period, BORE's held length, the one-shot's wanders. The keys
+     * used it until the owner asked for them to be like the held pads (2026-11-21); both use [PAD_HELD] now.
+     */
     internal val KEYS_HELD = Held(HELD_PERIOD_SECONDS, HELD_SECONDS, 1f)
 
     /** A held note blown long enough to cut and retune a loop of [period] seconds: settle, trim window, blend and margin. */
@@ -988,7 +991,7 @@ object Consort {
     /**
      * A sustaining pad's held note: an eight-second cycle with the slow wanders 1.6 times as deep as a one-shot's.
      * The owner heard the keys' two-second cycle on a held pad and asked for more humanization, then heard this
-     * against a six-second cycle and the two-second one, and chose it (2026-11-21, "I like c"). The keys keep theirs.
+     * against a six-second cycle and the two-second one, and chose it (2026-11-21, "I like c"); the keys followed ("Keys should be like held").
      */
     internal val PAD_HELD: Held = heldFor(PAD_PERIOD_SECONDS, PAD_WANDER)
     const val PAD_PERIOD_SECONDS = 8f

@@ -38,14 +38,14 @@ class ConsortKeysTest {
     }
 
     @Test
-    fun `every voice's bottom, middle and top keys loop at two seconds with the wave matched and no dip`() {
+    fun `every voice's bottom, middle and top keys loop at eight seconds with the wave matched and no dip`() {
         for (voice in ConsortVoice.entries) for (midi in ConsortKeys.padMidis(voice).let { listOf(it.first(), it[4], it.last()) }) {
             for (touch in ConsortKeys.TOUCHES.indices) {
                 val held = ConsortKeys.measured(plain(voice), ConsortKeys.Cell(midi, touch, 0))
                 val label = "$voice $midi touch $touch"
                 assertTrue(held.join.correlation >= Bore.LOOP_MIN_CORRELATION, "$label correlates ${held.join.correlation}")
                 assertTrue(held.join.blendDipDb >= -Bore.LOOP_MAX_DIP_DB, "$label dips ${held.join.blendDipDb}")
-                assertTrue(abs(held.join.lengthFrames - Consort.HELD_PERIOD_SECONDS * rate) <= rate / 40,
+                assertTrue(abs(held.join.lengthFrames - Consort.PAD_PERIOD_SECONDS * rate) <= rate / 40,
                     "$label loops at ${held.join.lengthFrames} frames, not its period")
                 assertTrue(held.note.snip.samples.all { it.isFinite() && it in -1f..1f }, label)
             }

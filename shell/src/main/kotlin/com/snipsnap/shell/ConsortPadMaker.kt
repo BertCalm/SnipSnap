@@ -28,8 +28,8 @@ object ConsortPadMaker {
     /** Soft first: the export's windows and the phone's. */
     val VELOCITY_WINDOWS: List<IntRange> = ConsortKeys.VELOCITY_WINDOWS
 
-    /** How long [preview] holds its key: past the first wrap of a two-second loop that starts near 0.3 s. */
-    const val PREVIEW_HOLD_SECONDS = 4f
+    /** How long [preview] holds its key: past the first wrap of an eight-second loop that starts near 0.3 s. */
+    const val PREVIEW_HOLD_SECONDS = 10f
 
     /** The preview's touch: inside the hard window. */
     const val PREVIEW_VELOCITY = .8f
