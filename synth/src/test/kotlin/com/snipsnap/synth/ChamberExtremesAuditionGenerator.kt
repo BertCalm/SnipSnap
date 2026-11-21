@@ -114,7 +114,7 @@ object ChamberExtremesAuditionGenerator {
         val centers = mutableListOf<Map<String, Any?>>()
         val replays = mutableListOf<Map<String, Any?>>()
         val options = Chamber.ProbeOptions(normalize = true, recordStems = true, recordDiagnostics = true, seconds = 4.5f)
-        for (voice in ChamberVoice.entries) {
+        for (voice in Chamber.ORIGINAL_VOICES) {
             val slug = voice.name.lowercase(Locale.ROOT)
             val center = baseline.find(voice)
             val centerPatch = baseline.patch(center)
@@ -183,7 +183,7 @@ object ChamberExtremesAuditionGenerator {
         // C3 has the same accepted control anchor. It has no .75-velocity PCM
         // counterpart in the retained study, so prove identity directly and do
         // not invent a baseline-WAV comparison for this register.
-        for (voice in ChamberVoice.entries) {
+        for (voice in Chamber.ORIGINAL_VOICES) {
             val patch = ChamberPatch("${voice.name} accepted C3 center", voice, Chamber.defaults(voice),
                 midi = 48, model = BASELINE_MODEL)
             val candidate = patch.copy(model = Chamber.WIDE_RANGE_MODEL)
@@ -212,7 +212,7 @@ object ChamberExtremesAuditionGenerator {
         // triangle fundamental, instead of promising monotonic brightness.
         val upperMetal = if ("--extended-checks" in flags) buildList<Map<String, Any?>> {
             val names = listOf("Membrane", "Bar", "Cowbell", "Triangle")
-            for (voice in ChamberVoice.entries) for (strike in listOf(.65f, .75f, .85f)) {
+            for (voice in Chamber.ORIGINAL_VOICES) for (strike in listOf(.65f, .75f, .85f)) {
                 val patch = ChamberPatch("${voice.name} high-metal contact report", voice,
                     Chamber.defaults(voice) + ("STRIKE" to strike), midi = 84, model = Chamber.WIDE_RANGE_MODEL)
                 val probe = render(patch, options)
@@ -251,7 +251,7 @@ object ChamberExtremesAuditionGenerator {
             "models" to mapOf("accepted" to BASELINE_MODEL, "wider" to Chamber.WIDE_RANGE_MODEL),
             "baseline" to mapOf("manifest" to "../manifest.json", "manifestSha256" to sha(manifestFile),
                 "sourceRevision" to baseline.sourceRevision, "policy" to "Existing accepted WAVs are referenced, never replaced or relabelled as new renders"),
-            "controls" to controls, "voices" to ChamberVoice.entries.map { it.name }, "clips" to clips,
+            "controls" to controls, "voices" to Chamber.ORIGINAL_VOICES.map { it.name }, "clips" to clips,
             "checks" to "checks.json", "provenance" to "source-provenance.json", "metricsCsv" to "metrics.csv",
             "summary" to "Unchanged accepted centers and current endpoints beside an explicit model-4 candidate. This study does not promote model 4 into the app or factory library.",
             "normalization" to "Complete mixes use AuditionLevel's loudest 200 ms RMS .03 with .99 peak guard. Raw gain is 1. Stems are measured at actual mix gain and never independently normalized.",
@@ -374,7 +374,7 @@ object ChamberExtremesAuditionGenerator {
     }
 
     private fun extendedChecks(root: File, options: Chamber.ProbeOptions): List<Map<String, Any?>> = buildList {
-        for (voice in ChamberVoice.entries) {
+        for (voice in Chamber.ORIGINAL_VOICES) {
             val center = ChamberPatch("Wider combined check", voice, Chamber.defaults(voice), model = Chamber.WIDE_RANGE_MODEL)
             val cases = mutableListOf<Pair<String, ChamberPatch>>()
             for ((a, b) in listOf("MATERIAL" to "PLACEMENT", "DIVIDE" to "PLACEMENT"))

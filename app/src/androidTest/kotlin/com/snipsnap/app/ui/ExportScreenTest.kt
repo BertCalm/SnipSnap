@@ -340,6 +340,15 @@ class ExportScreenTest : ComposeScreenTest() {
         compose.onNodeWithText(Copy.putOnCardOver(what), useUnmergedTree = true).assertExists()
         button(Copy.putOnCardOver(what)).assertIsEnabled()
 
+        // A card that refused the copy after the phone write (UAT 2026-11 user states, S-4): the
+        // same slot offers the card again, not a replace. Then back to the replace offer for the rest.
+        session!!.cardPending = CardPending(outcome, Uri.EMPTY, what = "", refused = true)
+        pump()
+        button(Copy.CARD_TRY_AGAIN).assertIsEnabled()
+        button(Copy.putOnCardOver(what)).assertDoesNotExist()
+        session!!.cardPending = CardPending(outcome, Uri.EMPTY, what)
+        pump()
+
         // A card copy in flight: shareExport() only ever reads the already-
         // settled `lastOutcome` and calls a synchronous ShareOut.send, so it
         // never needed to gate on `busy` the way the card-offer button and

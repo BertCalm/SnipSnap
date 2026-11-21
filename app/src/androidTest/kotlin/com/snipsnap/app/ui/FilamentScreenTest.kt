@@ -203,8 +203,10 @@ class FilamentScreenTest : ComposeScreenTest() {
         // factory sound must replace every field of that older draft.
         assertEquals(old, currentPatch(FilamentVoice.THREAD))
         assertEquals(.81f, progress("INJECT"), 0f)
-        assertEquals(12, FilamentPresets.all().size)
-        for (voice in FilamentVoice.entries) {
+        // Twelve original presets, then Glass Flute (FRAY) and String Braid, Glass Harmonica and Spring Tank
+        // (BRAID, HALO, SPRING), each kept on 20-21 Nov 2026.
+        assertEquals(16, FilamentPresets.all().size)
+        for (voice in Filament.KEPT_VOICES) {
             activate(voice.name)
             for (macro in Filament.macrosFor(voice)) slider(macro.name).assertExists()
             assertTrue("ROOT stepper row", currentRootOrNull() != null)
@@ -306,13 +308,13 @@ class FilamentScreenTest : ComposeScreenTest() {
     @Test
     fun touch_choice_opens_enabled_for_each_voice_and_reopens_without_changing_the_recipe() {
         val root = shelfRoot()
-        for (voice in FilamentVoice.entries) {
+        for (voice in Filament.KEPT_VOICES) {
             settings["recipe.FILAMENT.${voice.name}"] = FilamentPresets.forVoice(voice).first().copy(
                 midi = 57, velocity = .7f, config = FilamentConfig(seed = 73, profile = FilamentProfile.LATE),
             ).toJsonText()
         }
         show(root)
-        for (voice in FilamentVoice.entries) {
+        for (voice in Filament.KEPT_VOICES) {
             activate(voice.name)
             val before = currentPatch(voice)
             activate("MAKE INSTRUMENT")

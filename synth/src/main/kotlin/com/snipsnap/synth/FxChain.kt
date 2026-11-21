@@ -128,8 +128,8 @@ data class FxChain(
     val flanger: Map<String, Float>? = null,
     val tremolo: Map<String, Float>? = null,
     val rotary: Map<String, Float>? = null,
-    /** The granular scatter ([Grain]): after REWIND, before SPRING. Last in the parameter list, as it arrived last. */
-    val grain: Map<String, Float>? = null,
+    /** GRANULAR, the granular scatter ([Grain]): after REWIND, before SPRING. Last in the parameter list, as it arrived last. */
+    val granular: Map<String, Float>? = null,
 ) {
     init {
         for (s in SECTIONS) {
@@ -293,7 +293,7 @@ data class FxChain(
             Section("rotary", Rotary.MACROS, { it.rotary }, { c, m -> c.copy(rotary = m) }, Rotary::process),
             Section("echo", Echo.MACROS, { it.echo }, { c, m -> c.copy(echo = m) }, Echo::process),
             Section("rewind", Rewind.MACROS, { it.rewind }, { c, m -> c.copy(rewind = m) }, Rewind::process),
-            Section("grain", Grain.MACROS, { it.grain }, { c, m -> c.copy(grain = m) }, Grain::process),
+            Section("granular", Grain.MACROS, { it.granular }, { c, m -> c.copy(granular = m) }, Grain::process),
             Section("spring", Spring.MACROS, { it.spring }, { c, m -> c.copy(spring = m) }, Spring::process),
             Section("room", Room.MACROS, { it.room }, { c, m -> c.copy(room = m) }, Room::process),
             Section("hush", Hush.MACROS, { it.hush }, { c, m -> c.copy(hush = m) }, Hush::process),

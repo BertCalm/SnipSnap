@@ -37,11 +37,12 @@ object BorePadMaker {
     val VELOCITY_WINDOWS: List<IntRange> = BoreKeys.VELOCITY_WINDOWS
 
     /**
-     * The voices offered on held keys: FLUTE and SAX. HOLLOW, SHAWM, SHAKU, PANPIPE and VESSEL joined [Bore.KEPT_VOICES] on 2026-11-20 as
-     * one-shots and LOOPs, which is what the owner heard (bore-voices-1, touch-bore-1); their held keys are cut by the same [BoreKeys] path
-     * but are not offered until they are heard, as LIBRATION's new voices stay finite only.
+     * The voices offered on held keys: every kept voice ([Bore.KEPT_VOICES]). FLUTE and SAX were heard and kept held; HOLLOW, SHAWM, SHAKU,
+     * PANPIPE and VESSEL joined the engine on 2026-11-20 as one-shots and LOOPs and are offered held since 2026-11-21, cut by the same
+     * [BoreKeys] path, their soft layer the soft touch the owner kept ([BoreKeys.CANDIDATE_SOFT_BREATH_SHARE],
+     * [com.snipsnap.synth.BoreCandidates.HELD_TOUCH]), heard in round held-ab-1.
      */
-    val VOICES: Set<BoreVoice> = setOf(BoreVoice.FLUTE, BoreVoice.SAX)
+    val VOICES: Set<BoreVoice> = Bore.KEPT_VOICES.toSet()
 
     /**
      * How long [preview] holds its key: past the zone's end (3.72 to 3.92 s as measured), where it wraps to the loop start,

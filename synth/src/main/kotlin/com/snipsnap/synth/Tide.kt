@@ -533,8 +533,48 @@ object Tide {
      * Each stage's cutoff and damping are fixed, so each runs
      * [Dsp.TptSvf.lowPassInPlace]: the same samples as [Dsp.TptSvf.process]
      * per sample, without recomputing the coefficients' `tan` every sample.
+     *
+     * The four stages run in one pass over [buf] (2026-11-21), each sample
+     * through stage 1 to 4 in turn with every stage's state in locals. Each
+     * stage does [Dsp.TptSvf.lowPassInPlace]'s operations in its order, and the
+     * JVM neither reorders nor fuses float arithmetic, so the samples are the
+     * four-pass version's to the bit (`TideTest` holds the two equal); one pass
+     * reads and writes the buffer once instead of four times.
      */
     internal fun bandLimit(buf: FloatArray, rate: Int) {
+        if (buf.isEmpty()) return
+        val g = kotlin.math.tan(kotlin.math.PI * (BAND_LIMIT_HZ.coerceIn(10f, rate * 0.49f)) / rate).toFloat()
+        fun a1(k: Float) = 1f / (1f + g * (g + k.coerceAtLeast(0.1f)))
+        val b1 = a1(BUTTERWORTH_8[0]); val b2 = g * b1; val b3 = g * b2
+        val c1 = a1(BUTTERWORTH_8[1]); val c2 = g * c1; val c3 = g * c2
+        val d1 = a1(BUTTERWORTH_8[2]); val d2 = g * d1; val d3 = g * d2
+        val e1 = a1(BUTTERWORTH_8[3]); val e2 = g * e1; val e3 = g * e2
+        var p1 = 0f; var p2 = 0f; var q1 = 0f; var q2 = 0f
+        var r1 = 0f; var r2 = 0f; var t1 = 0f; var t2 = 0f
+        for (i in buf.indices) {
+            var x = buf[i]
+            var v3 = x - p2
+            var v1 = b1 * p1 + b2 * v3
+            var v2 = p2 + b2 * p1 + b3 * v3
+            p1 = 2f * v1 - p1; p2 = 2f * v2 - p2; x = v2
+            v3 = x - q2
+            v1 = c1 * q1 + c2 * v3
+            v2 = q2 + c2 * q1 + c3 * v3
+            q1 = 2f * v1 - q1; q2 = 2f * v2 - q2; x = v2
+            v3 = x - r2
+            v1 = d1 * r1 + d2 * v3
+            v2 = r2 + d2 * r1 + d3 * v3
+            r1 = 2f * v1 - r1; r2 = 2f * v2 - r2; x = v2
+            v3 = x - t2
+            v1 = e1 * t1 + e2 * v3
+            v2 = t2 + e2 * t1 + e3 * v3
+            t1 = 2f * v1 - t1; t2 = 2f * v2 - t2
+            buf[i] = v2
+        }
+    }
+
+    /** The four-pass band limit [bandLimit] replaced, kept so a test can hold the two equal to the bit. */
+    internal fun bandLimitByPasses(buf: FloatArray, rate: Int) {
         for (k in BUTTERWORTH_8) Dsp.TptSvf(rate).lowPassInPlace(buf, BAND_LIMIT_HZ, k)
     }
 

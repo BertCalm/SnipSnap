@@ -29,6 +29,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.ProgressBarRangeInfo
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.progressBarRangeInfo
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.setProgress
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -411,10 +417,27 @@ private fun NeedleStep(
             modifier = Modifier.fillMaxWidth(),
             onClick = onRepick,
         )
+        val sampleRate = head.original.sampleRate
         Box(
             Modifier
                 .fillMaxWidth()
                 .weight(1f)
+                // The cut as an adjustable control (UAT 2026-11 user states, S-8): it was drag-only
+                // and had no semantics, so TalkBack or switch access could only keep the default. The
+                // progress semantics give TalkBack's adjust gesture a target, as SPLIT's fader does;
+                // a set lands and snaps like a drag let go.
+                .semantics {
+                    contentDescription = Copy.SPLICE_CUT
+                    stateDescription = Copy.spliceCutAt(needleFrame.toDouble() / sampleRate)
+                    if (!busy) {
+                        progressBarRangeInfo = ProgressBarRangeInfo(needleFrame.toFloat(), 0f..spliceMaxFrame.toFloat())
+                        setProgress { target ->
+                            onNeedleChange(target.toInt().coerceIn(0, spliceMaxFrame))
+                            onNeedleSettle()
+                            true
+                        }
+                    }
+                }
                 .pointerInput(head, tail) {
                     // `size` read fresh inside `frameAt` on every call, not
                     // once at the top of this block - the same "layout may
@@ -445,6 +468,23 @@ private fun NeedleStep(
                 SpliceLane(head, sharedMaxFrames, needleFrame, "HEAD", scheme, Modifier.weight(1f))
                 SpliceLane(tail, sharedMaxFrames, needleFrame, "TAIL", scheme, Modifier.weight(1f))
             }
+        }
+        // The same cut, a step at a time, for anyone a drag does not serve (S-8). Unsnapped.
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            ActionButton(
+                Copy.SPLICE_CUT_EARLIER,
+                scheme,
+                enabled = !busy && needleFrame > 0,
+                modifier = Modifier.weight(1f),
+                onClick = { onNeedleChange(SpliceNeedle.nudge(needleFrame, -1, sampleRate, spliceMaxFrame)) },
+            )
+            ActionButton(
+                Copy.SPLICE_CUT_LATER,
+                scheme,
+                enabled = !busy && needleFrame < spliceMaxFrame,
+                modifier = Modifier.weight(1f),
+                onClick = { onNeedleChange(SpliceNeedle.nudge(needleFrame, 1, sampleRate, spliceMaxFrame)) },
+            )
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             ActionButton(

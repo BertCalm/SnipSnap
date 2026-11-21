@@ -38,7 +38,7 @@ object StarterShelf {
         ),
         Group(
             Copy.STARTER_HEADING_BREATH,
-            listOf("embouchure", "bellows", "obbligato", "circuit", "undertow", "aerostat"),
+            listOf("embouchure", "bellows", "obbligato", StarterKits.CONSORT_ID, com.snipsnap.synth.ConsortRoundRobinKits.ID, "circuit", "undertow", "aerostat"),
         ),
         Group(
             Copy.STARTER_HEADING_VOICES,

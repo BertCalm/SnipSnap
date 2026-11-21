@@ -3,7 +3,7 @@ package com.snipsnap.synth
 import kotlin.math.pow
 
 /**
- * Playable model-three FILAMENT instruments: THREAD, PULSE and CURL at C2–C6.
+ * Playable model-three FILAMENT instruments at C2–C6: THREAD, PULSE, CURL and the candidates.
  *
  * The same periodic excitation starts from a quiet network and continues until the real
  * delay, halo and activity states settle. The returned [KeyNote] retains that onset and
@@ -18,7 +18,8 @@ import kotlin.math.pow
 object FilamentKeys {
     const val MIN_MIDI = Filament.MIN_MIDI
     const val MAX_MIDI = Filament.MAX_MIDI
-    private val supportedVoices = setOf(FilamentVoice.THREAD, FilamentVoice.PULSE, FilamentVoice.CURL)
+    // Every voice, candidates included: each one's held loop is the same proven network path.
+    private val supportedVoices = FilamentVoice.entries.toSet()
 
     /** Keep the phone, package maker and same-network renderer on one audited capability. */
     fun supports(patch: FilamentPatch): Boolean =

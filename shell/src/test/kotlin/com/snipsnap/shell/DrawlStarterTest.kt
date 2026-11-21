@@ -43,9 +43,9 @@ class DrawlStarterTest {
         assertEquals(Copy.STARTER_HEADING_PLUCKS, group.heading)
         assertEquals(2, StarterShelf.GROUPS.sumOf { g -> g.ids.count { it == DrawlKits.ID || it == DrawlKits.TAKES_ID } }, "each on the shelf once")
         assertEquals(group.ids.indexOf(DrawlKits.ID) + 1, group.ids.indexOf(DrawlKits.TAKES_ID))
-        // Stored starter order only grows at the end: both were appended after ACCORD TAKES.
+        // Stored starter order only grows at the end: both were appended after CONSORT TAKES.
         val ids = StarterKits.ALL.map { it.id }
-        assertEquals(com.snipsnap.synth.AccordRoundRobinKits.ID, ids[ids.indexOf(DrawlKits.ID) - 1])
+        assertEquals(com.snipsnap.synth.ConsortRoundRobinKits.ID, ids[ids.indexOf(DrawlKits.ID) - 1])
         assertEquals(ids.indexOf(DrawlKits.ID) + 1, ids.indexOf(DrawlKits.TAKES_ID))
     }
 

@@ -7,7 +7,9 @@ excitation and energy returning to the instruments. Material names describe
 designed musical responses, rather than measured building materials.
 
 This stage implements **HYBRID and AQUARIUM**, six factory recipes, complete
-patch replay, phone controls and a sixteen-pad dry MPC kit. The supplied
+patch replay, phone controls and a sixteen-pad dry MPC kit. Five more voices,
+GLAZE, TIMBER, MASS, ALLOY and BOUNCE, were kept on 21 Nov 2026 (see
+[Kept voices](#kept-voices-21-nov-2026) at the end); the kit stays the two rooms'. The supplied
 [engineering specification](CHAMBER_SPEC.md) remains the unchanged proposal.
 Its other four voices, 36-preset library, expanded room editor and sustained
 HOLD operation remain later work. The owner accepted the revised membrane
@@ -520,3 +522,81 @@ raw/matched switching, keyboard stop, filters, persistent notes, JSON export and
 downloads. No layout overflow, console errors or failed requests were observed.
 To open the downloaded starter page locally, serve its directory over HTTP
 (for example `python3 -m http.server`); it loads the included JSON manifest.
+
+## Candidate voices, round chamber-voices-1 (20 Nov 2026)
+
+The melodic gate asks for six voices; CHAMBER has two rooms (HYBRID, AQUARIUM). Five candidates (one a spare) are
+appended to `ChamberVoice` after them, so saved names and ordinals never move. `Chamber.KEPT_VOICES` names the voices
+players are offered: presets, the kit, the picker (`SynthScreen`) and the tests that walk the kept contract read it.
+A candidate has no preset, no kit pad and no picker entry until the owner keeps it, and renders on the register
+model (5) only. None has been heard.
+
+Each candidate keeps the engine whole (one shared strike, modal instruments, the passive room that takes their energy
+and gives it back, the listener taps) and changes what the room holds (`ChamberCandidates.kt`):
+
+| Voice | What it is | How the engine is used |
+|---|---|---|
+| TIMBER | a marimba | the bar's modes tuned 1:4:10; a wooden room whose walls each carry the note as a resonance at every pitch (the register model's sympathetic mode, made a marimba's tubes); the bar coupled to the room enough to feed them |
+| MASS | a big drum in a stone hall | the membrane alone, longer, coupled strongly (2/s against .5/s) to a 14 × 15 × 8 m concrete room whose answer is heard louder |
+| ALLOY | a steel pan | the cowbell's shell retuned to a pan's tone field (root, octave, twelfth, weak skirt modes), played on the note in a metal room |
+| GLAZE | a singing bowl | the triangle replaced by a bowl's modes, each a pair 5 cents apart about the mode, so every partial beats; a glass room |
+| BOUNCE (spare) | a hammered string | the bar becomes a slightly stiff string; the shared strike comes back twice, lighter, each return on a whole number of the note's periods |
+
+Touch is wider than the kept rooms' and pivots on the same default (.75, the sound a KEEP keeps): from soft (.3) to
+hard (1) it moves hardness, tilts every mode (more below the default than above), and sets the level after leveling
+(soft 9 dB under the default, hard 2 dB over, never levelled back). Measured at C3 and C4: each step 5.1 to 18.1 dB
+of level-matched third-octave shape, soft against hard 12.1 to 22.5 dB, soft 11 dB under hard.
+`ChamberCandidateVoicesTest` holds these (each step at least 3.5 dB, soft against hard at least 8, soft at least 6 dB
+quieter), the pitch (within 15 cents from C2 to C6), distinctness (at least 3.7 dB from every other voice; least
+measured 6.0, ALLOY/BOUNCE at G#4), clean ends, a top register no brighter than AQUARIUM's plus 3 dB, and one check of
+each voice's own mechanism. It also pins 30 kept renders (both rooms on every model, touch and register extremes, all
+presets and the kit's original recipes) to hashes from the build before this round (7495ca56c).
+
+## Candidate voices, round chamber-voices-2 (21 Nov 2026)
+
+Verdict on round chamber-voices-1 (21 Nov 2026): GLAZE, range and touch, KEEP. TIMBER, MASS, ALLOY and BOUNCE, range
+and touch, TWEAK: "More distinctive". Through the room network alone they shared CHAMBER's strike, envelope and body.
+As FILAMENT's kept round 2 did, each reworked voice now carries an identity layer of its own, a recognisable
+instrument with its own attack, sustain, motion and spectrum (`ChamberCandidateLayers.kt`, built from
+`VoiceLayerKit.kt`), and the voice's room network plays underneath at .27 (MASS .30) after both are brought to the same
+loudness. The engine's release, leveling and touch level then run as before. GLAZE renders bit for bit as heard
+(pinned: 16 renders against c42bc8e89), and so do HYBRID, AQUARIUM, every preset and the kit (the 30 kept pins).
+
+| Voice | Instrument | What makes it unlike the others |
+|---|---|---|
+| TIMBER | a marimba | a yarn mallet's thock; bar modes 1 : 3.93 : 9.2 whose overtones die within half a second; the root held up by the tube, which blooms in over 20 ms and rings longer, with a faint hollow twelfth |
+| MASS | a huge low drum in a hall | the pitch drops 1 to 4 semitones in the first 50 ms (the skin relaxing; more when hard); membrane modes; the hall booms back with a low noise bloom and its own modes at 41 to 118 Hz; a hard beater adds the skin's slap |
+| ALLOY | a steel pan | harmonic partials 1 to 5 whose pitch bends down 15 to 50 cents as the note speaks; the octave blooms in after the root; every partial has a partner a few hertz up and root and octave trade energy three times a second (the shimmer) |
+| BOUNCE | a cimbalom | a course of three strings 1.5 cents apart; a hand hammer that rebounds twice (about 60 and 105 ms later, each landing on a whole number of periods, a little brighter, with its own click); more and louder rebounds when hard |
+
+Touch is the mallet, beater, stick or hammer itself: soft leaves mostly the root, gentle and dark (and for MASS a hall
+that barely wakes), hard is bright, quick and noisy. Measured at C3 and C4 (soft .3, default .75, hard 1): each step
+5.6 to 16.2 dB of level-matched third-octave shape, soft against hard 13.1 to 31.7 dB, soft 11 dB under hard. Nearest
+other voice over C2, E3, G#4, C6: TIMBER 17.3 dB, MASS 10.7, ALLOY 14.2, BOUNCE 10.7. `ChamberCandidateVoicesTest`
+now asks at least 9 dB of the reworked voices (3.7 for the rest) and checks each instrument: TIMBER's 3.93 mode falls
+48 dB while its root falls 11 (.05 to .6 s), MASS's pitch is 235 cents high at the strike, its hall mode at 53 Hz 16
+times the 47 Hz gap, ALLOY's root wavers 2.1 dB, BOUNCE's rebound lifts the level 1.4 times at the default touch. The
+layer is mixed by one call from `renderProbe`, whose bytecode grows by 24 bytes to about 7,460 of HotSpot's 8,000.
+
+## Kept voices (21 Nov 2026)
+
+| Round | Clips | Verdict |
+|---|---|---|
+| voices-chamber-1 (the desk round this file calls chamber-voices-1) | FD1 GLAZE range, FD2 GLAZE touch | KEEP, no notes |
+| fix-chamber-voices-1 | GE1/GE2 TIMBER, GF1/GF2 MASS, GG1/GG2 ALLOY, GH1/GH2 BOUNCE (before/after range, then the new soft/medium/hard) | KEEP, no notes |
+
+CHAMBER now offers seven voices: `Chamber.KEPT_VOICES` is HYBRID, AQUARIUM, GLAZE, TIMBER, MASS, ALLOY, BOUNCE, and the
+app's picker reads it. `Chamber.ORIGINAL_VOICES` (HYBRID, AQUARIUM) names the two rooms every model plays; the kit, the
+six room recipes and the room studies and tests stay on them, so nothing already heard moved. Each new voice has one
+factory recipe at its default settings, middle C and the default touch (.75), the medium note of the touch clip the
+owner kept: Singing Bowl (GLAZE), Marimba (TIMBER), Hall Drum (MASS), Steel Pan (ALLOY), Cimbalom (BOUNCE). They render
+on the register model (5) only.
+
+`ChamberCandidateVoicesTest` pins what was heard: GLAZE's 16 renders (c42bc8e89), and 25 lines for the rest, the new
+half of each before/after clip (C2, E3), each touch clip's three notes and every new recipe (2b294f616); each recipe
+also renders sample for sample the heard note. The listening clips were re-rendered from this build and match the
+heard clips' SHA-256 exactly.
+
+Two things to know. TIMBER, MASS, ALLOY and BOUNCE are mostly their instrument layer, which ignores STRIKE, BALANCE,
+MATERIAL, DIVIDE and PLACEMENT; only the quieter room under it (about a quarter of the level) moves with those knobs, so
+on these four the knobs do little. And CHAMBER is finite: no voice has held keys (HOLD is refused).

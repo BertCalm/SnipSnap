@@ -100,6 +100,8 @@ internal class FilamentJunction(
     }
 
     private val source = Ring(ceil(plan.maxDelay * rate).toInt() + 4)
+    /** BRAID only: each strand reads its own player's source. */
+    private val strandSources = if (voice == FilamentVoice.BRAID) Array(4) { Ring(ceil(plan.maxDelay * rate).toInt() + 4) } else null
     private val routes = plan.branches.map { Route(it) }.toTypedArray()
     // These arrays keep the fixed route order without allocating sample-rate iterators.
     private val active = routes.filter { it.active }.toTypedArray()
@@ -124,9 +126,11 @@ internal class FilamentJunction(
     private val inject = macros.getValue("INJECT").toDouble()
     private val activityAlpha = 1.0 - exp(-2.0 * PI * hz * 1.5 / rate)
     private val attackAlpha = 1.0 - exp(-1.0 / (.025 * rate))
-    private val releaseSeconds = when (voice) { FilamentVoice.THREAD -> .40; FilamentVoice.PULSE -> .14; FilamentVoice.CURL -> .65 }
+    private val releaseSeconds = when (voice) { FilamentVoice.THREAD -> .40; FilamentVoice.PULSE -> .14; FilamentVoice.CURL -> .65
+        else -> FilamentCandidates.tables(voice).release }
     private val releaseAlpha = 1.0 - exp(-1.0 / (releaseSeconds * rate))
-    private val withinT = tan((when (voice) { FilamentVoice.THREAD -> .40; FilamentVoice.PULSE -> 1.05; FilamentVoice.CURL -> .58 }) * .5)
+    private val withinT = tan((when (voice) { FilamentVoice.THREAD -> .40; FilamentVoice.PULSE -> 1.05; FilamentVoice.CURL -> .58
+        else -> FilamentCandidates.tables(voice).within }) * .5)
     private val acrossT = tan(.50 * .5)
     private val throughNorm = sqrt(routes.sumOf { it.throughWeight * it.throughWeight })
     private val spillNorm = sqrt(routes.sumOf { r -> r.spillWeights.sumOf { it * it } })
@@ -190,20 +194,28 @@ internal class FilamentJunction(
         if (captureDiagnostics) maxT = max(maxT, abs(t))
     }
 
-    fun next(input: Double) {
+    fun next(input: Double) = step(input, null)
+
+    /** BRAID: one input per strand; [inputs] holds four samples. */
+    fun nextStrands(inputs: DoubleArray) = step(inputs[0], inputs)
+
+    private fun step(input: Double, inputs: DoubleArray?) {
         if (captureDiagnostics) {
             frameCount++
             sourceEnergy += input * input
         }
         source.write(input)
+        val players = strandSources
+        if (inputs != null && players != null) for (s in 0 until 4) players[s].write(inputs[s])
         through = 0.0; escaped = 0.0
         for (route in active) {
             val id = route.branch.strandId * 4 + route.branch.pathId
+            val feed = if (inputs != null && players != null) players[route.branch.strandId] else source
             if (captureDiagnostics) {
-                val first = source.read(route.delays[0]) * route.launch
+                val first = feed.read(route.delays[0]) * route.launch
                 split(route, 0, first)
             }
-            val second = source.read(route.delays[1]) * route.launch * route.retained[0]
+            val second = feed.read(route.delays[1]) * route.launch * route.retained[0]
             val middle = split(route, 1, second)
             junction[id] = middle
             if (captureDiagnostics) before[id] = middle
@@ -226,7 +238,7 @@ internal class FilamentJunction(
             for (j in 0..1) {
                 val delay = if (options.genericSpill) plan.maxDelay * rate else route.delays[j]
                 val prefix = if (j == 0) route.launch else route.launch * route.retained[0]
-                val escapedInput = source.read(delay) * prefix * route.escape[j]
+                val escapedInput = feed.read(delay) * prefix * route.escape[j]
                 val leaf = route.spillFilters[j].next(escapedInput)
                 if (captureDiagnostics) escapedEnergy += leaf * leaf
                 escaped += route.spillWeights[j] * leaf
@@ -298,6 +310,7 @@ internal class FilamentJunction(
             route.ring.advance()
         }
         source.advance()
+        if (players != null) for (ring in players) ring.advance()
     }
 
     fun state(): DoubleArray {
@@ -308,10 +321,13 @@ internal class FilamentJunction(
             maxState = max(maxState, route.endpointFilter.maxState)
             for (filter in route.spillFilters) { filter.state(filters); maxState = max(maxState, filter.maxState) }
         }
-        val snapshot = DoubleArray(filters.size + source.size + active.sumOf { it.ring.size })
+        val players = strandSources
+        val snapshot = DoubleArray(filters.size + source.size + active.sumOf { it.ring.size } +
+            (players?.sumOf { it.size } ?: 0))
         for (i in filters.indices) snapshot[i] = filters[i]
         var offset = source.appendState(snapshot, filters.size)
         for (route in active) offset = route.ring.appendState(snapshot, offset)
+        if (players != null) for (ring in players) offset = ring.appendState(snapshot, offset)
         return snapshot
     }
 

@@ -100,11 +100,12 @@ class CairnSynthScreenTest : ComposeScreenTest() {
         it.config.getOrNull(SemanticsActions.OnClick)?.label == "YOUR PRESET $name"
     }
 
-    @Test fun cairn_closes_the_engine_ring_and_names_itself_in_full() {
+    @Test fun cairn_steps_on_to_consort_and_names_itself_in_full() {
         show()
         assertReadsInFull("CAIRN ▾")
+        // CONSORT was appended after CAIRN (2026-11-20) and now closes the ring.
         activate("NEXT ENGINE")
-        compose.onNode(hasContentDescription("ENGINE LATTICE. CHOOSE ENGINE")).assertExists()
+        compose.onNode(hasContentDescription("ENGINE CONSORT. CHOOSE ENGINE")).assertExists()
         activate("PREVIOUS ENGINE")
         compose.onNode(hasContentDescription("ENGINE CAIRN. CHOOSE ENGINE")).assertExists()
     }

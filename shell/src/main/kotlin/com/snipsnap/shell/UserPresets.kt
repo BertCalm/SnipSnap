@@ -579,6 +579,11 @@ object UserPresets {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "AccordPatch.fromJsonText($recipe),"
         }
+        if (patch is com.snipsnap.synth.ConsortPatch) {
+            // The section, breath and take live outside the macros: keep the complete recipe.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "ConsortPatch.fromJsonText($recipe),"
+        }
         if (patch is RimePatch) {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "RimePatch.fromJsonText($recipe),"

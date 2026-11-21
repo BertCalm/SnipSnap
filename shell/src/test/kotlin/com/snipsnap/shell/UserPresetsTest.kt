@@ -472,6 +472,13 @@ class UserPresetsTest {
                 assertEquals(preset, promoted, "${preset.name}: complete acoustic profile and performance promotion")
                 assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
                     "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
+            } else if (preset is com.snipsnap.synth.ConsortPatch) {
+                val call = KotlinLiteral.parse(line.dropLast(1)) as KotlinLiteral.Call
+                assertEquals("fromJsonText", call.name)
+                val promoted = com.snipsnap.synth.ConsortPatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
+                assertEquals(preset, promoted, "${preset.name}: complete section, breath and take promotion")
+                assertEquals(preset.macros.mapValues { it.value.toRawBits() }, promoted.macros.mapValues { it.value.toRawBits() },
+                    "${preset.engine}/${preset.name}: the JSON constructor rounds no macro")
             } else if (preset is com.snipsnap.synth.RimePatch) {
                 val call = KotlinLiteral.parse(line.dropLast(1)) as KotlinLiteral.Call
                 val promoted = com.snipsnap.synth.RimePatch.fromJsonText((call.positional.single() as KotlinLiteral.Str).value)
@@ -1283,6 +1290,12 @@ class UserPresetsTest {
                 val decoder = com.snipsnap.synth.ApsisPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(com.snipsnap.synth.ApsisPatch::class.java, decoder.returnType,
                     "APSIS promotion retains its saved pitch velocity model and seed context")
+            } else if (engine == com.snipsnap.synth.ConsortPatch.ENGINE) {
+                val decoder = com.snipsnap.synth.ConsortPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
+                assertEquals(com.snipsnap.synth.ConsortPatch::class.java, decoder.returnType,
+                    "CONSORT promotion keeps the section, breath and take with its complete-recipe constructor")
+                val section = Presets.all().first { it.engine == engine && (it as com.snipsnap.synth.ConsortPatch).chairs.isNotEmpty() }
+                assertTrue(UserPresets.rosterLine(section).startsWith("ConsortPatch.fromJsonText("))
             } else if (engine == ObbligatoPatch.ENGINE) {
                 val decoder = ObbligatoPatch.Companion.javaClass.getMethod("fromJsonText", String::class.java)
                 assertEquals(ObbligatoPatch::class.java, decoder.returnType, "OBBLIGATO promotion names its public complete-JSON constructor")

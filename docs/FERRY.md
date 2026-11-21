@@ -2,7 +2,8 @@
 
 The characteristic gesture is **strike → handoff → sympathetic bloom → return**.
 
-This is one finite, dry, mono PASSAGE voice. It ports the owner-approved Python
+This is one finite, dry, mono PASSAGE voice; seven more (TINE, TWIN, SWELL, TARAB,
+PEAL, BATON, VANE) were kept on 21 Nov 2026 (see [Kept voices](#kept-voices-21-nov-2026)). It ports the owner-approved Python
 study to SnipSnap's Kotlin renderer. The owner answered “Yes, clearly” to the first
 handoff comparison and “Clear throughout” to nine low/middle/high, slow/normal/fast
 examples. Those answers approve the Python references. On 2026-10-30 the owner
@@ -481,3 +482,86 @@ probe.
 - The existing cosine helper keeps one definition of the release shape.
 - Versioning preserves old recipes and the approved reference while the revised
   ending is judged in the listening room.
+
+## Candidate voices, round ferry-voices-1 (20 Nov 2026)
+
+The melodic gate asks for six voices; FERRY has one (PASSAGE). Six candidates (one a spare) are appended to
+`FerryVoice` after it. `Ferry.KEPT_VOICES` names the voices players are offered; presets read it, so a candidate has
+no preset (FERRY is not yet on the picker or in a kit). Candidates render on model 4 only, take the same macros, and
+have not been heard.
+
+Every candidate is PASSAGE's instrument: a passive network da/dt = (i H − Γ) a, struck once by displacing some of its
+states, observed through pickups, compiled once and stepped by `FerryNetwork.Compiled`. What changes is the graph,
+which states are struck and which are heard (`FerryCandidates.kt`):
+
+| Voice | What it is | Graph |
+|---|---|---|
+| TWIN | a piano-like string pair | per partial, two unison strings on one lossy bridge (Weinreich): the part that pushes the bridge dies fast, the rest rings and beats; MATCH sets how far apart the pair is |
+| SWELL | a note that swells in | the struck wood has no pickup; only what crosses into the wire is heard, so the note grows out of silence and breathes |
+| TARAB | a sitar-like string | a bright pluck under sympathetic strings at the octave, fifth, twelfth and double octave, a few cents apart, ringing as a halo |
+| CHIME | a handbell | each partial a pair of modes split 7 cents about it and coupled, so energy turns round the bell and the tone wavers |
+| RELAY | wood to wire to glass | a one-way chain: a dark knock, a bright wire bloom, then a pure glass tone left ringing |
+| TINE (spare) | a kalimba | a tine's clamped-bar modes driving a box whose modes stay at fixed pitches; the tine is retuned so the note stays in tune against the box's pull |
+
+HANDOFF scales every link (PASSAGE's pace law), LOSS every damping rate (PASSAGE's law) and the window; links shrink
+below middle C so a low note's coupling split stays a few cents. A long ring ends on a cosine release over the last
+.9 s of the window. Touch is the strike: velocity decides which partials the strike fills (soft leaves mostly the
+root), and after loudness leveling the level follows velocity (soft .35 is 8 to 9 dB under hard, never levelled
+back; the house target is 2 dB lower for candidates so a bright hard strike keeps its peak). Measured at C3 and C4:
+each step 4.9 to 23.6 dB of level-matched third-octave shape, soft against hard 12.1 to 38.4 dB.
+`FerryCandidateVoicesTest` holds these (each step at least 3.5 dB, soft against hard at least 8, soft at least 6 dB
+quieter), the pitch (within 15 cents from C2 to C5), distinctness (least measured 5.4 dB, SWELL/CHIME at C3), clean ends,
+the top note's 2 to 8 kHz band, one check of each graph's behaviour, and pins 19 PASSAGE renders (models 1 to 4,
+touch, register, LOSS, seed, presets) to hashes from the build before this round (7495ca56c).
+
+## Candidate voices, round ferry-voices-2 (21 Nov 2026)
+
+Verdict on round ferry-voices-1 (21 Nov 2026): TINE, range and touch, KEEP. TWIN, SWELL, TARAB, CHIME and RELAY, range
+and touch, TWEAK: "More distinctive". Through the network alone they shared FERRY's strike, envelope and body. As
+FILAMENT's kept round 2 did, each reworked voice now carries an identity layer of its own, a recognisable instrument
+with its own attack, sustain, motion and spectrum (`FerryCandidateLayers.kt`, built from `VoiceLayerKit.kt`), and the
+voice's network plays underneath at .26 (SWELL .30) after both are brought to the same loudness; release, leveling and
+touch level then run as before. CHIME is renamed PEAL (LIBRATION has a CHIME) and RELAY is renamed BATON (RELAY is an
+engine); neither was ever offered or saved. VANE is appended as a new spare. TINE renders bit for bit as heard (pinned:
+15 renders against c42bc8e89), and so does PASSAGE (the 19 kept pins).
+
+| Voice | Instrument | What makes it unlike the others |
+|---|---|---|
+| TWIN | a piano's double string | a felt thump; stretched partials, each on two strings a beat apart (about 1 Hz at middle C, MATCH widens it) that beat clearly; a fast prompt sound over a long aftersound |
+| SWELL | a bowed swell | no strike: the note grows for .55 to .9 s (slower when soft), its upper partials arriving only near the peak (the bloom), through a bowed instrument's fixed body resonances, then a late 5 Hz vibrato and a breath of rosin |
+| TARAB | a sitar | a bright pluck whose jawari buzz is a resonance sweeping down through the partials over about a second; sympathetic strings at the octave, fifth, twelfth and double octave bloom in late, a few cents off, and shimmer |
+| PEAL (was CHIME) | a handbell | a clapper's tick; the root and its twelfth plus a few bell partials, each a pair a fraction of a hertz apart, ringing 5 to 14 s with a slow, deep waver |
+| BATON (was RELAY) | wood, wire, glass | three instruments in turn: a dry wooden knock (.3 s), a bright stretched wire that swells in as it dies, then a pure glass tone rising as the wire fades, left ringing; HANDOFF sets the pace |
+| VANE (new spare) | a vibraphone | a soft-mallet bar tuned 1 : 4 : 10 over its network's tube, a long ring whose root pulses 5.6 times a second (the motor's fans) |
+
+Touch is the hammer, bow, plectrum, clapper or mallet: soft leaves mostly the root, dark and slow, hard is bright,
+quick and noisy. Measured at C3 and C4 (soft .35, medium .7, hard 1): each step 3.7 to 14.4 dB of level-matched
+third-octave shape, soft against hard 9.5 to 23.1 dB, soft 9 dB under hard. Nearest other voice over C2 to C5: TWIN and
+SWELL 8.5 dB from each other (one struck, one swelling: the loudest moment is 10 ms against 520 ms), TARAB 13.1, PEAL
+27.0, BATON 14.0, VANE 27.4. `FerryCandidateVoicesTest` now asks at least 8 dB of the reworked voices and checks each
+instrument: SWELL's loudest moment after .35 s and every struck voice's before 50 ms, TWIN's beating (5.0 dB about its
+decay), BATON's three stages (upper partials .12, then .47, then .001 of the root), TARAB's sweep (the centre of its
+upper partials falls from 6.7 to 4.9), PEAL's waver (3.4 dB), VANE's tremolo (12.6 dB peak to trough), TINE's fixed box.
+
+## Kept voices (21 Nov 2026)
+
+| Round | Clips | Verdict |
+|---|---|---|
+| voices-ferry-1 (the desk round this file calls ferry-voices-1) | FL1 TINE range, FL2 TINE touch | KEEP, no notes |
+| fix-ferry-voices-1 | GJ TWIN, GK SWELL, GL TARAB, GM PEAL, GN BATON (before/after range, then touch); GO1/GO2 VANE (range, touch) | KEEP, no notes |
+
+FERRY now has eight voices: `Ferry.KEPT_VOICES` is PASSAGE, TINE, TWIN, SWELL, TARAB, PEAL, BATON, VANE;
+`Ferry.ORIGINAL_VOICES` is PASSAGE, which every model plays. PASSAGE keeps its three recipes; each new voice has one, its
+default settings at C3 and full touch, a note of the range clip the owner kept: Kalimba (TINE), Double String (TWIN),
+Bowed Swell (SWELL), Sitar (TARAB), Handbell (PEAL), Wood Wire Glass (BATON), Vibraphone (VANE). They render on model 4
+only.
+
+Where they are offered: FERRY is not in the app's engine picker or the shared factory roster (`Presets.all()`), and it
+was not before this round either; it is played from the command line (`snipsnap synth FERRY TINE`, `--preset`,
+`--macros`, `--midi`) and saved as patches. The new voices join it there, through their recipes. Putting FERRY on the
+app's picker is a separate piece of work.
+
+`FerryCandidateVoicesTest` pins what was heard: TINE's 15 renders (c42bc8e89), and 39 lines for the rest, the new half
+of each before/after clip (C2, C3), VANE's four range notes, each touch clip's three notes and every new recipe
+(2b294f616); each recipe also renders sample for sample the heard note. The listening clips were re-rendered from this
+build and match the heard clips' SHA-256 exactly. FERRY is finite: no voice has held keys.

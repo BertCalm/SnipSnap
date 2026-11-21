@@ -21,7 +21,7 @@ import kotlin.test.assertTrue
 class CreaseIntegrationTest {
     @Test
     fun `native patch JSON preserves every model root velocity and a partial macro map`() {
-        for (voice in CreaseVoice.entries) for (model in 1..3) {
+        for (voice in Crease.ORIGINAL_VOICES) for (model in 1..3) {
             val patch = CreasePatch("Saved $voice", voice, mapOf("FOLD" to .37f),
                 midi = 55, velocity = .63f, model = model)
             val fields = patch.toJsonValue().entries
@@ -121,12 +121,12 @@ class CreaseIntegrationTest {
         // Native normalized Float32 hashes from the approved baf449c R3 listening manifest.
         // Matched audition WAV gain is deliberately outside this native render contract.
         val approved = approvedR3Hashes()
-        val native = CreasePresets.patches()
+        // The six approved recipes come first; the four voices kept on 20 Nov 2026 add one each after them.
+        val native = CreasePresets.patches().take(6)
         assertEquals(approved.keys, native.map { it.name }.toSet())
-        assertEquals(6, native.size, "only the six approved recipes enter the factory roster")
-        assertEquals(native, Presets.all().filter { it.engine == "CREASE" })
-        for (voice in CreaseVoice.entries) {
-            assertEquals(2, CreasePresets.patchesForVoice(voice).size)
+        assertEquals(CreasePresets.patches(), Presets.all().filter { it.engine == "CREASE" })
+        for (voice in Crease.KEPT_VOICES) {
+            assertEquals(if (voice in Crease.ORIGINAL_VOICES) 2 else 1, CreasePresets.patchesForVoice(voice).size)
             assertEquals(CreasePresets.patchesForVoice(voice), Presets.forVoice("CREASE", voice.name))
         }
         for (patch in native) {
@@ -161,7 +161,7 @@ class CreaseIntegrationTest {
             assertEquals(3, patch.model)
             assertEquals(.8f, patch.velocity)
         }
-        val approved = CreasePresets.patches()
+        val approved = CreasePresets.patches().take(6)
         assertEquals(approved, patches.subList(8, 14), "A09-A14 are the unchanged six approved positions")
         for ((pad, patch) in pads.subList(8, 14).zip(approved)) {
             assertEquals(approvedR3Hashes().getValue(patch.name), hash(pad.snip.samples), patch.name)
@@ -214,7 +214,7 @@ class CreaseIntegrationTest {
 
     @Test
     fun `native placement follows HOLD rather than finite note length for every model`() {
-        for (model in 1..3) for (voice in CreaseVoice.entries) {
+        for (model in 1..3) for (voice in Crease.ORIGINAL_VOICES) {
             assertEquals(DrumClass.TONAL, Crease.drumClassFor(voice, model = model))
             assertEquals(DrumClass.TONAL, Crease.drumClassFor(voice, mapOf("HOLD" to .98f, "RELAX" to 1f), model))
             assertEquals(DrumClass.LOOP, Crease.drumClassFor(voice, mapOf("HOLD" to Crease.HOLD_LOOP), model))

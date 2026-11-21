@@ -1,5 +1,6 @@
 package com.snipsnap.shell
 
+import com.snipsnap.kit.GrooveStore
 import com.snipsnap.kit.Kit
 import com.snipsnap.kit.KitStore
 import com.snipsnap.kit.Project
@@ -27,7 +28,7 @@ class ShelfModel(val root: File) {
     data class ProjectRow(
         val dir: File,
         val project: Project,
-        /** `project.json`'s mtime: RECENT sort, the same order the kit list defaults to. */
+        /** When the project was last worked on ([ShelfModel.editedAt]): RECENT sort, and the row's EDITED age. */
         val editedAtMillis: Long,
     ) {
         val name: String get() = project.name
@@ -60,10 +61,32 @@ class ShelfModel(val root: File) {
         ProjectStore.list(root)
             .mapNotNull { dir ->
                 runCatching { ProjectStore.load(dir) }.getOrNull()?.let { p ->
-                    ProjectRow(dir, p, File(dir, ProjectStore.FILE_NAME).lastModified())
+                    ProjectRow(dir, p, editedAt(dir, p))
                 }
             }
             .sortedByDescending { it.editedAtMillis }
+
+    /**
+     * When [project] was last worked on (UAT 2026-11 user states, S-3): the newest of
+     * `project.json`, the project's own beat (`beat/groove.json`), and each of its kits'
+     * `kit.json` and `groove.json`. It was `project.json` alone, which only a project-level change
+     * writes; a pad edit writes the kit's `kit.json` and a beat edit its `groove.json`, so a
+     * project worked on all day could read EDITED 3 WEEKS AGO and sink in a newest-first list.
+     * `kit.json` is the kit list's own recency signal, which nothing but a save touches
+     * (`KitShelf.list`'s note). A file that is not there counts as 0, so a kit gone from the shelf
+     * adds nothing.
+     */
+    fun editedAt(dir: File, project: Project): Long {
+        val files = buildList {
+            add(File(dir, ProjectStore.FILE_NAME))
+            add(File(ProjectStore.beatDir(dir), GrooveStore.FILE_NAME))
+            for (kit in project.kits) {
+                add(File(File(root, kit), KitStore.FILE_NAME))
+                add(File(File(root, kit), GrooveStore.FILE_NAME))
+            }
+        }
+        return files.maxOf { it.lastModified() }
+    }
 
     /** The kit list in the shelf's A–Z order, each with the projects that hold it. */
     fun kits(): List<KitRow> {

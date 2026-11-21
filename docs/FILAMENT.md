@@ -9,8 +9,9 @@ shared, damped halo. The gesture is **contain → bend → spill**.
 The supplied [engineering specification](superpowers/specs/2026-10-19-filament-engine-engineering-spec.md)
 is preserved as the proposal. The approved instrument implements THREAD, PULSE and
 CURL with four path classes, four loss sections per strand, up to four
-persistent strands and eight halo modes. BRAID, HALO, FRAY and the proposed
-36-preset library remain later work. The reduced bend model is a musical
+persistent strands and eight halo modes. BRAID, HALO, FRAY and SPRING were
+added and kept in November 2026 (see the candidate rounds below); the proposed
+36-preset library remains later work. The reduced bend model is a musical
 approximation, not an electromagnetic solver or measured optical fiber.
 
 ## Controls and saved sound
@@ -467,3 +468,87 @@ unfold arrivals, bends should deplete THROUGH while feeding SPILL, and the
 full model should reveal ordered escape that a generic reverb send loses.
 Numerical checks establish implementation properties, not that this gesture
 is musically convincing.
+
+## Candidate voices: BRAID, HALO, FRAY, SPRING (round filament-voices-1, 2026-11-20)
+
+Status: **built, measured, unheard**. The melodic gate asks for six voices and FILAMENT has three. Four
+candidates are appended to `FilamentVoice` after CURL, so saved names and ordinals do not move; the owner needs
+to keep at least three (SPRING is the spare). `Filament.KEPT_VOICES` is the three voices players are offered;
+the candidates have no preset, kit or starter, and are model 3 only. The kept renders (models 1 to 3, HOLD, all
+twelve model-3 presets, held keys, touch layers and the CURL halo-release capture) are pinned byte for byte in
+`FilamentCandidateVoicesTest` against the build before this round. The code is `FilamentCandidates.kt`; the only
+changes to the shared path are `else` arms and two hooks (per-strand sources in the junction, a dispersive
+cascade on the through collector), both inert for the kept voices.
+
+THREAD, PULSE and CURL send one harmonic source down every strand and hear the halo only as a colour behind the
+routes. Each candidate reads a part of the same network those three leave unused:
+
+- **BRAID** (strands as players): each strand gets its own copy of the source, a whole number of cycles apart
+  over the held loop (0, +1, -2, +3), so the routes beat against each other at about .2 to .65 Hz on every key,
+  like an ensemble; each copy also wanders in pitch (up to 4 cents) and level on its own seeded drift.
+- **HALO** (the halo as the instrument, a glass harmonica): a slow rubbed source, BEND high and COLLECT .85, so
+  almost everything reaches long-ringing, root-led modes; a finite note keeps ringing after the rub stops.
+- **FRAY** (air at the leaks, a glass flute): seeded breath noise, shaped to sit between just under the root
+  and about 2.4 kHz, travels with a flute-like tone; where it escapes at the bends the root-related halo modes
+  give the breath a pitch. Soft touch is breathier, hard touch has a brighter chiff.
+- **SPRING** (spare): a pluck whose through collector passes a 16-stage allpass cascade spread from 1.5 to 6
+  times the root, so every partial arrives at a different time and the attack chirps like a struck spring.
+
+All four have the held key the kept voices have (`FilamentKeys.supports` takes every voice): the same network
+runs to a settled loop, with the held-key overtone tilt. A candidate's loop spans 4.6 s rather than 2.3 s, and its
+level, brightness and pitch drift on a seeded `HoldDrift` that closes over that loop, so a held key never sits
+on one frozen cycle. Touch scales the upper partials as well as the level (soft is darker).
+
+Measured (Kotlin, `FilamentCandidateVoicesTest`, nothing heard): every candidate sounds its root within 2 cents
+from C2 to C6; the nearest pair of voices is 5.9 dB apart in level-matched third-octave shape (BRAID and SPRING
+at C5; the bar is 3.7). Soft against hard differs by 11.6 (BRAID), 11.5 (HALO), 6.1 (FRAY) and 13.4 dB (SPRING)
+of tone at matched level, and a soft note is also quieter. Held keys keep the 2 to 8 kHz band at or under the
+kept voices' ceilings (at C4: -50, -66, -46 and -41 dB against the root, ceiling -23.5) and their level wanders
+2.5 to 5.5 dB across the loop. HALO rings on at about 0.28 of its sung level half a second after the rub ends.
+
+### Verdict, round filament-voices-1 (2026-11-20)
+
+- **FRAY: KEEP** (range and touch, no notes). FRAY is now offered: `Filament.KEPT_VOICES` is THREAD, PULSE, CURL
+  and FRAY, and FRAY has one factory preset, **Glass Flute**, appended after the twelve original recipes at the
+  default performance the owner heard (default controls, C3, full touch, model 3). Its renders are pinned in
+  `FilamentCandidateVoicesTest` from the build whose renders gave the heard clips DC1 and DC2 byte for byte.
+  The FILAMENT starter kit keeps its twelve original recipes; FRAY ships as a preset only.
+- **BRAID, HALO, SPRING: range TWEAK, "More distinctive"**; their soft/medium/hard clips KEEP. The reference
+  clip of THREAD, PULSE and CURL had no verdict. `Filament.ORIGINAL_VOICES` (THREAD, PULSE, CURL) is the set with
+  models 1 and 2 and the original source path; every candidate, FRAY included, is model 3 only.
+
+### Round filament-voices-2: BRAID, HALO and SPRING reworked (unheard)
+
+Through the strand network alone the three shared FILAMENT's source tone and envelope and read as variations
+of one sound (5.9 to 11 dB apart in third-octave shape). Each now has its own layer (`FilamentCandidateLayers.kt`),
+added after the collectors, with the network playing underneath at 0.30 (SPRING 0.25):
+
+- **BRAID**, a string-machine ensemble: seven players up to 22 cents apart, each on its own slow 3-cent vibrato,
+  a bright sawtooth with an airy top, a bowed swell, through a slow six-stage phaser (300 Hz to 2.6 kHz, about .22 Hz).
+- **HALO**, a glass harmonica: nearly a pure sine with a split root (a slow .55 Hz pulse), faint inharmonic glass
+  modes (2.32, 4.25, 6.63 and 9.38 times the root) that bloom in later than the root, and a long ring after the rub.
+- **SPRING**, a pluck into a spring tank: the pluck and a short tap pass 120 stretched allpasses in a 47 ms
+  feedback loop (the parametric spring of Välimäki, Parker and Abel), so each arrival chirps and returns. Held,
+  it is re-plucked six times per loop, a little unevenly. Above E5 the tank, tap and top thin out by C6.
+
+A held key's layer opens from the zero state over .25 s (BRAID), .7 s (HALO) or 4 ms (SPRING); the layer table
+is periodic over the 4.6 s loop. Measured (Kotlin): nearest other voice 20.5/22.5/7.3 dB (BRAID, C3/C4/C5),
+13.5/12.9/10.8 (HALO), 10.8/8.9/10.6 (SPRING); roots within 4 cents C2 to C6; soft against hard 8.4, 11.6 and
+12.5 dB of tone; held 2 to 8 kHz at C4 -36, -53 and -35.5 dB (ceiling -23.5). Desk round filament-voices-2:
+clips GA1 to GC1 play the heard round-1 notes and then the new version; GD1 is THREAD, PULSE, CURL and FRAY.
+
+### Verdict, round fix-filament-voices-1 (2026-11-21)
+
+- **BRAID (GA1), HALO (GB1), SPRING (GC1): KEEP**, the reworked versions, no notes. FILAMENT now has seven voices:
+  `Filament.KEPT_VOICES` is every `FilamentVoice`, so the app picker offers all seven. Each new voice has one factory
+  preset, appended after Glass Flute at the default performance the owner heard in the clips' "after" halves (default
+  controls, C3, full touch, model 3): **String Braid** (BRAID), **Glass Harmonica** (HALO) and **Spring Tank**
+  (SPRING). The FILAMENT starter kit still holds its twelve original recipes; the new voices ship as presets only.
+- Pinned in `FilamentCandidateVoicesTest`: the heard renders, C2, C3 and C5 at the default performance and the held
+  C4 key, from the build whose renders gave GA1 to GC1 byte for byte. SPRING above E5 was thinned after those clips
+  (identical at E5 and below), so its C6 and the notes above E5 were never heard and are not pinned.
+- Held keys: `FilamentKeys.supports` takes every voice, so the three play as held keys through the same network path
+  as the others; their held C4 is what GA1 to GC1 played after the three notes.
+- Touch: the soft/medium/hard behaviour the owner kept (clips DA2, DB2, DD2) was heard on the round-1 versions. The
+  reworked versions keep the same touch rule (softer is darker and slower to start), measured 8.4, 11.6 and
+  12.5 dB soft against hard, but their own soft/medium/hard was not heard on its own.

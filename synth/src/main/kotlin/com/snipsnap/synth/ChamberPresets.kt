@@ -1,7 +1,7 @@
 package com.snipsnap.synth
 
 /**
- * Six finite factory recipes for the HYBRID and AQUARIUM rooms.
+ * Six finite factory recipes for the HYBRID and AQUARIUM rooms, and one for each voice kept on 21 Nov 2026.
  * Four Answers is the accepted model-3 sound. The owner found the original six "all pretty
  * similar" (20 Nov 2026), so the other five were re-voiced on the wider response.
  */
@@ -45,6 +45,14 @@ object ChamberPresets {
         p(ChamberVoice.AQUARIUM, "Quiet Canopy", "STRIKE" to .10f, "BALANCE" to .33f, "DIVIDE" to .90f, "PLACEMENT" to .25f),
         // Cowbell and triangle, hard, in one continuous glass room: the long ring.
         p(ChamberVoice.AQUARIUM, "High Water", "STRIKE" to 1f, "BALANCE" to .85f, "MATERIAL" to 1f, "DIVIDE" to 0f, "PLACEMENT" to .85f),
+        // The voices kept on 21 Nov 2026, one each: its default settings at middle C and the default touch, the note the
+        // owner heard and kept. TIMBER, MASS, ALLOY and BOUNCE are mostly their instrument layer, which ignores STRIKE, BALANCE,
+        // MATERIAL, DIVIDE and PLACEMENT; only the quieter room under it moves with them.
+        p(ChamberVoice.GLAZE, "Singing Bowl"),
+        p(ChamberVoice.TIMBER, "Marimba"),
+        p(ChamberVoice.MASS, "Hall Drum"),
+        p(ChamberVoice.ALLOY, "Steel Pan"),
+        p(ChamberVoice.BOUNCE, "Cimbalom"),
     )
 
     fun forVoice(voice: ChamberVoice): List<ChamberPatch> = presets.filter { it.voice == voice }
