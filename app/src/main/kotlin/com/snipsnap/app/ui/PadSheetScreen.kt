@@ -4789,7 +4789,7 @@ private fun provenanceLine(pad: KitPad, snip: Snip?, binDaysLeft: Int?, binKept:
     parts += if (cut != null && snip != null) "$origin @ ${cut.label(snip.sampleRate)}" else origin
     snip?.let { parts += "%.0f ms".format(java.util.Locale.ROOT, it.durationSeconds * 1000f) }
     // A kept original has no count: no sweep takes it while the pad needs it.
-    binDaysLeft?.let { parts += if (binKept) "original in bin, kept" else "original in bin, ${it}d left" }
+    binDaysLeft?.let { parts += if (binKept) "original in the trash, kept" else "original in the trash, ${it}d left" }
     return parts.joinToString(" · ")
 }
 

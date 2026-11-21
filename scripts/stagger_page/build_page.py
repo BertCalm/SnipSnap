@@ -140,6 +140,16 @@ ROUNDS = {
         "intro": "You asked for a bit of compression, then heard round 2b as echoy: its press lifted the room baked into every hit. This round's press is lighter and faster, catches the peak, and leaves the room where it was; the grooves keep only their bus. ",
         "ask": "<li>Is the echo gone, and is what is left still a bit of compression or none at all?</li>",
         "beside": "Round 2 had no press on the pads; round 2b's press lifted the room (echoy); this round's press catches the peak and leaves the room where it was, and the grooves take no second press."},
+    9: {"title": "Stagger Round Three D", "short": "Stagger, round three d",
+        "intro": "You heard the bit crushing as too much. Measured, the converter does three things: its 12-bit word ate the quiet tails (on one rimshot the whole tail was quantization), its 26 kHz hold put the grit on the snares and hats, and its drive touched only the kicks. A gentler hold barely helps (it is close to all or nothing), so this round sets the word to 16 bits and blends the converter half and half with itself run clean: the same colour, about 5 dB less grit, the tails whole. The foley keeps its own 12-bit converter, as the brief asked. ",
+        "ask": "<li>Is the crushing right now, or should it go further (the \"no crushing\" clips) or come back a little?</li>",
+        "compareSlots": [2, 3, 16],
+        "beside": "The backbeat drum, the third pad and the groove three ways: as round 3c shipped them, with no crushing on the drums at all, and this round's half blend."},
+    8: {"title": "Stagger Round Three C", "short": "Stagger, round three c",
+        "intro": "You heard the Dark Gong as the timpani. Measured, it was: its fundamental sat at 72 Hz against the timpani's 78, its overtones lined up like a drum's, and nothing sounded above 300 Hz. This round's Dark Gong is a modal gong: a hum that beats (the slow wah of two tones a hair apart), clanging partials that don't line up, and upper partials that bloom just after the strike, an octave-ish above the timpani and still dark. Everything else is round 3b. ",
+        "ask": "<li>Is the Dark Gong a gong now, clearly not the timpani, and still dark enough?</li>",
+        "compare": ["Timpani", "Dark Gong"],
+        "beside": "The timpani and the Dark Gong as round 3b shipped them, then this round's. Only the gong changed."},
     7: {"title": "Stagger Round Three B", "short": "Stagger, round three b",
         "intro": "You heard round 3 as flat, muffled and muddy. Measured, the snare was the main cause: its head rang around 300 Hz for a quarter second, so most of every backbeat sat in the muddy band, and its crack was filtered away three times over (the snare, the converter, a dark shelf on the grooves). Round 3's kick knock added boom on top. This round damps and tunes up the snare and gives it its wires, opens its filter, shortens the kick's knock, takes the dark shelf off the grooves and brings the hats up a little. ",
         "ask": "<li>Is the mud gone, does the snare crack now, and is anything too bright or too thin?</li>",
@@ -173,7 +183,14 @@ def build_2(m, src, out, ext="wav", before=None):
         rows = []
         for kit in m["kits"]:
             items = []
-            for slot, what in [(1, kit["pads"][0]["name"]), (2, kit["pads"][1]["name"]), (16, "groove")]:
+            # A round can name the pads it changed ("compare"); otherwise the kick, the backbeat drum and the groove.
+            if "compare" in round_:
+                pairs = [(p["slot"], p["name"]) for name in round_["compare"] for p in kit["pads"] if p["name"] == name]
+            elif "compareSlots" in round_:
+                pairs = [(n, "groove" if n == 16 else kit["pads"][n - 1]["name"]) for n in round_["compareSlots"]]
+            else:
+                pairs = [(1, kit["pads"][0]["name"]), (2, kit["pads"][1]["name"]), (16, "groove")]
+            for slot, what in pairs:
                 pad = kit["pads"][slot - 1]
                 for label, folder in earlier:
                     items.append(clip("%s/%s/pad-%02d.wav" % (folder, kit["id"], slot), "%s, %s" % (what, label), pad["seconds"]))
