@@ -84,7 +84,14 @@ object DrawlAuditionGenerator {
         }
         File(root, "kit.json").writeText(json.append("]\n").toString())
         File(root, "kit-takes").mkdirs()
+        val pins = StringBuilder()
+        for ((i, pad) in DrawlKits.arranged().withIndex())
+            pins.append("drawl-%02d ${pad.snip.frameCount} ${DrawlNativePins.sha(pad.snip.samples)}\n".format(i + 1))
         for ((i, pad) in DrawlKits.takesArranged().withIndex()) for ((z, zone) in pad.velocityTakes.withIndex())
-            for ((t, snip) in zone.withIndex()) WavWriter.write(File(root, "kit-takes/%02d-z$z-t$t.wav".format(i + 1)), snip)
+            for ((t, snip) in zone.withIndex()) {
+                WavWriter.write(File(root, "kit-takes/%02d-z$z-t$t.wav".format(i + 1)), snip)
+                pins.append("takes-%02d-z$z-t$t ${snip.frameCount} ${DrawlNativePins.sha(snip.samples)}\n".format(i + 1))
+            }
+        File(root, "kits.sha256").writeText(pins.toString())
     }
 }

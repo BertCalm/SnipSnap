@@ -3,8 +3,8 @@
 Version 0.1 · 2026-11-20
 Status: round 3 built. The owner kept all six voices of the Python prototype after rounds 0b to 0d
 (§18), then the native Kotlin engine (round 1) and its strums and takes (round 2), all pinned. Round 3
-files the factory bank and puts the DRAWL and DRAWL TAKES starters on the shelf; the kits await a
-listen (As built). HOLD is finite, the owner's decision (§10).
+files the factory bank and puts the DRAWL and DRAWL TAKES starters on the shelf; the owner kept both
+kits by ear and they are pinned (As built). HOLD is finite, the owner's decision (§10). Next: round 4.
 Repository truth: read at `7fd194f1`. APIs grepped: `Strings.Loop` and `Strings.Loop.retune`
 (`Strings.kt:529`, `:675`), `Strings.tune` (`:101`), `Strings.pluckExciter` (`:366`), `Strings.pickup`
 (`:401`), `Strings.bodyRing` (`:1321`), `Restrike.canRestrike` (`Restrike.kt:35`), `OsteriaStrum`
@@ -545,3 +545,8 @@ prototype) and answered "All sound good": the strums and takes are kept, and HOL
 `DrawlKitsTest` covers the kits' contents and pins. Locally: `DrawlTest`, `DrawlNativePinsTest`,
 `DrawlKitsTest`, `PresetsTest`, `PatchesTest`, `PadRecipeTest`, `DrawlStarterTest`, `StarterShelfTest`,
 `SynthRootTest` and `StarterKitsTest`'s stable-IDs test pass; CI holds the full suite.
+
+**Kits kept (21 Nov 2026).** The owner heard the round-3 page (every pad of both kits, the resonator walk,
+the strums, the leads and the steels, and each pad's twelve repeated hits) and kept both kits as they are.
+`DrawlKitsTest` pins all 208 renders, DRAWL's 16 pads and DRAWL TAKES' 192 takes, by the SHA-256 of their
+float samples (`drawl/kits-v1.sha256`); each matched the page's WAVs byte for byte.

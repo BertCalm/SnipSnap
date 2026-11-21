@@ -115,4 +115,22 @@ class DrawlKitsTest {
         println("DRAWL TAKES size: $frames frames, ${"%.1f".format(frames / 44_100.0)} s, ${"%.1f".format(frames * 3 / 1e6)} MB PCM24")
         assertTrue(frames < 11L * 60 * 44_100, "the kit is ${frames / 44_100} s of audio")
     }
+
+    /** A failure here means kept DRAWL kit audio changed: re-listen before re-pinning. */
+    @Test fun `every pad and take of both kits hashes as the owner heard and kept it in round 3`() {
+        val pinned = javaClass.getResourceAsStream("/drawl/kits-v1.sha256")!!.bufferedReader().readLines()
+            .filterNot { it.startsWith("#") || it.isBlank() }.map { it.split(' ') }
+            .associate { f -> f[0] to (f[1].toInt() to f[2]) }
+        val rendered = DrawlKits.arranged().withIndex().map { (i, pad) -> "drawl-%02d".format(i + 1) to pad.snip } +
+            DrawlKits.takesArranged().withIndex().flatMap { (i, pad) ->
+                pad.velocityTakes.withIndex().flatMap { (z, zone) -> zone.withIndex().map { (t, snip) -> "takes-%02d-z$z-t$t".format(i + 1) to snip } }
+            }
+        assertEquals(16 + 16 * 12, rendered.size)
+        assertEquals(rendered.map { it.first }.toSet(), pinned.keys)
+        for ((id, snip) in rendered) {
+            val (frames, sha) = pinned.getValue(id)
+            assertEquals(frames, snip.frameCount, "$id frames")
+            assertEquals(sha, DrawlNativePins.sha(snip.samples), id)
+        }
+    }
 }
