@@ -3966,5 +3966,5 @@ and MPC playback open.
 Eight more genre kits. Five come from 31 new loops, grouped by what they measure (`prototype/kerf/genre_bank_r6.py`,
 the third bank `genre_patches_r6.json`): KERF JUNGLE (172 BPM), CLANG (112, percussion), HOUSE (124), DEEP (127) and
 SWAY (86). Three come from the first loops' leftovers: CASSETTE (92), BOOM (78) and TIGHT (100). The first twelve kits
-and the engine do not change. Not yet heard.
+and the engine do not change. Heard by the owner: "Those are great" (2026-11-21).
 

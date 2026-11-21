@@ -992,7 +992,7 @@ comes after the owner hears these hits.
   bank: DUST, RUSH, JUNGLE and CLANG. `:shell:generateKerfKits` proves every pad of all sixteen.
   `KerfKits.build(g, roles)` builds chosen pads, each levelled by its own grid, so they are the same
   bytes as in a full build.
-- **Not yet.** The owner has not heard round 6's kits; the audition page goes to them with this
-  round. Phone and MPC playback of rounds 5 and 6 is open. The engine's bigger pools
-  (model 2) follow the listen.
+- **Heard.** The owner heard the round-6 page (each new kit's sixteen pads and a two-bar groove
+  in its style): "Those are great. Proceed" (2026-11-21). CLANG stays a percussion kit. Phone and
+  MPC playback of rounds 5 and 6 is open. The engine's bigger pools (model 2) follow.
 
