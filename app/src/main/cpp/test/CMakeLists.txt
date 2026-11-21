@@ -179,3 +179,14 @@ add_executable(glue_tests glue_tests.cpp)
 target_include_directories(glue_tests PRIVATE "${ENGINE_DIR}")
 target_compile_options(glue_tests PRIVATE -Wall -Wextra -Wpedantic)
 add_test(NAME glue_tests COMMAND glue_tests)
+
+# glue_render: a WAV through the real GlueBus, for listening and for checking
+# the native arithmetic against prototype/borough/glue_recipe.py `model`. A
+# host tool only: it is not in the app's CMake and never ships in the APK.
+#   build/native-tests/glue_render <in.wav> <out.wav> <trimDb> <satDb|none> <driveDb>
+# Its self-test (input formats read back, the render held to the bus's own
+# arithmetic) runs with the suite.
+add_executable(glue_render glue_render.cpp)
+target_include_directories(glue_render PRIVATE "${ENGINE_DIR}")
+target_compile_options(glue_render PRIVATE -Wall -Wextra -Wpedantic)
+add_test(NAME glue_render_self_test COMMAND glue_render --self-test "${CMAKE_CURRENT_BINARY_DIR}")

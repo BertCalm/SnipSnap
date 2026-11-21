@@ -178,7 +178,7 @@ def loop_feel(kit):
                 backbeat=rel('backbeat'), kick_db=[d - top for d in kl])
 
 
-def groove(kit, bank, stack=None, sbank=None, bars=4):
+def groove(kit, bank, stack=None, sbank=None, bars=4, raw=False):
     """Each kit plays its own loop's groove (loop_feel): its pattern bar by bar (K kick, S snare, X both,
     g ghost, h hat; hats are only seen where nothing louder hit, so a hat found on a position in any bar
     plays there in every bar), its push on the off-8ths, off-16ths and backbeat, and its kick dynamics
@@ -224,7 +224,7 @@ def groove(kit, bank, stack=None, sbank=None, bars=4):
             for pad, steps, zone in STACK_PATTERNS[stack['id']]:
                 for s in steps:
                     place(('s', pad), bar * 16 + s, ZONES[zone], .5, 6, push(s))
-    return y / np.max(np.abs(y)) * .89
+    return y if raw else y / np.max(np.abs(y)) * .89   # raw: at the pads' own level (glue_recipe.py)
 
 
 KICK_PADS = (0, 4)   # A01 KICK, A05 KICK 2

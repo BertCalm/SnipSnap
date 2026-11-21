@@ -121,3 +121,13 @@ The same day's speed pass stopped the filters working through the silence after 
 floats) and fused the house band limit's four passes into one: the default OBOE note went from 92 to
 56 ms, the factory solos' median from 69 to 56 ms and the sections' from 134 to 110 ms, with all 214
 compared renders identical to the bit.
+
+## Faster tanh (2026-11-21)
+
+The reed's rasp and the flute's jet call tanh, a fifth of a render through StrictMath's software
+expm1. `Consort.fastTanh` takes it through `Math.exp` (the CPU's own exponential): renders about 10 %
+faster (solo presets' median 72 -> 64 ms, sections' 143 -> 131 ms, 4 cores). Of 194 compared renders,
+191 are identical to the bit; three pinned one-shots move by -177 to -182 dB, at most 0.09 of a 24-bit
+step, 80 samples rounding to the neighbouring 24-bit value. The owner adopted it on that measurement;
+`ConsortPinsTest` moved to `oneshot-k2-v2.sha256`. What is left of a render is the room, the house
+decimator and the pipe itself.

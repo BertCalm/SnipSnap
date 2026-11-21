@@ -1,9 +1,14 @@
-# BOROUGH: fitted boom-bap kits and perc stacks (round 1)
+# BOROUGH: fitted boom-bap kits and perc stacks
 
-Status: CONCEIVE plus a Python sound proof. Round 0 heard by the owner ("Sounds quite drum
-machine like"); round 1 rebuilds every voice on acoustic models and is waiting for a listen.
-Not integrated, not on the shelf.
-Repository read: `afb0fa98` (2026-11-18).
+Status (round 3, 2026-11-20): the owner accepted the round-2 Python kits ("I think they are all ready") and chose to
+generate them in the app. The Kotlin port (`Borough.kt`, `BoroughKits.kt`) is built and measured against the
+prototype (see "Round 3: Kotlin port"), and the six kits are on the shelf with their default stacks. Round 3.1
+(2026-11-21): the stacks sit at their kit's level with shorter tails, and each kit carries the live glue the owner
+picked, which the app's native bus plays when the kit loads (see "Round 3.1: the live glue"). The owner heard the
+app's own pads through the native glue and said "Ready" (2026-11-21). Round 3.2 (2026-11-21): the PERC STACK picker
+on an open kit's KIT screen re-renders A13-A16 with another stack and leaves A01-A12 alone (see "Round 3.2: the stack
+picker"); built and tested in software, its screen proved only by CI. No phone or MPC yet.
+Repository read: `afb0fa98` (2026-11-18); round 3 from `1b1d2d65b`.
 
 The characteristic gesture is **heavy swept kick → papery snare crack with late wires → dark, driven recording chain → a perc stack riding on top**.
 
@@ -130,6 +135,231 @@ strokes, never the full ring, so the pad may sound shorter than a ride left to r
 rings 1.35 s above -30 dB. Verification unchanged: 792 WAVs, 0 failures, timbral velocity on
 88 of 88 pads. Listening page version 3: the RIDE & RIMS before player is the round 1 groove
 with the hat stand-in.
+
+## Round 3: into the app, generated (Kotlin port built; not yet heard)
+
+Accepted 2026-11-20. The kits are exported as recipes (`export_recipes.py` ->
+`synth/src/main/resources/borough/v1/recipes.json`, 34 KB, numbers only: per kit the twelve pads, designed drums or
+EMBER voices with their record chain, the balance trims and the limiter drive the owner heard; per stack the four
+EMBER voices with their TUNE and resample ratio resolved once). `synth/src/test/resources/borough-parity.json` holds
+the Python harness's fine measurement of every accepted pad (hardest zone, first take: band energy by window,
+kick pitch, snare body pitch, length, loudness) for the Kotlin port to be measured against. Shipping the same kits
+as frozen samples would have added roughly 40-50 MB.
+
+### Round 3: Kotlin port
+
+**What was built.** `synth/.../Borough.kt` renders every pad from `recipes.json` on top of the Kotlin EMBER, ported
+line by line: the designed kick and snare (`designed.py`), the ghost (the designed snare at 0.4 x velocity, 0.35 s),
+EMBER-voice pads (EMBER at WARMTH 0, then the record chain: `acoustic.ember_voice`, `hat`, `ride`), stack pads
+(`acoustic.stack_pad`: the resolved TUNE, DISTANCE 0.25, WARMTH 0, a Fourier resample where flagged), the record
+(`acoustic.record`: compressor, drive, tilt, low-pass) and `acoustic.end`. It reuses EMBER's membrane, beater,
+stick, wires and club; `Ember.kt` gained small internal accessors only (a strike drawn from a given seed, the
+second head's ratio, the club convolution as its own step), and its own voices render the same bytes as before.
+`BoroughDsp.kt` holds the scipy calls EMBER did not need, each checked against scipy's own numbers
+(`BoroughDspTest`): `resample_poly(y, 1, 4)` (the designed drums' way down), `signal.resample` (the stacks) and
+`hilbert` (the measure). `BoroughKits.kt` lays out the six kits (A01-A12) with any of the four stacks (A13-A16):
+three zones (0.35, 0.65, 1.0) of three takes, take 0 the recipe and takes 1-2 jittered (`build.jitter`), each take
+peaking at 0.89 x v^0.8, then the kit's kick and rest trims. Every strike is seeded by its kit or stack, pad, zone
+and take. The six kits are FRESH TAPE starters under SKINS, each with the stack the owner heard
+(241 starters); `BoroughKits.build(kit, stack)` takes any stack for the picker to come.
+
+**Disclosed, not the same arithmetic:** Kotlin's `Random` draws every noise and strike scatter, so a Kotlin take is
+another realisation of the recipe, not a copy of a Python one (as EMBER's port); EMBER's own voices leave EMBER
+through the house decimator (EMBER round 1); the room convolution is the house single-precision FFT.
+
+**Measured against the Python** (`BoroughParityTest`; every one of the 88 pads, hardest zone, take 0, through a port
+of `hits.measure_hit`, scored as `fit_designed` scores: grid RMS over 6 windows x 8 bands, -40 dB floor, its kick and
+snare masks). The yardstick is Python's own spread: `prototype/borough/parity_spread.py` re-renders each pad's
+recipe with eight fresh seeds in Python and scores each against the same reference
+(`borough-parity-spread.json`; it first re-renders the reference itself, which reproduces to 0.00 dB, 0.06 on the
+shaker whose resample ratio is rounded in the recipe).
+
+| Pads | Kotlin median | Kotlin worst | Python's own median | Python's own worst |
+|---|---:|---:|---:|---:|
+| Designed kicks (12) | 1.10 dB | 2.38 | 0.92 | 2.44 |
+| Designed snares and ghosts (18) | 1.79 | 3.14 | 2.12 | 4.43 |
+| EMBER-voice drum pads (42) | 2.95 | 7.14 | 3.35 | 7.35 |
+| Stack pads (16) | 3.59 | 5.32 | 3.41 | 6.62 |
+| All 88 | 2.58 | 7.14 (CRANKED pedal hat) | 2.45 | 7.35 |
+
+- 81 of 88 pads sit inside the spread of Python's own eight realisations. The other seven sit over its worst by
+  0.01 to 0.45 dB: STOOP SNARE 2 +0.01, CELLAR KICK 2 +0.28, CELLAR TOM LO +0.20, WAX OPEN HAT +0.45, WAX KICK 2
+  +0.27, BELLS JINGLE +0.04, TOPS STICKS +0.30. Eight seeds is a small sample of a random draw; none is a different
+  sound. No bias: Kotlin's distance minus Python's median, averaged over the 88 pads, is +0.06 dB.
+- Kick pitch at 30 ms: 10 of 12 kicks read the reference's pitch exactly, STOOP KICK 2 0.7 semitone under (one FFT
+  bin) and WAX KICK 1.05 under (one bin, 2.7 Hz at 45 Hz; Python's own realisations read 43.1 and 45.8 Hz half and
+  half). STOOP KICK reads 53.8 Hz where the reference reads 96.9: at 30 ms its punch and its boom are about as loud,
+  and the measure picks one or the other from seed to seed in Python itself (five of eight Python realisations read
+  51 to 57 Hz, three 96.9 Hz).
+- Snare body: all 18 designed snares and ghosts within 0.62 semitone of the reference (most exact).
+- Lengths within 95 ms (DRY ROOM's high tom, where `end` trims); loudness over 300 ms within a median 0.1 dB.
+
+Tolerances (`BoroughParityTest`, set from these numbers): grid within Python's worst realisation + 1 dB; mean bias
+within 0.5 dB; kick pitch at 30 ms within a semitone (or one bin) of the reference or of one of Python's
+realisations; snare body within a semitone; length within 15% or 150 ms.
+
+**The other checks** (`BoroughKitsTest`, on all six kits' drums and all four stacks, 792 strikes): finite, peak at
+most 0.9 and exactly 0.89 x v^0.8 x trim, |DC| under 0.005, final 10 ms rms at most 0.00076 (bar 0.003, verify.py's);
+soft against hard a different strike on all 88 pads (gain-matched residual above -20 dB, closest -15.1 dB on CRANKED
+KICK 2; Python's closest -14.3 on the same pad); every pair of takes in every zone distinct (closest -31.4 dB, STOOP
+KICK 2; Python's closest -34.5, CRANKED KICK 2; copies of one strike measure under -100); builds deterministic; every
+kit with every stack. A kit generates in 8 to 11 s on this machine (four cores).
+
+**Gates, in software** (`BoroughKitTest`, `:shell:generateBoroughKits`): STOOP DUST from the shelf through saving,
+reloading, the pad resolver at all 127 velocities (zones at 1-41, 42-84, 85-127) and nine successive hits per zone
+(the three takes in order, then again), SFZ out and back, MPC 3 (zones, slices and cycles read back from the track)
+and MPC 2 (three velocity layers, each its zone's first take: the owner's format limit); WAX with the TOPS stack
+through save and MPC 3. The generator does all six kits: "Verified BOROUGH STOOP DUST: 16 pads, 144 slices, saved PCM
++ playback + MPC 3 track + SFZ + DecentSampler", and the same for the other five.
+
+**Not done this round:** the stack-picker UI; persisting a kit's glue settings in the kit format; switching the
+glue compressor and limiter on when a BOROUGH kit loads (`glue_limiter_drive_db` is parsed, not used).
+Nothing has been heard from the Kotlin render, and no phone or MPC has played the kits. (The glue items are done in
+round 3.1 below.)
+
+### Round 3.1: the live glue (native, built; not yet heard)
+
+The owner picked C, "C for all except rides and rims" (2026-11-21): the round-2 glue with tape-style saturation in
+front on five kits, and the round-2 glue alone on RIDE AND RIMS. `glue_recipe.py` pinned the numbers per kit in
+`recipes.json` `kits[].glue`. This round makes the app play them.
+
+**What was built.**
+
+- **Native bus** (`app/src/main/cpp/GlueBus.h`). Two stages now sit in front of the existing compressor and limiter:
+  an input trim (-24..+24 dB) and an optional saturator `tanh(g x) / tanh(g)`, g = 10^(saturationDb/20) (0..12 dB).
+  The order is `model()`'s: trim, saturation, the compressor, makeup x drive, the lookahead limiter. The bus stays
+  stereo-linked and applies the same curve on each channel. Off is still bit-exact bypass. A 0 dB trim with no
+  saturation is the old chain sample for sample (`glue_a_default_front_end_is_the_chain_it_was_sample_for_sample`),
+  so every existing setting and test is unchanged.
+  - The trim and the saturator's drive glide in dB over 20 ms, like the other settings.
+  - Switching the saturator on or off while the glue is on **crossfades** the curve's input and output over 20 ms.
+    It does not glide g from a neutral value, because the curve has no neutral setting in its range: it is the
+    identity only as g -> 0 (-inf dB), and its smallest setting, 0 dB (CELLAR's), already lifts quiet material by
+    1/tanh(1), +2.4 dB. Both ends of the crossfade are continuous in the signal, so nothing steps.
+  - `glue_tests` holds the curve values at 0, 2.7, 6 and 12 dB on both channels, the trim alone and in front of the
+    saturator, the glides (a line in dB, halfway at 10 ms), the toggle with no click, bypass still bit-exact with a
+    front end set, and the ceiling held with the guard's clamped count 0 on +24 dB trim, 12 dB saturation and 24 dB
+    of drive into a kick and snare at four times full scale. The no-click check fails, as it should, when the
+    crossfade is replaced by a hard switch. The JNI carries the nine values in chain order (`jni_tests`).
+- **Kit format** (`:kit`). An optional `Kit.glue` field (`KitGlue`: trim, saturation or null, threshold, ratio,
+  makeup, limiter drive, ceiling) is written to kit.json as `"glue"`. A kit without it writes no key, and old kit
+  files load unchanged with no glue. A damaged field loads as no glue and the kit's pads still load. The field round
+  trips through save and load and survives ordinary edits (`KitStoreTest`). `Borough.KitRecipe.glue` parses the
+  recipe's object and `BoroughKits.glueOf(kit)` returns it. The six BOROUGH starters write it into their kit.json,
+  and no other starter carries one (`BoroughKitTest`).
+- **App.** `PadEngine.load` publishes `GlueSettings.forKit(kit)` with the bank: the kit's glue, on, or
+  `GlueSettings.OFF` for every kit without one (`app/src/test/.../GlueSettingsTest`).
+- **Live calibration.** I traced the gain from a pad's exported file to the bus's input in the pads' mix. Velocity
+  scales it by v (1 at full velocity). The pad's level scales it by 0.707946, the default every BOROUGH pad carries.
+  The linear balance law is unity on both sides at centre. A mono sample feeds both channels unscaled, and the
+  master gain comes after the glue. So a default pad at full velocity reaches the glue at **0.708 x its sample,
+  -3.0 dB** (`PadHit.DEFAULT_HIT_GAIN`). The recipe's trim assumes 1.0x, so the app adds +3.0 dB to each kit's
+  trim (`GlueSettings.LIVE_TRIM_CALIBRATION_DB`). The recipe is not changed. The mix is clamped at +-1 before the
+  glue (the engine's existing guard). At default levels the demo grooves peak at 0.65 to 0.96 there (DRY ROOM
+  1.36 x 0.708), so the clamp does not touch them. A pad turned up to full level could reach it on DRY ROOM, RIDE
+  AND RIMS, CRANKED and CELLAR. Softer hits arrive at v x level, where the Python groove plays a zone's sample at
+  (v / zone)^0.8. The trim is calibrated to the hardest default hit, which sets the demo groove's peak.
+- **Render tool** (`app/src/main/cpp/test/glue_render.cpp`, built by the native harness only, not in the app's
+  CMake, not in the APK). It runs a WAV through the real bus, on from its first frame, and writes 32-bit float.
+  The 3 ms lookahead stays in the file: the output is 132 frames late at 44.1 kHz and 132 frames longer.
+
+**Measured: native against `model()`.** `prototype/borough/glue_native.py` builds each kit's raw demo groove as
+`glue_recipe.py` does, from `:shell:generateBoroughKits`' pads. It renders the groove through `glue_render` with the
+kit's recipe glue and compares the result sample for sample with `model()`.
+
+| Kit | Trim (recipe) | Saturation | Limiter drive | Native vs model | `model()` as is |
+|---|---:|---:|---:|---:|---:|
+| STOOP DUST | +0.79 dB | 2.7 dB | 7.13 dB | -148.0 dB | -58.7 dB |
+| CELLAR BOOM | -1.29 | 0.0 | 7.67 | -148.0 | -49.6 |
+| CRANKED | -1.81 | 6.0 | 7.00 | -148.1 | -148.1 |
+| WAX | +0.63 | 6.0 | 7.00 | -148.2 | -55.1 |
+| DRY ROOM | -2.67 | 6.0 | 7.00 | -148.0 | -50.0 |
+| RIDE AND RIMS | -2.37 | none | 7.00 | -148.3 | -50.7 |
+
+Every kit peaks at 0.8913 (-1 dBFS) and the guard clamps nothing. -148 dB is the float output's rounding: the
+arithmetic is the same. The right-hand column is `model()` run unchanged. Its sliding minimum is scipy's
+`minimum_filter1d` with the default `mode='reflect'`, which mirrors a groove's first hit (frame 0) into the time
+before the file. The model's limiter therefore ducks ahead of a signal that has not started. Every difference sits in
+the first 120 frames after the latency. CRANKED's groove does not open on a hit loud enough to limit. Given the
+silence the native bus starts from (a one-second lead-in, dropped afterwards), the model agrees. `model()` against
+what the owner heard stays as `glue_recipe.py` reports it, -30.6 to -34.6 dB, with crest within 0.1 dB.
+
+**What exports do not carry.** The glue is live playback only. The pads on disk are not glued, so the MPC 3 track,
+the MPC 2 program, SFZ and DecentSampler all play the drums dry of it. None of those formats has a whole-kit bus, and
+none applies the glue. An SFZ round trip comes back with no glue (`BoroughKitTest`). Where an export writes SnipSnap's
+own sidecar kit.json beside its samples, that sidecar is a copy of the kit, so the field travels in it for a later
+SnipSnap import. No MPC reads it.
+
+**Not done:** the stack picker (built in round 3.2, below). Nothing has been heard from the native glue. No phone or MPC has played it, and the
+app's `GlueSettingsTest` and `:app:assembleDebug` need an Android SDK this session does not have. Both are for CI's
+android-build job; the mapping and its test ran here once, compiled under `:shell`'s test source set.
+
+### Round 3.2: the stack picker (built; nothing heard on a phone)
+
+The owner's decisions (2026-11-21): an open BOROUGH kit offers HANDS, TAMBOURINE, BELLS and TOPS, the current one
+selected. Another one re-renders only A13-A16, with `BoroughKits.stackPads(kit, stack)` for the kit they sit in (a
+stack's level and tails follow its kit, round 3.1). A01-A12 never move. If the player has changed any of A13-A16, the
+app asks first; untouched stack pads swap straight away. The glue and the rest of kit.json stay as they are.
+
+**What was built.**
+
+- **`BoroughStackSwap`** (`:shell`). `held(kit)` reads which BOROUGH kit and stack a kit holds from its pads'
+  `source` (engine BOROUGH, `kit`, `slot`, `kitVersion`, and `stack` on a stack pad). `KitAssembler` writes these
+  and kit.json keeps them through save and reload. The kit is the one most of A01-A16's BOROUGH pads name. The
+  stack is the one the BOROUGH stack pads still on A13-A16 name, when they agree. If they name more than one, no
+  stack is selected. `swap(kitDir, stack, replaceChanges)` refuses a kit with no BOROUGH pads on bank A. It does
+  nothing for the stack the kit already holds. If A13-A16 were changed, it writes nothing and names the changed
+  slots, and the app asks before calling it again with `replaceChanges`.
+- **The writing.** The new stack goes through `KitAssembler` into a temporary folder. That is the writer the
+  starter uses: three velocity zones of three takes each, one chain WAV per pad. `KitBuilderModel.adoptAssembled`
+  then copies each WAV into the kit folder under a name nothing else uses and saves kit.json. VERSIONS keeps the kit
+  as it was. Only after that save do the replaced files go to the trash (THE BIN, 30 days), as any replaced pad's do.
+  No old stack WAV is left in the kit folder, and rolling back the swap in VERSIONS brings the old stack back byte
+  for byte. A failure before the save takes back the copied files and leaves kit.json as it was.
+- **App.** A PERC STACK row on the KIT screen, above KIT TOOLS, drawn only for a BOROUGH kit (`PercStackRow.kt`). It
+  has four segments, two by two, because TAMBOURINE does not fit a quarter of a phone's width in the label font. The
+  stack the kit holds is selected. A tap runs the swap off the main thread under the kit write lock, with the dock's
+  busy line "Swapping in HANDS…". If pads were changed, a dialog asks "Replace your changes on A13–A16?" and names
+  them, for example "A14 changed. What is there now goes in the trash, and VERSIONS rolls the kit back.", with CANCEL
+  and REPLACE. A swap that lands updates the open kit, and the pads engine reloads the bank from it as after any
+  kit edit. The dock then says "HANDS on A13–A16. The drums didn't move."
+
+**What counts as changed.** A stack pad is untouched when it is exactly what a swap to its stack would write today.
+Its kit.json entry must equal, field for field, the pad `KitAssembler` makes from `stackPads` for that kit. That
+covers name, class, colour, level, pan, tune, choke, one-shot, shape, the chain with its zones and takes, recipe and
+provenance; only the file's name may differ. Its WAV must hold the same PCM, within `KitBuilderModel.RENDER_MATCH`
+(1e-3, the app's existing "a re-render and the file on disk are the same sound"). Deciding this renders the stack the
+kit holds, which takes about a second here. A slot whose provenance already says it is not that stack's pad is
+changed without rendering. The tests count each of these as changed: a new sample, a level, pan or tune change, a
+shape (decay), a cleared pad, a pad moved off the slot, a WAV rewritten outside the app under the same name, and a
+pad printed by another `kitVersion`. A kit-wide setting (key, tempo) or an edit to a drum pad leaves A13-A16
+untouched.
+
+**What it cannot tell.**
+
+- It cannot see a change kept somewhere other than kit.json and the WAV (live kit effects, for instance). Those do
+  not change the pads.
+- It errs towards asking. A stack pad from an older `BoroughKits.VERSION`, or one a later build renders differently
+  without bumping the version, reads as changed: there is no way to tell that from an edit. The cost is one
+  unneeded question, never a lost edit.
+- Tapping the selected stack does nothing, even if one of its pads was changed. To restore a changed stack, pick
+  another and then pick it back.
+- VERSIONS rolls kit.json and the old files back, but it does not take the swapped-in WAVs out of the folder. That is
+  how a VERSIONS rollback treats any replaced pad today; it is not specific to this picker.
+
+**Velocity and round robin.** The swapped pads are written by the same assembler and chain as the starter's, and
+`BoroughStackSwapTest` checks them on STOOP DUST for each of the other three stacks. The PCM equals
+`stackPads(STOOP, stack)` take for take (`TriadKitProof`). The pads keep their provenance after reloading. The pad
+resolver picks zones 1-41, 42-84 and 85-127 and deals the three takes in order. The MPC 3 track reads back its zones,
+slices and cycles, and its samples match byte for byte. A01-A12 stay byte-identical in kit.json and on disk, the glue
+and every other kit field are kept, and the next swap goes straight away. The refusals write nothing: a kit with no
+BOROUGH pads, the stack already there, and changed pads not yet confirmed.
+
+**Not verified here.** `:app` does not compile in this session (no Android SDK). The row, the dialog and the App
+wiring are proved only by CI's android-build, and by `PercStackRowTest` on CI's emulator. That test checks the row is
+drawn only for a BOROUGH kit, that a swap lands, and that changed pads are asked about first, with CANCEL leaving the
+kit alone and REPLACE swapping. No new mapping in `:app` needed a host unit test: the choices, the labels and the
+lines are `:shell`'s and tested there. Nobody has heard a swapped stack on a phone, and no MPC has loaded one.
 
 ## Round 2: designed boom-bap drums in all six kits
 
@@ -505,10 +735,10 @@ Listening page (private until shared): https://claude.ai/artifact/6y32yHPUszWK58
 
 | Gate | Status |
 |---|---|
-| Drums: multiple distinct genre kits on the shelf | not yet: six kits rendered in Python; round 0 heard and rejected as drum-machine-like, round 1 not heard; not on the shelf |
-| Percussion: authored roll/riser where appropriate | partial: SNARE ROLL per kit and TAMB ROLL, finite, not heard |
-| Velocity levels through render, save, playback, export | render only (Python): three timbral zones; save, playback and export not started |
-| Round robin through render, save, playback, export | render only (Python): three takes; save, playback and export not started |
+| Drums: multiple distinct genre kits on the shelf | round 3: six kits on the shelf, generated in Kotlin from the accepted round-2 recipes; the Kotlin render not yet heard |
+| Percussion: authored roll/riser where appropriate | a finite SNARE ROLL (EMBER's press roll) on A12 of every kit (`BoroughKitsTest`) |
+| Velocity levels through render, save, playback, export | pass in software (round 3): three timbral zones in Kotlin, through save, the pad resolver, SFZ and MPC 3 (`BoroughKitTest`, `:shell:generateBoroughKits`); MPC 2 keeps the layers. Round 3.2: a stack swapped in by the picker keeps its zones through save, reload, the resolver and MPC 3 (`BoroughStackSwapTest`) |
+| Round robin through render, save, playback, export | pass in software (round 3): three distinct takes per zone, dealt in order through save, playback, SFZ and MPC 3; MPC 2 keeps each zone's first take (format limit). Round 3.2: the same for a swapped stack, through save, the resolver and MPC 3. No phone or MPC has played them |
 | Melodic, keygroups, chords, HOLD, STRUM | not applicable: finite drum and percussion one-shots |
 
 ## Next round
@@ -541,7 +771,42 @@ Listening page (private until shared): https://claude.ai/artifact/6y32yHPUszWK58
     muddy ... These are just flopping."
   - round 2 prototype (STOOP, designed drums): "Round 2 is def betetr" (2026-11-20). Direction accepted; all six
     kits are being rebuilt this way.
+  - round 2, all six kits: "I think they are all ready" (2026-11-20). Accepted for the app. The owner chose to
+    generate them in the app (Kotlin, on EMBER) rather than ship samples, six kits with a perc-stack picker,
+    and the live glue compressor switched on when a BOROUGH kit loads.
+  - round 3 A/B (the app's MPC 3 export against the accepted Python kits): "Stoop hard is extremely overblown on
+    the individual pad walkthrough" (2026-11-21). The page's fault, not the kit's: `listen_app.py` read the
+    app's 32-bit WAVs as 16-bit, so every pad run came in about 96 dB over full scale and was hard-clipped (all
+    six kits). Measured against Python, the app's STOOP pads hold the same peaks (kick 0.89) and the same band
+    balance (kick within 0.1 dB below 120 Hz). Fixed by reading each file at its own sample width, with a check that no pad
+    peaks past the 0.89 level law. The page now carries the Python pad runs beside the app's. The grooves were
+    unaffected (the glue sets its level from each groove's own peak). Awaiting the owner's re-listen.
+  - round 3, the same page: "I feel like the sound needs to be a bit fuller and vibrant. It feels sluggish and
+    muddled" (2026-11-21). Measured (`fuller.py`, the app's own pads, 10 s of each groove against its loop): the
+    space between hits sits 26-33 dB under the peak against the loops' 43-69 dB. The drums alone sit 51-138 dB
+    under (RIDE & RIMS 32: its ride rings 1.4 s), so the default perc stack fills the gaps and the glue lifts them
+    a further 4-7 dB. The stack also takes 2-7 dB off the bottom (under 150 Hz against 150 Hz-5 kHz). Cause: the
+    stack pads carry no level trim (each peaks at 0.89 against the kit's trimmed snare and hats at 0.28-0.54),
+    and THUD, BONGO LO, LOG, STICKS, BELL LO and the TOPS ride ring 0.5-1.4 s in the low and low mid. The top
+    is not missing: the grooves reach 10-15 kHz, the loops 1.2-4.5 kHz. Round 3 was also the first page to play
+    every groove with its stack through the glue; round 2's glued grooves were drums only. On the page as
+    round 3.1, level-matched: A now; B the stack at the kit's rest trim with tails -30 dB by 250 ms (bells and
+    rides 600 ms) and RIDE & RIMS' ride at 600 ms; C B plus tape-style saturation before the glue, driven to the
+    loop's crest (at most 6 dB). A lighter, faster glue was tried and dropped: it raised every crest 2-4 dB.
+  - round 3.1 pick: "C for all except rides and rims. It blows iout the snare and chocks the ride" (2026-11-21).
+    Built: every stack at its kit's rest trim with the shorter tails (recipes rules.stack_tail; the drums
+    unchanged, RIDE AND RIMS' ride at its full ring); each kit's live glue pinned in recipes kits[].glue
+    (glue_recipe.py: saturation on five kits, none on RIDE AND RIMS). Read as: RIDE AND RIMS takes the perc fix
+    only, full ride, plain glue; on the page for the owner to confirm.
+  - round 3.1, as built (the app's own pads through the native glue, beside the picks, level-matched; RIDE AND
+    RIMS with its ride ringing and no saturation): "Ready" (2026-11-21). Accepted. Next: the stack picker.
   Heard as better is not accepted for the shelf: no kit has been approved yet.
+- **Round 3.2, the stack picker (built, not heard):** `BoroughStackSwap` and the KIT screen's PERC STACK row. The
+  swap, the changed-pad rule and the refusals are tested on the JVM (`BoroughStackSwapTest`). The row and its confirm
+  are tested only on CI (`PercStackRowTest`, android-build). Nobody has swapped a stack on a phone.
+- **Round 3.1, the live glue (measured, not heard):** the native bus matches `model()` to -148 dB on every kit's demo
+  groove (`glue_native.py`, with `model()`'s reflect edge removed); the live calibration is +3.0 dB (a default pad's
+  level). Nobody has listened to the native glue, on any device.
 
 ## Why it is built this way
 
