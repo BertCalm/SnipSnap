@@ -3352,6 +3352,8 @@ fun App(shelf: KitShelf) {
     // waiting, nothing busy), so it never pulls a user away from somewhere they went.
     // `startPicked` also holds the write below back until the pick has read the old value:
     // `project` starts null, and writing that first would forget it before it was read.
+    // CHOP's work in progress, held here so it outlives the CHOP screen (S-6).
+    val chopHold = remember { com.snipsnap.app.ui.ChopHold() }
     var startPicked by remember { mutableStateOf(false) }
     LaunchedEffect(kitsLoaded) {
         if (!kitsLoaded || startPicked) return@LaunchedEffect
@@ -4582,6 +4584,7 @@ fun App(shelf: KitShelf) {
                             entry = open,
                             lastCommit = lastCommit,
                             shelf = shelf,
+                            hold = chopHold,
                             onToast = { dock.say(it) },
                             onSentToGrid = { newEntry, sent ->
                                 haptics.land()
