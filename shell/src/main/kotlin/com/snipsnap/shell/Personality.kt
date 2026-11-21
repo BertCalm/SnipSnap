@@ -2382,8 +2382,12 @@ object Copy {
     // ---- PERC STACK (a BOROUGH kit's A13-A16, docs/BOROUGH.md round 3.2) ----
     /** The row's heading on the KIT screen, over a BOROUGH kit's four stacks. */
     @field:CopyLabel const val PERC_STACK = "PERC STACK"
-    /** The ask before a swap replaces stack pads that are no longer the stack as it was made (the owner's words, 2026-11-21). */
-    const val PERC_STACK_ASK = "Replace your changes on A13–A16?"
+    /**
+     * The ask before a swap replaces stack pads that are no longer the stack as it was made: the owner's words
+     * (2026-11-21), then the way back (Reversal's law: a line that destroys says whether it can be got back). The
+     * replaced files go to the trash, as [com.snipsnap.shell.BoroughStackSwap.swap] bins them.
+     */
+    const val PERC_STACK_ASK = "Replace your changes on A13–A16? The trash keeps them ${Reversal.DAYS} days."
     @field:CopyLabel const val PERC_STACK_REPLACE = "REPLACE"
     /** Under the ask: the pads that changed, and where what is on them now goes. */
     fun percStackChanged(slots: List<Int>): String {
