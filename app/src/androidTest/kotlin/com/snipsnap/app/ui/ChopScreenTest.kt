@@ -346,4 +346,63 @@ class ChopScreenTest : ComposeScreenTest() {
         /** Real time for a released read's worker to hand its result to the main thread: a hop of milliseconds, with room to spare. */
         const val HOP_MS = 500L
     }
+    /**
+     * CHOP on and off screen over one [ChopHold], as App holds it: [onChop] false is the user
+     * gone to another place, true is coming back. [shared] false gives each appearance its own
+     * hold, the way a test that builds CHOP alone (and CHOP before S-6) did.
+     */
+    private fun showLeaving(onChop: androidx.compose.runtime.MutableState<Boolean>, shared: Boolean) {
+        val commit = tapeCommit()
+        val shelf = KitShelf(folder("chop-test-shelf"))
+        val kept = ChopHold()
+        setPhoneContent {
+            CompositionLocalProvider(LocalBusySink provides { told += it?.label }, LocalReduceMotion provides true) {
+                if (onChop.value) {
+                    ChopScreen(
+                        entry = null,
+                        lastCommit = commit,
+                        shelf = shelf,
+                        onToast = { toasts += it },
+                        onSentToGrid = { e, line -> sent += e to line },
+                        onNavigateTape = {},
+                        onNavigateKits = {},
+                        loadingClock = { compose.mainClock.currentTime },
+                        hold = if (shared) kept else androidx.compose.runtime.remember { ChopHold() },
+                    )
+                }
+            }
+        }
+    }
+
+    /** Re-chops the break into a GRID of four, leaves CHOP, and comes back. */
+    private fun gridThenLeaveAndReturn(onChop: androidx.compose.runtime.MutableState<Boolean>) {
+        waitFor("the break chopped", timeoutMillis = 60_000) { showing(header(4, "BY HITS")) }
+        invokeClick("EXPAND CHOP")
+        invokeClick("GRID")
+        waitFor("the grid chop") { showing(header(4, "GRID ×4")) }
+        compose.runOnUiThread { onChop.value = false }
+        pump()
+        compose.runOnUiThread { onChop.value = true }
+        pump()
+    }
+
+    /** UAT 2026-11 user states, S-6 (ruled 2026-11-21): CHOP keeps its edits on leaving. */
+    @Test
+    fun leaving_chop_and_coming_back_finds_the_chop_as_it_was_left() {
+        val onChop = androidx.compose.runtime.mutableStateOf(true)
+        showLeaving(onChop, shared = true)
+        gridThenLeaveAndReturn(onChop)
+        waitFor("the grid chop, kept", timeoutMillis = 60_000) { showing(header(4, "GRID ×4")) }
+        assertFalse("the chop was rebuilt from the sample", showing(header(4, "BY HITS")))
+    }
+
+    /** The positive control: without a hold that outlives the screen, coming back is a fresh chop. */
+    @Test
+    fun without_a_shared_hold_coming_back_is_a_fresh_chop() {
+        val onChop = androidx.compose.runtime.mutableStateOf(true)
+        showLeaving(onChop, shared = false)
+        gridThenLeaveAndReturn(onChop)
+        waitFor("a fresh chop", timeoutMillis = 60_000) { showing(header(4, "BY HITS")) }
+    }
+
 }

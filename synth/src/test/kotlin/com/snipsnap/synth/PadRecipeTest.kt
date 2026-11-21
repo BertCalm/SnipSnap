@@ -53,6 +53,7 @@ class PadRecipeTest {
         ConsortPatch("Reed trio", ConsortVoice.OBOE, mapOf("HOLD" to 0.2f),
             chairs = listOf(ConsortChair(ConsortVoice.CLARINET, ConsortInterval.FIFTH), ConsortChair(ConsortVoice.BASSOON, ConsortInterval.MIN7)), velocity = 0.8f, take = 2),
         FillPatch("Fill roll", FillVoice.SNARE, Fill.defaults(FillVoice.SNARE)),
+        DrawlPatch("Bar slide", DrawlVoice.LAP, mapOf("SLIDE" to .8f, "HOLD" to .1f), velocity = .9f, take = 2),
         AccordPatch("Saved ensemble", AccordVoice.TINE, mapOf("CONTACT" to .7f),
             midi = 55, velocity = .6f, seed = Long.MIN_VALUE,
             acousticProfile = AccordAcousticProfile.LONG_RING,

@@ -1,14 +1,16 @@
 # TERRA's stick voices: the Japanese festival set
 
-Nine TERRA voices added on 2026-11-20: ODAIKO, NAGADO, SHIME, KA, KANE, CHAPPA,
-BINZASARA, COWBELL and WATER_DRUM. They live in `TerraSticks.kt`, play the fitted
+Ten TERRA voices added on 2026-11-20: ODAIKO, NAGADO, SHIME, KA, KANE, CHAPPA,
+BINZASARA, COWBELL, WATER_DRUM and FAN (the fan came in round 7). They live in `TerraSticks.kt`, play the fitted
 tables in `TerraSticksTables.kt`, and share TERRA's output stage, velocity and
 takes.
 
-**Status: prototype round, not engine-complete.** The voices render from the
-app's engine and have provisional presets. No kit, no roll or riser pad, and no
-velocity/round-robin evidence through save, playback and export exists yet. See
-[Gates](#gates).
+**Status: complete against the applicable gates (2026-11-20).** The owner
+approved the sound of the four kits, the fan and the darker soft edge stroke ("Sounds
+good, I like", after the round-7 listening page), and `TerraStickKitsPinsTest`
+pins every pad's twelve zone samples as heard. Velocity and round robin are
+verified through save, export and playback. The owner reported phone and MPC
+playback good the same day. See [Gates](#gates).
 
 ## The gesture
 
@@ -50,6 +52,7 @@ The fitting scripts and the fitted models are in `prototype/taiko/`.
 | BINZASARA | wooden slats on a cord | the single-throw reference | SPREAD: the fall's length, half to twice the measured 185 ms |
 | COWBELL | a clapper bell, shaken | the ringing reference, whole gesture | SHAKE: 1 the measured train, 0 one strike. DAMP: a hand on the bell |
 | WATER_DRUM | water drum, 183 Hz | a hit from the short reference | none |
+| FAN | a fan slapped or swished | two gestures from the fan loop | SWEEP: 0 the slap, 1 the swish |
 
 All share TUNE (+-5 semitones), DECAY (0.5x to 2x), FORCE (the contact, softer
 to harder) and ATTACK (the landing's noise, +-9 dB).
@@ -84,6 +87,75 @@ The owner listened to Python renders on a published page over six rounds.
 - **Round 6.** Both big drums on one voice, and together. The owner asked for
   all the voices.
 
+## Round 7: the fan, the gong's soft edge, and a processed kit
+
+After the owner's first listen of the app's kits ("These are cool"), they asked
+for the fan, the edge-stroke fix and a processed kit.
+
+**The fan.** Rounds 1 to 6 had skipped it as "a noise gesture, not a struck
+object", which was assumed, not measured. Measured, each event in the fan loop is
+neither a drum (no ringing note) nor continuous noise: it is a burst of short
+flaps with a flat spectrum from 400 Hz to 2 kHz.
+
+- **The slap:** twelve flaps over 106 ms, dying away.
+- **The swish:** sixteen flaps over 123 ms, swelling to a peak at 66 ms.
+
+Each flap is band noise plus the event's three strongest spectral peaks as short
+notes, dealt at the measured times and levels, the way the binzasara's slats are.
+The flap's decay was chosen from 4 to 130 ms by fit (65 ms). Fit error, attack /
+body: slap 4.0 / 2.6 dB with an envelope correlation of 0.91; swish 7.5 / 1.8 dB,
+its quiet first 30 ms fitted as part of the whole gesture. Kotlin against Python:
+2.8 to 4.8 dB, about the spread between two of its own takes. Velocity brightens
+the onset 79% (slap) and 105% (swish).
+
+**The gong's soft edge.** The edge stroke's notes sit in one narrow band (3.4 to
+7.6 kHz), so no re-weighting among them darkens it: every tilt tried moved its
+onset brightness by -2 to +1%. A softer, longer contact brings out a plate's low
+modes against its high ones, so a soft edge stroke now reaches toward the centre
+stroke, up to 45% of the way at velocity 0 (shape) and not at all at full
+velocity, where every render is unchanged. The centre stroke's notes stand in for
+the plate's low modes: an analogy, not simulated. Measured: the edge stroke's
+onset brightness now rises 40% from a third of full velocity to full (it was 4%).
+Under HIT the strokes stay the full-velocity ones, so a struck pad keeps one level
+curve per mode.
+
+**TERRA DUSK.** A fourth kit built around the rack, 90 BPM like the delayed
+references: the odaiko rewound and in a large room, echoes at TIME 0.66 (about
+250 ms, a dotted sixteenth at 90 BPM) and 0.94 (about 333 ms, an eighth), the
+shime smeared into a spring, the rim through tape, the fan ghosted, the water drum
+dubbed, a shime roll echoed and an odaiko riser in a room. The chain is baked into
+all twelve zone samples of each pad, after the strike is softened, so a soft touch
+is a softer strike through the same chain. Each pad's chain is saved in its source
+beside its recipe. Round 8 replaced the granular stand-ins with GRAIN.
+
+## Round 8: ring, grain and tempo
+
+Four optional improvements, the known limits, worked through on 2026-11-21. The
+owner heard each candidate beside the approved pad it would replace and took all
+of them ("Everything sounds great"). Eighteen pads changed; the other forty-six
+are byte for byte the round-7 renders.
+
+- **RING.** A fourth articulation beside HIT, ROLL and RISER: the same strike
+  printed past the hit's 1.45 s cut, for its longest note's T60 at DECAY plus
+  0.3 s (at least half a second past the hit, at most 6 s), filed as a phrase pad.
+  At DECAY's default the odaiko's ring runs 3.1 s, 41 to 47 dB under its loudest
+  100 ms just past the hit's cut. Six pads ring: THUNDER's Odaiko Long, Odaiko
+  Deep, Cymbal Wash (6 s) and Gong Low, MATSURI's Chan, BON's Bell Single.
+- **GRAIN** (`Grain.kt`), a new rack section after REWIND and before SPRING:
+  Hann-windowed grains of 10 to 120 ms cut from the hit's first 150 ms, scattered
+  over 0.1 to 1 s after it, a quarter backwards, later ones quieter, from one fixed
+  seed per setting. DUSK's three stand-ins became Ten Grains, Ka Grains and Chiki
+  Grains. It is not yet a pedal chip: a pedal needs its own listening gate.
+- **Tempo.** A roll or riser recipe may carry a BPM. A roll then fills one bar at
+  the subdivision nearest the voice's own rate; a riser climbs through the
+  subdivisions over two bars to a full-touch accent on the next downbeat, each
+  stroke moved at most 2 ms. Every kit's rolls and risers are locked to the kit's
+  tempo.
+- **The cowbell, left alone.** Refining its four strike times (within 6 ms, in
+  0.25 ms steps) raised its waveform match from 57% to 59%. That is too little to
+  change an approved sound; the limit is more likely the swinging bell's notes not
+  holding still, which fixed notes cannot follow.
+
 ## The Kotlin port, measured
 
 Against the Python render of the same tables (full velocity, take 0), over third
@@ -98,23 +170,96 @@ Render time, warm, one voice: 18 to 150 ms (BINZASARA and ODAIKO the slowest:
 Velocity, soft (0.3) to full, centroid of the first 30 ms: +38% (KA) to +163%
 (ODAIKO) on every voice at its defaults.
 
+## Rolls and risers
+
+`TerraRolls.kt`. A stick-voice pad can be a ROLL or a RISER instead of a HIT
+(`TerraArticulation`), saved in its recipe. A hit writes the bytes TERRA has
+always written; a roll or riser writes `"version": 3` and its articulation, so an
+older build refuses it by name instead of playing one hit and dropping the roll
+on re-save (the same rule a struck pad's version 2 follows).
+
+A roll is real strokes of the voice, never one sample looped: two hands
+alternating (the second at 0.86 of the first), each stroke its own renderer take
+from a cycle of eight, timing moved up to 4 ms either way, tails ringing under
+the next stroke.
+
+- **ROLL:** 2.0 s at the voice's own rate (5 strokes a second for the binzasara,
+  whose every stroke is a fall of slats, up to 15 for the shime).
+- **RISER:** 3.0 s, speeding up exponentially (for example 3 to 12 strokes a
+  second on the odaiko) and growing from a quarter of the touch to all of it, so
+  every stroke is brighter than the last, not only louder.
+- **Touch and take:** the touch scales every stroke's force, so a soft roll is
+  darker. A kit take is a different roll: its strokes draw renderer takes 16
+  apart, so takes 0 to 3 share none.
+
+Rolls are tempo-free by default, as BACKWASH's tambourine roll is. Since round 8 a
+recipe may carry a BPM, and every kit's rolls and risers carry their kit's.
+Rendered they last 2.5 to 4.4 s, and the classifier files them as phrases (LOOP).
+
+Cost: one stroke render per distinct force and stroke take, rendered in
+parallel. That is over the house's tens-of-milliseconds rule for a one-shot; a
+roll is a phrase pad and re-renders only when its recipe changes.
+
+## The kits
+
+`TerraStickKits.kt`. Three kits of sixteen pads, each a different musical job,
+not one kit at three strengths. No recipe is shared between them.
+
+| Kit | Tempo | Lead voices | Job | Rolls and risers |
+|---|---|---|---|---|
+| TERRA MATSURI | 90 | NAGADO | Street festival: don low, shime ten and tsu as the time, ka answering, kane and chappa on top, one odaiko accent | Ten Roll, Don Riser |
+| TERRA THUNDER | 70 | ODAIKO | Big drums: both odaiko and their pair, three tuned nagado toms, rim cracks, a cymbal wash, a low gong | Odaiko Roll, Odaiko Riser, Tom Roll |
+| TERRA BON | 115 | WATER_DRUM, COWBELL | Dance: water drum and shaken bell lead, shime and a soft nagado under them, slats as the shaker; no odaiko | Slat Roll, Bell Riser |
+
+Every pad carries three touches (a third, two thirds and all of a full strike)
+by four takes. A touch is rendered at its velocity through the voice's own law
+and peak-matched to its take's hard hit, as every velocity zone in the house is,
+so level is the hardware's velocity curve's job. A take is the voice's own next
+landing (renderer takes 0 to 3). Grid pads carry no PadRecipe; each pad's recipe
+rides in its source as JSON, as TERRA's round-robin kits' do.
+
+Mute groups: MATSURI's open and choked chappa cut each other; BON's three bell
+pads cut each other (the riser excepted).
+
+Build time, all sixteen pads of twelve samples each, one machine: 11 s
+(MATSURI, BON) and 24 s (THUNDER, whose odaiko pads and three rolls are the
+slowest).
+
+The listening page for this round is
+<https://claude.ai/artifact/ECBiXKd9cS9E44gZBhkNmU> (private to the owner).
+
 ## Disclosed, not fixed
 
-- **KANE's edge stroke is volume-only with velocity** (+4%). Its energy sits in
-  one narrow region, so the velocity law has little to tilt.
 - **The cowbell's waveform match is 51%.** Its spectrum over time is close; its
   fine detail is not. Its strikes are a quarter to a half louder against its
   ring than measured.
 - **Ring times are lower bounds** wherever the reference was a loop: the next hit
   cut the tail (0.25 to 0.45 s clear on most drum voices).
-- **Every pad is cut to 1.45 s or less**, under the classifier's 1.5 s. ODAIKO's
-  first drum rings 2 to 3 s in the reference.
-- **The fan in the references is not built.** It is a noise gesture, not a
-  struck object.
+- **Hits are cut to 1.45 s or less**, under the classifier's 1.5 s. Pads that
+  should ring longer use RING (round 8) and are filed as phrases.
+- **The fan's swish fits loosely in its attack** (7.5 dB): its quiet first 30 ms
+  is fitted as part of the whole gesture.
+- **The soft edge stroke is an analogy:** it borrows the centre stroke's notes as
+  the plate's low modes. The owner approved how it sounds.
+- **GRAIN is reached only through a saved chain** until it has a pedal chip and
+  that chip's own listening gate. An older build reading a DUSK pad's chain ignores
+  the section it does not know: it keeps the printed audio and drops GRAIN from the
+  editable chain.
 - **The presets are provisional.** They were written from the prototype's
   rounds. Nobody has heard them from the app, so none is pinned.
-- **Nobody has heard the Kotlin render.** The owner's verdicts are on the Python
-  renders.
+- **The owner's verdicts on the app's renders:** "These are cool" (kits round 1),
+  then "Sounds good, I like" (round 7, all four kits, the fan and the soft edge
+  stroke), both 2026-11-20. The kits are pinned as heard; the presets are not.
+- **The forty presets were kept on one listen** of each at a soft and a full
+  touch ("Ok, they are good", 2026-11-20), and are pinned as heard in
+  `TerraPresetsTest`. Their knob settings were written from the prototype's
+  rounds, not tuned by ear one by one.
+- **The classifier files a few pads outside PERC:** the binzasara as CLAP, BON's
+  small cymbal and slat snap as SNARE. Each pad's class is what the classifier
+  hears, as in every TERRA kit.
+- **MPC 2 keeps each zone's first take.** A pad with both velocity layers and
+  round robin cannot keep both in MPC 2 (the owner's 2026-11-14 format limit);
+  MPC 3 keeps all four takes.
 
 ## Gates
 
@@ -123,8 +268,8 @@ Applied from [ENGINE_ACCEPTANCE_GATES](ENGINE_ACCEPTANCE_GATES.md).
 | Gate | Status |
 |---|---|
 | Melodic, keygroups, chord tools, STRUM | Not applicable: percussion voices on a drum engine |
-| Percussion: authored roll/riser | Open. The prototype has five roll builds; none is in the app |
-| Drums: multiple distinct genre kits | Open. No kit uses these voices yet |
-| Velocity levels | Rendering only: measured above. Not yet verified through saving, playback or export |
-| Round robin | Rendering only: takes are distinct landings. Not yet verified through saving, playback or export |
-| Hardware | Not attempted |
+| Percussion: authored roll/riser | Pass: ROLL and RISER on every stick voice, saved in the recipe, rolls and risers in all four kits; sound approved 2026-11-20 |
+| Drums: multiple distinct genre kits | Pass: MATSURI, THUNDER, BON and the processed DUSK on the shelf, distinct lead voices and jobs; sound approved 2026-11-20 and pinned |
+| Velocity levels | Pass, automated: three timbral touches per pad, each softer one darker (`TerraStickKitsTest`), kept through shelf render, save and reload, MPC 3, MPC 2, SFZ and playback at all 127 velocities (`TerraStickKitsRoundTripTest`) |
+| Round robin | Pass, automated: four distinct takes per touch, dealt in turn over nine hits in playback and kept through save, MPC 3 and SFZ. MPC 2 keeps each zone's first take (owner's format limit) |
+| Hardware | Pass, owner's report: asked to check repeated hits cycling and soft hits sounding softer on phone and MPC, the owner answered "Is good" (2026-11-20). Which kits and which MPC export format were played was not stated |

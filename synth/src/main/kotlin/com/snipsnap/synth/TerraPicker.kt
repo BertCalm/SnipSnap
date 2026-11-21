@@ -27,7 +27,7 @@ object TerraPicker {
         TerraVoice.DJEMBE, TerraVoice.DHOLAK, TerraVoice.BAYAN, TerraVoice.COMPOUND_MEMBRANE, TerraVoice.NAGADO, TerraVoice.SHIME -> DrumClass.TOM
         TerraVoice.CONICAL_BELL, TerraVoice.TUNED_BAR, TerraVoice.SLAP, TerraVoice.DAYAN, TerraVoice.DARBUKA,
         TerraVoice.DOUM, TerraVoice.TUN, TerraVoice.KA, TerraVoice.KANE, TerraVoice.CHAPPA, TerraVoice.BINZASARA,
-        TerraVoice.COWBELL, TerraVoice.WATER_DRUM -> DrumClass.PERC
+        TerraVoice.COWBELL, TerraVoice.WATER_DRUM, TerraVoice.FAN -> DrumClass.PERC
     }
 
     /** The chip's one-line label: the instrument the voice plays, with no underscores. */
@@ -54,5 +54,6 @@ object TerraPicker {
         TerraVoice.BINZASARA -> "BINZASARA"
         TerraVoice.COWBELL -> "COWBELL"
         TerraVoice.WATER_DRUM -> "WATER DRUM"
+        TerraVoice.FAN -> "FAN"
     }
 }
