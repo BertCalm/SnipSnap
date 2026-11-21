@@ -1,9 +1,10 @@
-# BOROUGH: fitted boom-bap kits and perc stacks (round 1)
+# BOROUGH: fitted boom-bap kits and perc stacks
 
-Status: CONCEIVE plus a Python sound proof. Round 0 heard by the owner ("Sounds quite drum
-machine like"); round 1 rebuilds every voice on acoustic models and is waiting for a listen.
-Not integrated, not on the shelf.
-Repository read: `afb0fa98` (2026-11-18).
+Status (round 3, 2026-11-20): the owner accepted the round-2 Python kits ("I think they are all ready") and chose to
+generate them in the app. The Kotlin port (`Borough.kt`, `BoroughKits.kt`) is built and measured against the
+prototype (see "Round 3: Kotlin port"), and the six kits are on the shelf with their default stacks. The Kotlin
+render has not been heard; the stack picker and the live glue are later steps.
+Repository read: `afb0fa98` (2026-11-18); round 3 from `1b1d2d65b`.
 
 The characteristic gesture is **heavy swept kick → papery snare crack with late wires → dark, driven recording chain → a perc stack riding on top**.
 
@@ -131,7 +132,7 @@ rings 1.35 s above -30 dB. Verification unchanged: 792 WAVs, 0 failures, timbral
 88 of 88 pads. Listening page version 3: the RIDE & RIMS before player is the round 1 groove
 with the hat stand-in.
 
-## Round 3: into the app, generated (in progress)
+## Round 3: into the app, generated (Kotlin port built; not yet heard)
 
 Accepted 2026-11-20. The kits are exported as recipes (`export_recipes.py` ->
 `synth/src/main/resources/borough/v1/recipes.json`, 34 KB, numbers only: per kit the twelve pads, designed drums or
@@ -140,6 +141,76 @@ EMBER voices with their TUNE and resample ratio resolved once). `synth/src/test/
 the Python harness's fine measurement of every accepted pad (hardest zone, first take: band energy by window,
 kick pitch, snare body pitch, length, loudness) for the Kotlin port to be measured against. Shipping the same kits
 as frozen samples would have added roughly 40-50 MB.
+
+### Round 3: Kotlin port
+
+**What was built.** `synth/.../Borough.kt` renders every pad from `recipes.json` on top of the Kotlin EMBER, ported
+line by line: the designed kick and snare (`designed.py`), the ghost (the designed snare at 0.4 x velocity, 0.35 s),
+EMBER-voice pads (EMBER at WARMTH 0, then the record chain: `acoustic.ember_voice`, `hat`, `ride`), stack pads
+(`acoustic.stack_pad`: the resolved TUNE, DISTANCE 0.25, WARMTH 0, a Fourier resample where flagged), the record
+(`acoustic.record`: compressor, drive, tilt, low-pass) and `acoustic.end`. It reuses EMBER's membrane, beater,
+stick, wires and club; `Ember.kt` gained small internal accessors only (a strike drawn from a given seed, the
+second head's ratio, the club convolution as its own step), and its own voices render the same bytes as before.
+`BoroughDsp.kt` holds the scipy calls EMBER did not need, each checked against scipy's own numbers
+(`BoroughDspTest`): `resample_poly(y, 1, 4)` (the designed drums' way down), `signal.resample` (the stacks) and
+`hilbert` (the measure). `BoroughKits.kt` lays out the six kits (A01-A12) with any of the four stacks (A13-A16):
+three zones (0.35, 0.65, 1.0) of three takes, take 0 the recipe and takes 1-2 jittered (`build.jitter`), each take
+peaking at 0.89 x v^0.8, then the kit's kick and rest trims. Every strike is seeded by its kit or stack, pad, zone
+and take. The six kits are FRESH TAPE starters under SKINS, each with the stack the owner heard
+(241 starters); `BoroughKits.build(kit, stack)` takes any stack for the picker to come.
+
+**Disclosed, not the same arithmetic:** Kotlin's `Random` draws every noise and strike scatter, so a Kotlin take is
+another realisation of the recipe, not a copy of a Python one (as EMBER's port); EMBER's own voices leave EMBER
+through the house decimator (EMBER round 1); the room convolution is the house single-precision FFT.
+
+**Measured against the Python** (`BoroughParityTest`; every one of the 88 pads, hardest zone, take 0, through a port
+of `hits.measure_hit`, scored as `fit_designed` scores: grid RMS over 6 windows x 8 bands, -40 dB floor, its kick and
+snare masks). The yardstick is Python's own spread: `prototype/borough/parity_spread.py` re-renders each pad's
+recipe with eight fresh seeds in Python and scores each against the same reference
+(`borough-parity-spread.json`; it first re-renders the reference itself, which reproduces to 0.00 dB, 0.06 on the
+shaker whose resample ratio is rounded in the recipe).
+
+| Pads | Kotlin median | Kotlin worst | Python's own median | Python's own worst |
+|---|---:|---:|---:|---:|
+| Designed kicks (12) | 1.10 dB | 2.38 | 0.92 | 2.44 |
+| Designed snares and ghosts (18) | 1.79 | 3.14 | 2.12 | 4.43 |
+| EMBER-voice drum pads (42) | 2.95 | 7.14 | 3.35 | 7.35 |
+| Stack pads (16) | 3.59 | 5.32 | 3.41 | 6.62 |
+| All 88 | 2.58 | 7.14 (CRANKED pedal hat) | 2.45 | 7.35 |
+
+- 81 of 88 pads sit inside the spread of Python's own eight realisations. The other seven sit over its worst by
+  0.01 to 0.45 dB: STOOP SNARE 2 +0.01, CELLAR KICK 2 +0.28, CELLAR TOM LO +0.20, WAX OPEN HAT +0.45, WAX KICK 2
+  +0.27, BELLS JINGLE +0.04, TOPS STICKS +0.30. Eight seeds is a small sample of a random draw; none is a different
+  sound. No bias: Kotlin's distance minus Python's median, averaged over the 88 pads, is +0.06 dB.
+- Kick pitch at 30 ms: 10 of 12 kicks read the reference's pitch exactly, STOOP KICK 2 0.7 semitone under (one FFT
+  bin) and WAX KICK 1.05 under (one bin, 2.7 Hz at 45 Hz; Python's own realisations read 43.1 and 45.8 Hz half and
+  half). STOOP KICK reads 53.8 Hz where the reference reads 96.9: at 30 ms its punch and its boom are about as loud,
+  and the measure picks one or the other from seed to seed in Python itself (five of eight Python realisations read
+  51 to 57 Hz, three 96.9 Hz).
+- Snare body: all 18 designed snares and ghosts within 0.62 semitone of the reference (most exact).
+- Lengths within 95 ms (DRY ROOM's high tom, where `end` trims); loudness over 300 ms within a median 0.1 dB.
+
+Tolerances (`BoroughParityTest`, set from these numbers): grid within Python's worst realisation + 1 dB; mean bias
+within 0.5 dB; kick pitch at 30 ms within a semitone (or one bin) of the reference or of one of Python's
+realisations; snare body within a semitone; length within 15% or 150 ms.
+
+**The other checks** (`BoroughKitsTest`, on all six kits' drums and all four stacks, 792 strikes): finite, peak at
+most 0.9 and exactly 0.89 x v^0.8 x trim, |DC| under 0.005, final 10 ms rms at most 0.00076 (bar 0.003, verify.py's);
+soft against hard a different strike on all 88 pads (gain-matched residual above -20 dB, closest -15.1 dB on CRANKED
+KICK 2; Python's closest -14.3 on the same pad); every pair of takes in every zone distinct (closest -31.4 dB, STOOP
+KICK 2; Python's closest -34.5, CRANKED KICK 2; copies of one strike measure under -100); builds deterministic; every
+kit with every stack. A kit generates in 8 to 11 s on this machine (four cores).
+
+**Gates, in software** (`BoroughKitTest`, `:shell:generateBoroughKits`): STOOP DUST from the shelf through saving,
+reloading, the pad resolver at all 127 velocities (zones at 1-41, 42-84, 85-127) and nine successive hits per zone
+(the three takes in order, then again), SFZ out and back, MPC 3 (zones, slices and cycles read back from the track)
+and MPC 2 (three velocity layers, each its zone's first take: the owner's format limit); WAX with the TOPS stack
+through save and MPC 3. The generator does all six kits: "Verified BOROUGH STOOP DUST: 16 pads, 144 slices, saved PCM
++ playback + MPC 3 track + SFZ + DecentSampler", and the same for the other five.
+
+**Not done this round:** the stack-picker UI; persisting a kit's glue settings in the kit format; switching the
+glue compressor and limiter on when a BOROUGH kit loads (`glue_limiter_drive_db` is parsed, not used).
+Nothing has been heard from the Kotlin render, and no phone or MPC has played the kits.
 
 ## Round 2: designed boom-bap drums in all six kits
 
@@ -515,10 +586,10 @@ Listening page (private until shared): https://claude.ai/artifact/6y32yHPUszWK58
 
 | Gate | Status |
 |---|---|
-| Drums: multiple distinct genre kits on the shelf | not yet: six kits rendered in Python; round 0 heard and rejected as drum-machine-like, round 1 not heard; not on the shelf |
-| Percussion: authored roll/riser where appropriate | partial: SNARE ROLL per kit and TAMB ROLL, finite, not heard |
-| Velocity levels through render, save, playback, export | render only (Python): three timbral zones; save, playback and export not started |
-| Round robin through render, save, playback, export | render only (Python): three takes; save, playback and export not started |
+| Drums: multiple distinct genre kits on the shelf | round 3: six kits on the shelf, generated in Kotlin from the accepted round-2 recipes; the Kotlin render not yet heard |
+| Percussion: authored roll/riser where appropriate | a finite SNARE ROLL (EMBER's press roll) on A12 of every kit (`BoroughKitsTest`) |
+| Velocity levels through render, save, playback, export | pass in software (round 3): three timbral zones in Kotlin, through save, the pad resolver, SFZ and MPC 3 (`BoroughKitTest`, `:shell:generateBoroughKits`); MPC 2 keeps the layers |
+| Round robin through render, save, playback, export | pass in software (round 3): three distinct takes per zone, dealt in order through save, playback, SFZ and MPC 3; MPC 2 keeps each zone's first take (format limit). No phone or MPC has played them |
 | Melodic, keygroups, chords, HOLD, STRUM | not applicable: finite drum and percussion one-shots |
 
 ## Next round
