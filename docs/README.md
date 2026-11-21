@@ -6,6 +6,9 @@ instrument and accepted finite TRACE gesture. The
 TRACE keyboard instrument, revised held balance, passing JVM/Android/native/emulator
 checks and remaining listening and physical phone/MPC acceptance.
 
+**Drawl.** [`DRAWL.md`](DRAWL.md) is the slide, steel and flat-top string engine: six voices,
+the factory bank, the DRAWL and DRAWL TAKES kits, finite keys and chord-tool voicings.
+
 **Accord.** [`ACCORD.md`](ACCORD.md) records the finite native ensemble,
 BRUSH default, WOOD/TINE profiles, saved recipes and diagnostic audition.
 Its [design/As built record](superpowers/specs/2026-11-01-accord-engine-design.md)

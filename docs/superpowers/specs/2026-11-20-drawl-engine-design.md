@@ -4,7 +4,7 @@ Version 0.1 · 2026-11-20
 Status: round 3 built. The owner kept all six voices of the Python prototype after rounds 0b to 0d
 (§18), then the native Kotlin engine (round 1) and its strums and takes (round 2), all pinned. Round 3
 files the factory bank and puts the DRAWL and DRAWL TAKES starters on the shelf; the owner kept both
-kits by ear and they are pinned (As built). HOLD is finite, the owner's decision (§10). Next: round 4.
+kits by ear and they are pinned (As built). HOLD is finite, the owner's decision (§10). Round 4 adds keys, chord-tool voicings and the SYNTH picker (As built); the keys await a listen.
 Repository truth: read at `7fd194f1`. APIs grepped: `Strings.Loop` and `Strings.Loop.retune`
 (`Strings.kt:529`, `:675`), `Strings.tune` (`:101`), `Strings.pluckExciter` (`:366`), `Strings.pickup`
 (`:401`), `Strings.bodyRing` (`:1321`), `Restrike.canRestrike` (`Restrike.kt:35`), `OsteriaStrum`
@@ -550,3 +550,30 @@ prototype) and answered "All sound good": the strums and takes are kept, and HOL
 the strums, the leads and the steels, and each pad's twelve repeated hits) and kept both kits as they are.
 `DrawlKitsTest` pins all 208 renders, DRAWL's 16 pads and DRAWL TAKES' 192 takes, by the SHA-256 of their
 float samples (`drawl/kits-v1.sha256`); each matched the page's WAVs byte for byte.
+
+### Round 4: keys, chords and the picker (21 Nov 2026)
+
+The owner said go after keeping both kits. User-facing summary: [DRAWL.md](../../DRAWL.md).
+
+- **Keys** (`DrawlKeygroupMaker`, `DrawlPadMaker`, ACCORD's shape):
+  - Range and roots: each voice's root an octave either side, the reach of TUNE, at minor-third roots plus the saved note.
+  - Touches and takes: three touches (.3, .75, 1) of two takes (0 and 1), in the matching-window Cycle layout.
+  - Length: HOLD is capped at .5 on keys (about 6 s at most, against some 85 MB of floats at HOLD 1). Key-up fades over 0.6 s.
+  - Provenance: every sample is bound to its recipe by SHA-256.
+  - Refusals: a strummed recipe makes no keys.
+  - `DrawlKeygroupMakerTest` covers recipes, tiling, phone reload, MPC 3 and MPC 2 read-back, refusals, and all 960 chord-tool voicings on real FLATTOP keys.
+- **Chords** (`DrawlChords`):
+  - Every chord-tool voicing moves by whole octaves into a voice's keys. A voicing too wide for the 25 keys folds tone by tone.
+  - `DrawlChordsTest` covers every voicing on every voice and the 1/n audition sum.
+- **Picker:**
+  - `Engine.DRAWL` closes the ring after CONSORT, in `EngineCatalog` under PLUCKED & STRINGS.
+  - The typed recipe keeps velocity, take and strum through edits, drafts, scramble and SEND. SEND makes a finite one-shot, never a pad loop.
+  - `DrawlPerformanceControls` has TOUCH, TAKE 1 to 4, and STRUM OFF/DOWN/UP with the voice's kept chord and SWEEP.
+  - `HeldSpec.Drawl` serves MAKE INSTRUMENT.
+  - `DrawlSynthScreenTest` checks the screen; the READMEs count 102 picker engines.
+  - The app is not compiled here: CI builds it, and the emulator workflow runs the screen test.
+- **Listening:** `generateDrawlKeysAudition` saves every voice's keys and plays them with the app's `InstrumentEngine`.
+  The packages are 18 to 29 MB each. The clips are a key walk, three touches, a repeated key, and I-IV-V-I from the chord tool.
+
+Locally `DrawlKeygroupMakerTest`, `DrawlChordsTest`, `ConventionTest`, `EngineCatalogTest`, `StarterShelfTest` and the DRAWL
+starter, kit and pin tests pass; CI holds the full suite and the app.

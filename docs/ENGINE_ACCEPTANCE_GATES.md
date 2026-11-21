@@ -1286,7 +1286,7 @@ Render time (2026-11-21): the filters stop working through the silence after the
 Open: the picker, MAKE INSTRUMENT (and its render time with the 4 s keys) and ROBIN on a phone, the sustaining pads on a phone, and an MPC loading the kits and keys. Nothing here is a hardware claim.
 
 
-## DRAWL (round 3, 2026-11-21: voices, strums, takes, factory bank and both kits kept by ear and pinned)
+## DRAWL (round 4, 2026-11-21: voices, strums, takes, factory bank and both kits kept by ear and pinned; keys, chords and the picker built)
 
 A bar-stopped string whose pitch path is the performance: resonator guitar, electric slide, lap steel,
 pedal steel, country flat-top and western nylon. Design, every listen and every measured number:
@@ -1300,16 +1300,16 @@ pad and take of both kits, 208 renders (`DrawlKitsTest`, `drawl/kits-v1.sha256`)
 |---|---|---|
 | Six melodic voices | CONE, BOTTLE, LAP, STEEL, FLATTOP, GUT: kept by ear as the Python prototype (round 0d) and as the native engine (round 1), pinned. | Pass, kept by ear |
 | Presets | `DrawlPresets`: 18 in the factory roster, per voice its default note, long slide and strum, each a kept native render by hash (`DrawlTest`). | Pass, kept by ear |
-| Playable keygroups | None. | Open (round 4) |
+| Playable keygroups | MAKE INSTRUMENT makes finite keys for every single-note recipe (`DrawlKeygroupMaker`, `DrawlPadMaker`): the voice's root an octave either side, minor-third roots, three touches of two takes in the matching-window Cycle layout, HOLD capped at .5, key-up fade 0.6 s, every sample bound to its recipe. `DrawlKeygroupMakerTest` proves phone reload and MPC 3 and MPC 2 read-back. Keys for all six voices played through the app's sample player from saved packages, 18 to 29 MB each; not heard yet. | Pass in software; listen open |
 | Premade kit | DRAWL (`drawl`): sixteen finite pads in D major pentatonic, every voice, each with its recipe; saves, reloads, regenerates and exports to MPC 3 and MPC 2 (`DrawlKitsTest`, `DrawlStarterTest`). Kept by ear in round 3 and pinned pad for pad. | Pass, kept by ear |
-| Chord-tool compatibility | `DrawlStrum.fromChord` takes a `ChordStabs.Stab`'s voicing; every chord tone sounds (`DrawlTest`). No run over every chord-tool voicing or on keys yet. | Open (round 4) |
+| Chord-tool compatibility | On keys, `DrawlChords.notes` moves each of the chord tool's 960 voicings into every voice's keys by octaves, every pitch class kept (`DrawlChordsTest`). All 960 play on real saved FLATTOP keys through `InstrumentEngine`, and key-up ends them (`DrawlKeygroupMakerTest`). On a pad, `DrawlStrum.fromChord` strums a chord. The chord tool has not driven a DRAWL instrument on a phone. | Pass in software; listen open |
 | Appropriate HOLD | Finite on every voice: HOLD lengthens the note to 8 s and never loops. The owner kept this for STEEL and LAP too ("All sound good", round 3). | Pass, the owner's decision |
 | STRUM | Built on every voice (bar chord slides as one, STEEL's pedals, fretted unslid), saved with the patch; each voice's strum down and up kept by ear natively (round 2) and pinned. | Pass, kept by ear |
 | Percussion, drums | Not applicable: a melodic string engine. | Not applicable |
 | Velocity: rendering | A harder pick is louder and has a brighter level-matched onset on all six voices (`DrawlTest`), at one gain per sound; soft and hard kept by ear natively (round 1) and pinned. | Pass, kept by ear |
-| Velocity: saving, playback, export | DRAWL TAKES carries soft, medium and hard zones (0 to 41, 42 to 84, 85 to 127) on every pad through save, reload, the pad resolver and MPC 3 and MPC 2 export, read back from the files (`DrawlStarterTest`). `DrawlPatch` saves its velocity. Kept by ear in round 3 and pinned. No keys yet. | Pass for pads, kept by ear |
+| Velocity: saving, playback, export | DRAWL TAKES carries soft, medium and hard zones (0 to 41, 42 to 84, 85 to 127) on every pad through save, reload, the pad resolver and MPC 3 and MPC 2 export, read back from the files (`DrawlStarterTest`). `DrawlPatch` saves its velocity. Kept by ear in round 3 and pinned. Keys carry the three touches as velocity windows 0 to 42, 43 to 84 and 85 to 127 through the package, the phone resolver and MPC 3 and MPC 2 read-back (`DrawlKeygroupMakerTest`). | Pass for pads, kept by ear; keys in software |
 | Round robin | Four distinct in-tune takes per voice, takes 1 to 3 kept by ear natively and pinned; ROBIN deals them (`Restrike`). DRAWL TAKES deals all four per touch; the resolver cycles them in order, MPC 3 carries every take; MPC 2 keeps each touch's first take with the export screen's note (the recorded format limit). Every take kept by ear in round 3 and pinned. | Pass for pads, kept by ear |
-| Picker | No entry. | Open (round 4) |
+| Picker | `Engine.DRAWL` on the SYNTH picker after CONSORT, catalogued under PLUCKED & STRINGS. It has its six voices, knobs and presets, plus TOUCH, TAKE 1 to 4, STRUM OFF/DOWN/UP with SWEEP, and MAKE INSTRUMENT (`HeldSpec.Drawl`). `DrawlSynthScreenTest` walks them. Not compiled in the dev container (no Android SDK). | Open: CI build, emulator, phone |
 | Hardware | Not attempted: no phone or MPC has loaded either kit. | Open |
 
 Nothing here is a completion claim.

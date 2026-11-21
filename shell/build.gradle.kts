@@ -955,3 +955,13 @@ tasks.register<JavaExec>("verifySecondlineKits") {
     maxHeapSize = "1g"
     args(providers.gradleProperty("secondlineKitOutput").getOrElse("${rootDir}/testkit/secondline-kits"))
 }
+
+tasks.register<JavaExec>("generateDrawlKeysAudition") {
+    group = "distribution"
+    description = "Make DRAWL's MAKE INSTRUMENT keys for every voice and play them back through the app's sample player."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.snipsnap.shell.DrawlKeysAuditionGenerator")
+    workingDir = rootDir
+    maxHeapSize = "1g"
+    args(providers.gradleProperty("drawlKeysOutput").orNull ?: "${rootDir}/testkit/drawl-keys-audition")
+}
