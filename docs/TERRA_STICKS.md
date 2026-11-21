@@ -126,8 +126,35 @@ shime smeared into a spring, the rim through tape, the fan ghosted, the water dr
 dubbed, a shime roll echoed and an odaiko riser in a room. The chain is baked into
 all twelve zone samples of each pad, after the strike is softened, so a soft touch
 is a softer strike through the same chain. Each pad's chain is saved in its source
-beside its recipe. The rack has no granular section; REWIND and SMEAR stand in for
-the references' granular versions, which is an approximation, not that effect.
+beside its recipe. Round 8 replaced the granular stand-ins with GRAIN.
+
+## Round 8: ring, grain and tempo
+
+Four optional improvements, the known limits, worked through on 2026-11-21. The
+owner heard each candidate beside the approved pad it would replace and took all
+of them ("Everything sounds great"). Eighteen pads changed; the other forty-six
+are byte for byte the round-7 renders.
+
+- **RING.** A fourth articulation beside HIT, ROLL and RISER: the same strike
+  printed past the hit's 1.45 s cut, for its longest note's T60 at DECAY plus
+  0.3 s (at least half a second past the hit, at most 6 s), filed as a phrase pad.
+  At DECAY's default the odaiko's ring runs 3.1 s, 41 to 47 dB under its loudest
+  100 ms just past the hit's cut. Six pads ring: THUNDER's Odaiko Long, Odaiko
+  Deep, Cymbal Wash (6 s) and Gong Low, MATSURI's Chan, BON's Bell Single.
+- **GRAIN** (`Grain.kt`), a new rack section after REWIND and before SPRING:
+  Hann-windowed grains of 10 to 120 ms cut from the hit's first 150 ms, scattered
+  over 0.1 to 1 s after it, a quarter backwards, later ones quieter, from one fixed
+  seed per setting. DUSK's three stand-ins became Ten Grains, Ka Grains and Chiki
+  Grains. It is not yet a pedal chip: a pedal needs its own listening gate.
+- **Tempo.** A roll or riser recipe may carry a BPM. A roll then fills one bar at
+  the subdivision nearest the voice's own rate; a riser climbs through the
+  subdivisions over two bars to a full-touch accent on the next downbeat, each
+  stroke moved at most 2 ms. Every kit's rolls and risers are locked to the kit's
+  tempo.
+- **The cowbell, left alone.** Refining its four strike times (within 6 ms, in
+  0.25 ms steps) raised its waveform match from 57% to 59%. That is too little to
+  change an approved sound; the limit is more likely the swinging bell's notes not
+  holding still, which fixed notes cannot follow.
 
 ## The Kotlin port, measured
 
@@ -165,8 +192,8 @@ the next stroke.
   darker. A kit take is a different roll: its strokes draw renderer takes 16
   apart, so takes 0 to 3 share none.
 
-Rolls are tempo-free, as BACKWASH's tambourine roll is: `render` receives no
-tempo, so a roll is printed at the voice's rate and does not follow a kit's BPM.
+Rolls are tempo-free by default, as BACKWASH's tambourine roll is. Since round 8 a
+recipe may carry a BPM, and every kit's rolls and risers carry their kit's.
 Rendered they last 2.5 to 4.4 s, and the classifier files them as phrases (LOOP).
 
 Cost: one stroke render per distinct force and stroke take, rendered in
@@ -208,14 +235,16 @@ The listening page for this round is
   ring than measured.
 - **Ring times are lower bounds** wherever the reference was a loop: the next hit
   cut the tail (0.25 to 0.45 s clear on most drum voices).
-- **Every pad is cut to 1.45 s or less**, under the classifier's 1.5 s. ODAIKO's
-  first drum rings 2 to 3 s in the reference.
+- **Hits are cut to 1.45 s or less**, under the classifier's 1.5 s. Pads that
+  should ring longer use RING (round 8) and are filed as phrases.
 - **The fan's swish fits loosely in its attack** (7.5 dB): its quiet first 30 ms
   is fitted as part of the whole gesture.
 - **The soft edge stroke is an analogy:** it borrows the centre stroke's notes as
   the plate's low modes. The owner approved how it sounds.
-- **TERRA DUSK has no granular processing.** The rack has none; REWIND and SMEAR
-  stand in.
+- **GRAIN is reached only through a saved chain** until it has a pedal chip and
+  that chip's own listening gate. An older build reading a DUSK pad's chain ignores
+  the section it does not know: it keeps the printed audio and drops GRAIN from the
+  editable chain.
 - **The presets are provisional.** They were written from the prototype's
   rounds. Nobody has heard them from the app, so none is pinned.
 - **The owner's verdicts on the app's renders:** "These are cool" (kits round 1),

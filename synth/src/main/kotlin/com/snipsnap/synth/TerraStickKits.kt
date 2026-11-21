@@ -20,8 +20,8 @@ import com.snipsnap.kit.ArrangedPad
  *   instruments, so this kit is built around the rack ([FxChain]). The odaiko rewound and in a large room,
  *   echoes timed near the references' 90 BPM (TIME 0.66, about 250 ms, a dotted sixteenth; TIME 0.94, about
  *   333 ms, an eighth), the shime smeared into a spring, the rim through tape, the fan ghosted, the water drum
- *   dubbed. The rack has no granular section; REWIND's reversed windows and SMEAR stand in for the
- *   references' granular smear, which is an approximation, not that effect.
+ *   dubbed. Since round 8 three pads run GRAIN, the rack's granular scatter, for the references'
+ *   granular versions of the shime, the rim and the gong's edge.
  *
  * Every pad carries three touches (a third, two thirds and all of a full strike: [TOUCHES]) and
  * [TAKES] takes per touch. A touch is a different strike, not a quieter copy: each is rendered at its
@@ -32,8 +32,11 @@ import com.snipsnap.kit.ArrangedPad
  * Grid pads carry no PadRecipe: a single-hit recipe cannot regenerate twelve samples. Each pad's recipe
  * rides in its source as JSON beside the take rule, as TERRA's round-robin kits' do.
  *
- * Status: provisional. The owner picked the voices by ear from the prototype's renders; nobody has heard
- * these kits from the app. Not pinned.
+ * Round 8 (2026-11-21): six pads ring past the hit's cut ([TerraArticulation.RING]): THUNDER's Odaiko Long, Odaiko
+ * Deep, Cymbal Wash and Gong Low, MATSURI's Chan, BON's Bell Single.
+ *
+ * Status: the owner approved the kits' sound (round 7 on 2026-11-20, round 8 on 2026-11-21: "Everything sounds great").
+ * TerraStickKitsPinsTest pins every pad's twelve zone samples as heard.
  */
 object TerraStickKits {
     enum class Kit(val id: String, val displayName: String, val bpm: Int) {
@@ -52,6 +55,7 @@ object TerraStickKits {
     private val HIT = TerraArticulation.HIT
     private val ROLL = TerraArticulation.ROLL
     private val RISER = TerraArticulation.RISER
+    private val RING = TerraArticulation.RING
 
     /** A pad on [voice]: every macro written out ([Terra.defaults] plus the pad's own). */
     private fun pad(name: String, voice: TerraVoice, articulation: TerraArticulation = HIT, vararg overrides: Pair<String, Float>) =
@@ -76,7 +80,7 @@ object TerraStickKits {
         pad("Ten High", SHIME, HIT, "TUNE" to .85f, "DECAY" to .3f),
         pad("Ka", KA),
         pad("Ka High", KA, HIT, "TUNE" to .8f, "DECAY" to .3f),
-        pad("Chan", KANE, HIT, "EDGE" to 0f),
+        pad("Chan", KANE, RING, "EDGE" to 0f),
         pad("Chiki", KANE, HIT, "EDGE" to 1f),
         pad("Chappa", CHAPPA),
         pad("Chappa Choke", CHAPPA, HIT, "DECAY" to .1f, "ATTACK" to .7f),
@@ -88,18 +92,18 @@ object TerraStickKits {
     )
 
     private fun thunder(): List<TerraPatch> = listOf(
-        pad("Odaiko Long", ODAIKO, HIT, "DRUM" to 0f),
+        pad("Odaiko Long", ODAIKO, RING, "DRUM" to 0f),
         pad("Odaiko Low", ODAIKO, HIT, "DRUM" to 1f),
         pad("Odaiko Pair", ODAIKO, HIT, "DRUM" to .5f),
-        pad("Odaiko Deep", ODAIKO, HIT, "DRUM" to 1f, "TUNE" to 0f, "DECAY" to .9f),
+        pad("Odaiko Deep", ODAIKO, RING, "DRUM" to 1f, "TUNE" to 0f, "DECAY" to .9f),
         pad("Odaiko Soft", ODAIKO, HIT, "DRUM" to 0f, "FORCE" to .2f, "ATTACK" to .3f),
         pad("Tom Low", NAGADO, HIT, "TUNE" to .1f, "DECAY" to .7f),
         pad("Tom Mid", NAGADO, HIT, "TUNE" to .45f),
         pad("Tom High", NAGADO, HIT, "TUNE" to .8f, "DECAY" to .4f),
         pad("Rim Crack", KA, HIT, "DECAY" to 0f, "FORCE" to 1f, "ATTACK" to 1f),
         pad("Rim Low", KA, HIT, "TUNE" to .1f, "DECAY" to .7f),
-        pad("Cymbal Wash", CHAPPA, HIT, "TUNE" to 0f, "DECAY" to 1f, "FORCE" to .2f, "ATTACK" to .3f),
-        pad("Gong Low", KANE, HIT, "TUNE" to 0f, "DECAY" to 1f, "EDGE" to 0f),
+        pad("Cymbal Wash", CHAPPA, RING, "TUNE" to 0f, "DECAY" to 1f, "FORCE" to .2f, "ATTACK" to .3f),
+        pad("Gong Low", KANE, RING, "TUNE" to 0f, "DECAY" to 1f, "EDGE" to 0f),
         pad("Snap", SHIME, HIT, "STROKE" to 0f, "DECAY" to .2f, "FORCE" to 1f),
         pad("Odaiko Roll", ODAIKO, ROLL, "DRUM" to 0f),
         pad("Odaiko Riser", ODAIKO, RISER, "DRUM" to .5f),
@@ -111,7 +115,7 @@ object TerraStickKits {
         pad("Water Low", WATER, HIT, "TUNE" to .1f, "DECAY" to .8f),
         pad("Water Tap", WATER, HIT, "DECAY" to .1f, "FORCE" to 1f, "ATTACK" to .8f),
         pad("Bell Shake", BELL),
-        pad("Bell Single", BELL, HIT, "SHAKE" to 0f),
+        pad("Bell Single", BELL, RING, "SHAKE" to 0f),
         pad("Bell Muted", BELL, HIT, "SHAKE" to 0f, "DAMP" to 1f),
         pad("Ten Bright", SHIME, HIT, "STROKE" to 1f, "TUNE" to .7f),
         pad("Ten Ghost", SHIME, HIT, "STROKE" to 0f, "TUNE" to .6f, "FORCE" to .2f, "ATTACK" to .2f),
@@ -137,11 +141,11 @@ object TerraStickKits {
         pad("Don Echo", NAGADO, HIT, "TUNE" to .45f, "DECAY" to .4f) to FxChain(echo = echo(.66f, .5f, .6f, .4f)),
         pad("Don Ghost", NAGADO, HIT, "TUNE" to .3f, "DECAY" to .6f) to FxChain(ghost = mapOf("AMOUNT" to .7f), room = mapOf("SIZE" to .6f, "WALLS" to .5f, "DISTANCE" to .7f)),
         pad("Ten Echo", SHIME, HIT, "STROKE" to 0f, "DECAY" to .4f) to FxChain(echo = echo(.66f, .35f, .55f, .35f)),
-        pad("Ten Smear", SHIME, HIT, "STROKE" to 1f, "TUNE" to .4f) to FxChain(smear = mapOf("AMOUNT" to .8f, "FLOOR" to 0f), spring = mapOf("SIZE" to .5f, "TONE" to .5f, "MIX" to .4f)),
+        pad("Ten Grains", SHIME, HIT, "STROKE" to 1f, "TUNE" to .4f) to FxChain(grain = mapOf("MIX" to .7f, "SIZE" to .35f, "DENSITY" to .6f, "SCATTER" to .55f), spring = mapOf("SIZE" to .5f, "TONE" to .5f, "MIX" to .3f)),
         pad("Ka Echo", KA, HIT, "DECAY" to .3f, "ATTACK" to .7f) to FxChain(echo = echo(.3f, .6f, .7f, .45f)),
-        pad("Ka Tape", KA, HIT, "TUNE" to .3f, "DECAY" to .6f) to FxChain(tape = mapOf("WOBBLE" to .5f, "DRIVE" to .4f, "AGE" to .6f), echo = echo(.45f, .3f, .4f, .3f)),
+        pad("Ka Grains", KA, HIT, "TUNE" to .3f, "DECAY" to .6f) to FxChain(grain = mapOf("MIX" to .8f, "SIZE" to .2f, "DENSITY" to .75f, "SCATTER" to .5f)),
         pad("Chan Echo", KANE, HIT, "EDGE" to 0f, "DECAY" to .6f) to FxChain(echo = echo(.94f, .55f, .4f, .45f)),
-        pad("Chiki Echo", KANE, HIT, "EDGE" to 1f, "DECAY" to .4f) to FxChain(echo = echo(.66f, .5f, .5f, .4f)),
+        pad("Chiki Grains", KANE, HIT, "EDGE" to 1f, "DECAY" to .4f) to FxChain(grain = mapOf("MIX" to .7f, "SIZE" to .45f, "DENSITY" to .5f, "SCATTER" to .75f), room = mapOf("SIZE" to .5f, "WALLS" to .4f, "DISTANCE" to .7f)),
         pad("Cymbal Spring", CHAPPA, HIT, "DECAY" to .6f, "FORCE" to .4f) to FxChain(spring = mapOf("SIZE" to .7f, "TONE" to .45f, "MIX" to .5f)),
         pad("Fan Ghost", FAN, HIT, "SWEEP" to 1f, "DECAY" to .7f) to FxChain(ghost = mapOf("AMOUNT" to .6f), room = mapOf("SIZE" to .7f, "WALLS" to .3f, "DISTANCE" to .8f)),
         pad("Bell Echo", BELL, HIT, "SHAKE" to 0f, "DECAY" to .4f) to FxChain(echo = echo(.66f, .45f, .5f, .35f)),
@@ -153,13 +157,16 @@ object TerraStickKits {
     /** The chain baked into [kit]'s pad [index], or null for a dry kit. */
     fun fxFor(kit: Kit, index: Int): FxChain? = if (kit == Kit.DUSK) dusk()[index].second else null
 
-    /** The sixteen recipes of [kit], in MPC pad order A01 to A16. */
+    /**
+     * The sixteen recipes of [kit], in MPC pad order A01 to A16. Every roll and riser is locked to the kit's tempo
+     * ([TerraPatch.bpm], round 8): a roll fills a bar, a riser climbs over two to a downbeat accent.
+     */
     fun patches(kit: Kit): List<TerraPatch> = when (kit) {
         Kit.MATSURI -> matsuri()
         Kit.THUNDER -> thunder()
         Kit.BON -> bon()
         Kit.DUSK -> dusk().map { it.first }
-    }
+    }.map { p -> if (p.articulation == ROLL || p.articulation == RISER) p.copy(bpm = kit.bpm) else p }
 
     /**
      * The pads that choke one another, by kit: a pressed cymbal cuts the open one, a hand on the bell cuts
