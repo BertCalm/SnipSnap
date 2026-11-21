@@ -141,7 +141,9 @@ are byte for byte the round-7 renders.
   At DECAY's default the odaiko's ring runs 3.1 s, 41 to 47 dB under its loudest
   100 ms just past the hit's cut. Six pads ring: THUNDER's Odaiko Long, Odaiko
   Deep, Cymbal Wash (6 s) and Gong Low, MATSURI's Chan, BON's Bell Single.
-- **GRAIN** (`Grain.kt`), a new rack section after REWIND and before SPRING:
+- **SPECKLE** (the GRAIN processor, `Grain.kt`), a new rack section after REWIND and before SPRING.
+  It is named SPECKLE in the rack because GRAIN is also an engine and a touch-surface voice, and
+  three Meridian presets already use the word. Chains saved with the earlier key "grain" still load:
   Hann-windowed grains of 10 to 120 ms cut from the hit's first 150 ms, scattered
   over 0.1 to 1 s after it, a quarter backwards, later ones quieter, from one fixed
   seed per setting. DUSK's three stand-ins became Ten Grains, Ka Grains and Chiki

@@ -129,7 +129,7 @@ data class FxChain(
     val tremolo: Map<String, Float>? = null,
     val rotary: Map<String, Float>? = null,
     /** The granular scatter ([Grain]): after REWIND, before SPRING. Last in the parameter list, as it arrived last. */
-    val grain: Map<String, Float>? = null,
+    val speckle: Map<String, Float>? = null,
 ) {
     init {
         for (s in SECTIONS) {
@@ -293,7 +293,10 @@ data class FxChain(
             Section("rotary", Rotary.MACROS, { it.rotary }, { c, m -> c.copy(rotary = m) }, Rotary::process),
             Section("echo", Echo.MACROS, { it.echo }, { c, m -> c.copy(echo = m) }, Echo::process),
             Section("rewind", Rewind.MACROS, { it.rewind }, { c, m -> c.copy(rewind = m) }, Rewind::process),
-            Section("grain", Grain.MACROS, { it.grain }, { c, m -> c.copy(grain = m) }, Grain::process),
+            // Named SPECKLE, not GRAIN: GRAIN is also an engine and a touch-surface voice, and a rack section
+            // of that name made the Meridian presets CLOSE GRAIN, HARD GRAIN and GRAIN THREAD borrow a reserved word.
+            // Not SCATTER: that is one of this section's own macros.
+            Section("speckle", Grain.MACROS, { it.speckle }, { c, m -> c.copy(speckle = m) }, Grain::process),
             Section("spring", Spring.MACROS, { it.spring }, { c, m -> c.copy(spring = m) }, Spring::process),
             Section("room", Room.MACROS, { it.room }, { c, m -> c.copy(room = m) }, Room::process),
             Section("hush", Hush.MACROS, { it.hush }, { c, m -> c.copy(hush = m) }, Hush::process),
@@ -325,12 +328,19 @@ data class FxChain(
             if (version != VERSION) throw JsonException("unsupported fx version $version")
             var chain = FxChain(reverse = (obj["reverse"] as? JsonValue.Bool)?.value ?: false)
             for (sec in SECTIONS) {
-                val macros = (obj[sec.name] as? JsonValue.Obj)?.entries?.mapValues { (_, v) -> v.num().toFloat() }
+                val node = obj[sec.name] ?: legacyKey(sec.name)?.let { obj[it] }
+                val macros = (node as? JsonValue.Obj)?.entries?.mapValues { (_, v) -> v.num().toFloat() }
                     ?: continue
                 chain = sec.with(chain, macros)
             }
             return chain
         }
+
+        /**
+         * A section's earlier key in saved chains: SPECKLE was saved as "grain" on 2026-11-20 and 21, before it was
+         * renamed. A function, not a map: FxTest counts every Map field of this class as a rack section.
+         */
+        private fun legacyKey(section: String): String? = if (section == "speckle") "grain" else null
 
         fun fromJsonText(text: String): FxChain = fromJsonValue(Json.parse(text))
     }

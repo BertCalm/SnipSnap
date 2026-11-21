@@ -55,12 +55,20 @@ class GrainTest {
         for (i in 0 until out.frameCount) assertEquals(out.samples[2 * i] * .5f, out.samples[2 * i + 1], 1e-5f)
     }
 
-    @Test fun `a chain with GRAIN saves and reloads, after REWIND and before SPRING`() {
-        val chain = FxChain(grain = mapOf("MIX" to .6f, "SIZE" to .3f, "DENSITY" to .7f, "SCATTER" to .5f))
+    @Test fun `a chain with the GRAIN processor saves and reloads as SPECKLE, after REWIND and before SPRING`() {
+        val chain = FxChain(speckle = mapOf("MIX" to .6f, "SIZE" to .3f, "DENSITY" to .7f, "SCATTER" to .5f))
         assertEquals(chain, FxChain.fromJsonText(chain.toJsonText()))
         val names = FxChain.SECTIONS.map { it.name }
-        assertEquals(names.indexOf("rewind") + 1, names.indexOf("grain"))
-        assertTrue(names.indexOf("grain") < names.indexOf("spring"))
+        assertEquals(names.indexOf("rewind") + 1, names.indexOf("speckle"))
+        assertTrue(names.indexOf("speckle") < names.indexOf("spring"))
         assertTrue(chain.process(ka).samples.all { it.isFinite() })
+    }
+
+    @Test fun `a chain saved with the earlier key grain still loads its section as SPECKLE`() {
+        val chain = FxChain(speckle = mapOf("MIX" to .6f, "SIZE" to .3f, "DENSITY" to .7f, "SCATTER" to .5f))
+        val saved = chain.toJsonText()
+        assertTrue(saved.contains("\"speckle\""), "the section is saved as speckle: $saved")
+        val earlier = saved.replace("\"speckle\"", "\"grain\"")
+        assertEquals(chain, FxChain.fromJsonText(earlier))
     }
 }
