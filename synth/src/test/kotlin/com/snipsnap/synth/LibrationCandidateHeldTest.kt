@@ -12,13 +12,14 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * The held keys of ROTOR and HOLLOW ([LibrationCandidateHeld], 21 Nov 2026, unheard until round held-cl-1), read as the
+ * HOLLOW's held key ([LibrationCandidateHeld], 21 Nov 2026, kept in round held-cl-1 as KA5; ROTOR's awaits a verdict), read as the
  * cloud voices' held keys are: the trajectories traversed out and back over about four seconds, the root fitted to whole
  * turns, every oscillator running across the wrap. Pinned here: the key starts as the kept one-shot does, the loop closes
  * on real neighbouring loops with every phase whole, the root is in tune, and the soft layer is the kept soft touch.
  */
 class LibrationCandidateHeldTest {
-    private val voices = listOf(LibrationVoice.ROTOR, LibrationVoice.HOLLOW)
+    // ROTOR's held key is written but not offered: it was not rated in held-cl-1 (KA4) and awaits a verdict.
+    private val voices = listOf(LibrationVoice.HOLLOW)
     private val rate = Dsp.RATE
 
     private fun rms(x: FloatArray, from: Int, n: Int): Double {
@@ -34,6 +35,7 @@ class LibrationCandidateHeldTest {
     @Test
     fun `each held key starts as the kept one-shot and loops closed, in tune, at bass middle and treble`() {
         assertEquals(Libration.CLOUD_VOICES + voices, LibrationKeys.HELD_VOICES)
+        assertFalse(LibrationKeys.supports(LibrationPatch("Held", LibrationVoice.ROTOR, Libration.defaults(LibrationVoice.ROTOR))))
         for (voice in voices) for (midi in listOf(36, 60, 84)) {
             val p = LibrationKeys.Session().probe(patch(voice, midi))
             val x = p.note.snip.samples
@@ -81,5 +83,25 @@ class LibrationCandidateHeldTest {
             assertTrue(shapes > 1.0, "$voice soft and hard keys are only $shapes dB apart")
             assertFalse(soft.snip.samples.contentEquals(hard.snip.samples))
         }
+    }
+
+    /**
+     * Kept by ear in round held-cl-1 (21 Nov 2026, KA5 HOLLOW): the touch-key layers at middle C from the preset (what
+     * the keys instrument ships and the clip played), and the LOOP at HOLD 1 from the preset. A change here must be heard.
+     */
+    @Test
+    fun `the heard HOLLOW held key and LOOP render exactly what round held-cl-1 heard`() {
+        val preset = LibrationPresets.forVoice(LibrationVoice.HOLLOW).single()
+        val lines = LibrationTouchKeys.capture(preset.copy(midi = 60)).mapIndexed { i, l ->
+            "LIBRATION HOLLOW held C4 layer $i loop ${l.note.loopStartFrame} ${CandidateVoiceProbes.hash(l.note.snip.samples)}"
+        } + ("LIBRATION HOLLOW LOOP " + CandidateVoiceProbes.hash(
+            preset.copy(macros = preset.macros + ("HOLD" to 1f), heldModel = LibrationKeys.MODEL_VERSION).render().samples))
+        assertEquals(3, lines.size)
+        assertEquals(HEARD, CandidateVoiceProbes.hash(lines), lines.joinToString("\n"))
+    }
+
+    private companion object {
+        /** SHA-256 over the three lines above, taken in the run whose re-rendered clip KA5 matched the heard clips' SHA-256. */
+        const val HEARD = "594b21e78fa97953545837409f30dfd2be292bd65735a308a7119a861624aaa8"
     }
 }

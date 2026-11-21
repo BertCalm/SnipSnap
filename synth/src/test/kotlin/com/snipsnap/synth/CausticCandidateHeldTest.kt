@@ -12,7 +12,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * The held keys of BOWL, SCATTER and TONGUE ([CausticCandidateHeld], 21 Nov 2026, unheard until round held-cl-1): the
+ * The held keys of BOWL, SCATTER and TONGUE ([CausticCandidateHeld], 21 Nov 2026, kept in round held-cl-1 as KA1-KA3): the
  * one-shot's own strike, repeated in a varied hand. Pinned here: the key starts as the kept one-shot does, the loop
  * closes on real history, the repeats hold the first strike's level instead of building on it, the hand varies every
  * strike, MOTION moves the strikes and not the body, the soft layer is the kept soft touch at the hard layer's level.
@@ -130,5 +130,30 @@ class CausticCandidateHeldTest {
             assertEquals(Presets.forVoice("CAUSTIC", voice.name).single().render().samples.size,
                 CausticInstrument.render(voice).samples.size)
         }
+    }
+
+    /**
+     * Kept by ear in round held-cl-1 (21 Nov 2026, KA1 BOWL, KA2 SCATTER, KA3 TONGUE): the zone the keys instrument
+     * ships at middle C from each voice's preset, soft and hard layer (what CausticPadMaker.renderLayers renders and the
+     * clip played), and the LOOP at HOLD 1 from the preset. Any change to these is a sound change and must be heard.
+     */
+    @Test
+    fun `the heard held keys and LOOPs render exactly what round held-cl-1 heard`() {
+        val lines = ArrayList<String>()
+        for (voice in voices) {
+            val preset = CausticPresets.forVoice(voice).single()
+            CausticInstrument.heldLayers(voice, preset.macros, 60, preset.velocity, preset.model).forEachIndexed { i, n ->
+                lines += "CAUSTIC $voice held C4 layer $i loop ${n.loopStartFrame} ${CandidateVoiceProbes.hash(n.snip.samples)}"
+            }
+            lines += "CAUSTIC $voice LOOP " + CandidateVoiceProbes.hash(
+                CausticInstrument.render(voice, preset.macros + ("HOLD" to 1f), preset.midi, preset.velocity).samples)
+        }
+        assertEquals(9, lines.size)
+        assertEquals(HEARD, CandidateVoiceProbes.hash(lines), lines.joinToString("\n"))
+    }
+
+    private companion object {
+        /** SHA-256 over the nine lines above, taken in the run whose re-rendered clips KA1-KA3 matched the heard clips' SHA-256. */
+        const val HEARD = "702d665a082392edd00145a55c302d92079d00e87b2133fd863e3754c97c1a43"
     }
 }

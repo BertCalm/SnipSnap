@@ -17,10 +17,11 @@ object LibrationKeys {
     data class Rendered(val note: KeyNote, val diagnostics: Diagnostics)
 
     /**
-     * The voices with a held key: the cloud voices, and since 21 Nov 2026 ROTOR and HOLLOW ([LibrationCandidateHeld];
-     * unheard until round held-cl-1). CHIME and STRUM are struck and finite.
+     * The voices with a held key: the cloud voices, and since 21 Nov 2026 HOLLOW ([LibrationCandidateHeld], kept in
+     * round held-cl-1, KA5). ROTOR's held key is written ([LibrationCandidateHeld.handles]) but not offered: it was not
+     * rated in held-cl-1 (KA4) and awaits a verdict. CHIME and STRUM are struck and finite.
      */
-    val HELD_VOICES: List<LibrationVoice> = Libration.CLOUD_VOICES + listOf(LibrationVoice.ROTOR, LibrationVoice.HOLLOW)
+    val HELD_VOICES: List<LibrationVoice> = Libration.CLOUD_VOICES + listOf(LibrationVoice.HOLLOW)
 
     fun supports(patch: LibrationPatch): Boolean = patch.model == 3 && patch.voice in HELD_VOICES
     fun isHeld(hold: Float): Boolean = hold == 1f

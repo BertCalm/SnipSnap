@@ -875,12 +875,14 @@ voice has one factory preset, appended after Travelling Catches, at the default 
 controls, C4, medium touch, model 2 (Singing Bowl, Bead Scatter, Thumb Tongue). The eleven earlier presets keep model
 1 and their bytes; the CAUSTIC kit is unchanged. No starter kit was added.
 
-**Held BOWL, SCATTER and TONGUE: built 21 Nov 2026, unheard** (next section; listening round held-cl-1).
+**Held BOWL, SCATTER and TONGUE: kept 21 Nov 2026** (next section; listening round held-cl-1, KEEP all three).
 
-## Held keys and LOOP for BOWL, SCATTER and TONGUE (built 21 Nov 2026; unheard, round held-cl-1)
+## Held keys and LOOP for BOWL, SCATTER and TONGUE (kept 21 Nov 2026, round held-cl-1)
 
-Status: **unheard**. The owner asked for held keys and the LOOP for the three voices kept in caustic-voices-1, with a
-listening round first. Code: `CausticCandidateHeld.kt`; the strike law is the one-shot's own, now `CausticCandidates.strike`.
+Status: **kept by ear.** Round held-cl-1, 21 Nov 2026: KA1 BOWL **KEEP**, KA2 SCATTER **KEEP**, KA3 TONGUE **KEEP**
+(no notes). Each clip played the hard then the soft key held at middle C from the voice's preset, then the LOOP at
+HOLD 1; `CausticCandidateHeldTest` pins those zones (both layers) and LOOPs to what was heard. The owner asked for
+held keys and the LOOP for the three voices kept in caustic-voices-1, with a listening round first. Code: `CausticCandidateHeld.kt`; the strike law is the one-shot's own, now `CausticCandidates.strike`.
 
 - **What a held key plays.** The one-shot's own strike first (the same contacts at the same fractional delays on the
   same body: the held key's first 80 ms match the kept one-shot to -50 to -94 dB after levelling), then the same
@@ -909,7 +911,7 @@ listening round first. Code: `CausticCandidateHeld.kt`; the strike law is the on
 Measured (Kotlin, `CausticCandidateHeldTest`, C2/C4/C6 at the defaults; nothing heard): seam under 1e-11, loop wrap
 step 0.01 to 0.08 of the loop's own 99.9th-percentile step; first ring (.3 to .8 s) within 6 dB of the loop's level;
 held root within 15 cents; soft against hard 3.9 to 6.8 dB apart by level-matched third-octave shape at C4 and within
-0.1 dB in level; MOTION .6 moves the loop's shape 1.9 to 3.5 dB. Key files at C4: BOWL 22 s (the bowl's 9 s ring needs
+0.1 dB in level; MOTION .6 moves the loop's shape 1.9 to 3.5 dB (MOTION itself was not in the clips). Key files at C4: BOWL 22 s (the bowl's 9 s ring needs
 four loops to settle), SCATTER 13 s, TONGUE 11 s. The finite renders of all seven voices, every preset, and the
 earlier voices' held keys, LOOPs and MOTION are unchanged (419 hashes, base against this build).
 

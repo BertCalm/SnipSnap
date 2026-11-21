@@ -14,7 +14,9 @@ import kotlin.random.Random
  * each HOLLOW breath and ROTOR's turning frame are corrected once to whole turns of the loop, so no phase is reset.
  * The note starts from rest exactly as the one-shot does (the same rounded opening, ROTOR's percussion ping); there is
  * no release, the player's key-up owns it. Two whole loops settle the start (nothing here rings longer than a second)
- * before the loop, and a real preceding and following loop test it.
+ * before the loop, and a real preceding and following loop test it. HOLLOW's was kept by ear in round held-cl-1
+ * (KA5, 21 Nov 2026) and is offered; ROTOR's was not rated (KA4), so it is not in [LibrationKeys.HELD_VOICES] and no
+ * patch can reach it until a verdict.
  */
 internal object LibrationCandidateHeld {
     private const val RATE = Dsp.RATE

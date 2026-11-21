@@ -17,7 +17,7 @@ object Libration {
     val KEPT_VOICES = LibrationVoice.entries.toList()
     /**
      * The voices the cloud renderer plays, and the only ones on the starter kit. CHIME, STRUM, ROTOR and HOLLOW are
-     * LibrationCandidates.kt; ROTOR and HOLLOW also have held keys ([LibrationKeys.HELD_VOICES]).
+     * LibrationCandidates.kt; HOLLOW also has a held key ([LibrationKeys.HELD_VOICES]).
      */
     val CLOUD_VOICES = listOf(LibrationVoice.GATHER, LibrationVoice.TWINS, LibrationVoice.DEPARTURE)
     const val MIN_MIDI = 36

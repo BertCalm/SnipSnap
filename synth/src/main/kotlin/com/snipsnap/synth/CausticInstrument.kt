@@ -85,7 +85,8 @@ object CausticInstrument {
 
     /**
      * The voices with a held key (a sustained loop and MOTION): every voice since 21 Nov 2026. BOWL, SCATTER and
-     * TONGUE repeat their own strike in a varied hand ([CausticCandidateHeld]); unheard until round held-cl-1.
+     * TONGUE repeat their own strike in a varied hand ([CausticCandidateHeld]); kept by ear in round held-cl-1
+     * (KA1-KA3, 21 Nov 2026).
      */
     val HELD_VOICES: List<CausticVoice> = CausticVoice.entries.toList()
 

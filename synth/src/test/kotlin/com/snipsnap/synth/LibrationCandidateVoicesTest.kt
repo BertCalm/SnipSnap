@@ -34,7 +34,7 @@ class LibrationCandidateVoicesTest {
         Libration.probe(voice, macros, midi, velocity, options).samples.samples
 
     @Test
-    fun `the four kept voices are appended and offered with their heard preset, ROTOR and HOLLOW also held`() {
+    fun `the four kept voices are appended and offered with their heard preset, HOLLOW also held`() {
         assertEquals(listOf(LibrationVoice.CHIME, LibrationVoice.STRUM, LibrationVoice.ROTOR, LibrationVoice.HOLLOW), candidates)
         assertEquals(LibrationVoice.entries.take(3), Libration.CLOUD_VOICES)
         assertEquals(LibrationVoice.entries, Libration.KEPT_VOICES)
@@ -53,8 +53,8 @@ class LibrationCandidateVoicesTest {
                 velocity = .6f, sourceSeconds = .5)
             assertEquals(patch, Patches.fromJsonText(patch.toJsonText()), "$voice does not survive saving")
             assertContentEquals(patch.render().samples, LibrationRenderSession().render(patch).samples, "$voice preview differs")
-            // ROTOR and HOLLOW have held keys since 21 Nov 2026 (LibrationCandidateHeldTest); CHIME and STRUM are struck and finite.
-            if (voice == LibrationVoice.ROTOR || voice == LibrationVoice.HOLLOW) assertTrue(LibrationKeys.supports(patch))
+            // HOLLOW has a held key since 21 Nov 2026 (LibrationCandidateHeldTest); ROTOR's awaits a verdict; CHIME and STRUM are finite.
+            if (voice == LibrationVoice.HOLLOW) assertTrue(LibrationKeys.supports(patch))
             else {
                 assertFalse(LibrationKeys.supports(patch))
                 assertFailsWith<IllegalArgumentException> { patch.copy(macros = patch.macros + ("HOLD" to 1f),

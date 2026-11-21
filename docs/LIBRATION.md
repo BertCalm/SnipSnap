@@ -1,7 +1,7 @@
 # Libration — finite instrument
 
 LIBRATION has seven voices: GATHER, TWINS and DEPARTURE (below), and CHIME, STRUM, ROTOR and HOLLOW, kept in
-libration-voices-1 on 20 Nov 2026 (see "Kept voices" at the end; held ROTOR and HOLLOW built 21 Nov 2026, unheard).
+libration-voices-1 on 20 Nov 2026 (see "Kept voices" at the end; held HOLLOW kept 21 Nov 2026; held ROTOR built, awaiting a verdict).
 
 This milestone adapts the supplied Libration engineering proposal to SnipSnap's offline
 Kotlin synthesis path. It implements GATHER, TWINS and DEPARTURE for an initial listening
@@ -388,14 +388,14 @@ LIBRATION now has seven voices.
 They are appended to `LibrationVoice` after DEPARTURE, so saved names and ordinals do not move.
 `Libration.KEPT_VOICES` is all seven, and the app's voice picker reads it. `Libration.CLOUD_VOICES` is GATHER,
 TWINS and DEPARTURE: the cloud renderer and the starter kit. `LibrationKeys.HELD_VOICES` (held instrument, touch
-keys, keygroups) is those three and, since 21 Nov 2026, ROTOR and HOLLOW. Each new voice has one factory preset, named after it: its default controls at C3, the
+keys, keygroups) is those three and, since 21 Nov 2026, HOLLOW (ROTOR's held key is built but not offered). Each new voice has one factory preset, named after it: its default controls at C3, the
 default touch (.8) and the six-second note, which is the C3 note of its heard range clip. There is no new
 starter; the LIBRATION starter is unchanged. The heard renders (the four range notes and the three touches of
 each voice, 28 in all) are pinned in `libration/kept-voices-v1.sha256`, and the cloud voices' renders (finite
 models 1 to 3, held, and presets) are pinned against the build before the round, both in
 `LibrationCandidateVoicesTest`. The code is `LibrationCandidates.kt` (it keeps its round-time name).
 
-**Held ROTOR and HOLLOW: built 21 Nov 2026, unheard** (section at the end; listening round held-cl-1). CHIME
+**Held HOLLOW: kept 21 Nov 2026; held ROTOR: awaiting a verdict** (section at the end; listening round held-cl-1). CHIME
 and STRUM are struck and are complete as finite notes.
 
 GATHER, TWINS and DEPARTURE are one cloud renderer at three settings of REGION. Each candidate reads something in
@@ -426,7 +426,8 @@ fade. Touch changes tone in each: mallet hardness and upper bar modes (CHIME), p
 pipe balance, speech and a short second-harmonic ping (ROTOR), upper odd partials and speech (HOLLOW).
 
 **Finite at the round.** The held instrument, the touch keys and the keygroup maker refused all four. Since 21 Nov
-2026 they take ROTOR and HOLLOW (section at the end); CHIME and STRUM stay finite.
+2026 they take HOLLOW (section at the end); ROTOR's held key is built but refused until it is rated; CHIME and
+STRUM stay finite.
 RESONANCE is the ring length for CHIME and STRUM and the release length for ROTOR and HOLLOW.
 
 Measured before the round (Kotlin, `LibrationCandidateVoicesTest`): finite, under the .94 ceiling,
@@ -442,10 +443,15 @@ Weak spots named before the round (the owner kept all four with no note on them)
 triangles, with only the pipes' drift against each other to keep it from sounding like a motor, and its tall pipes
 swing by 12 dB; HOLLOW is a recolouring of the kept cloud.
 
-## Held keys and LOOP for ROTOR and HOLLOW (built 21 Nov 2026; unheard, round held-cl-1)
+## Held keys and LOOP for ROTOR and HOLLOW (round held-cl-1: HOLLOW kept 21 Nov 2026, ROTOR awaiting a verdict)
 
-Status: **unheard**. Code: `LibrationCandidateHeld.kt`, reached through `LibrationKeys` (HOLD 1 with `heldModel` 1,
-as for the cloud voices), so the LOOP pad, the held instrument and the touch keys all take ROTOR and HOLLOW.
+Status: round held-cl-1, 21 Nov 2026: KA5 HOLLOW **KEEP** (no notes). KA4 ROTOR was **not rated**, so ROTOR's held
+key is not offered: `LibrationKeys.HELD_VOICES` is the cloud voices and HOLLOW, so `LibrationKeys.supports` (and with
+it the patch's HOLD with `heldModel`, the LOOP pad, MAKE INSTRUMENT and the touch keys) refuses ROTOR. Its code stays
+in `LibrationCandidateHeld` for when it is rated; the description below covers both. HOLLOW's clip played the hard
+then the soft key held at middle C from its preset, then the LOOP at HOLD 1; `LibrationCandidateHeldTest` pins those
+layers and the LOOP to what was heard. Code: `LibrationCandidateHeld.kt`, reached through `LibrationKeys` (HOLD 1
+with `heldModel` 1, as for the cloud voices).
 
 - **Read as the cloud's held keys are** ([LIBRATION_HOLD.md](LIBRATION_HOLD.md)): the same loop plan (3.8 to 4.2 s,
   the root fitted to whole turns within .1 cent), the same out-and-back traversal of the first five seconds of the
