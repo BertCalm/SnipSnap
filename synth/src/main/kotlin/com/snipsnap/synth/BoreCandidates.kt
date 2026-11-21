@@ -172,8 +172,8 @@ internal object BoreCandidates {
      * The candidates' touch ([CandidateTouch]; the owner on every soft, medium, hard clip: "All sound the same"). A breath softer than
      * [DEFAULT_BREATH] is a gentler air stream that leaves mostly the fundamental and the next partials, quieter and slower to speak.
      * The clips' soft touch (BREATH at 0.62 of the default, depth 0.38) loses 18.5 dB above three times the note, is 7.7 dB quieter
-     * before that and takes 0.3 s to rise; the held keys' soft layer (BREATH at [BoreKeys.SOFT_BREATH_SHARE] of itself, depth 0.55)
-     * would lose 26 dB. The corner sits higher than ARCO's so a soft low reed keeps enough of its edge to stay a melodic note to the
+     * before that and takes 0.3 s to rise; a candidate's held soft layer is blown at that same touch
+     * ([BoreKeys.CANDIDATE_SOFT_BREATH_SHARE]) and shaped by [HELD_TOUCH]. The corner sits higher than ARCO's so a soft low reed keeps enough of its edge to stay a melodic note to the
      * classifier. At the default BREATH and above, the kept sound.
      */
     val TOUCH = CandidateTouch.Lean(shelfDbPerDepth = 48f, levelDbPerDepth = 20f, riseSecondsPerDepth = 0.8f, cornerRatio = 3f)
@@ -181,6 +181,18 @@ internal object BoreCandidates {
     /** A candidate's one-shot [x] at [hz] as blown at [breath] ([TOUCH]). */
     fun touched(x: FloatArray, hz: Float, breath: Float): FloatArray =
         CandidateTouch.touched(x, hz, CandidateTouch.depth(breath, DEFAULT_BREATH), TOUCH)
+
+    /**
+     * [TOUCH] on a held key (`BoreKeys`): the same darker shelf and the same slower rise, no level. A held key's level is the player's
+     * velocity, once, in the host (the BELLOWS rule), so the zone is levelled on its loop after the touch, as every zone is. The touch
+     * goes on the held note before the zone is cut from it, so the join is searched and checked on what ships ([Bore.checkJoin]).
+     * The LOOP's held note ([Bore.heldNote]) is not touched: the LOOP is the one-shot's, and plays at the patch's own BREATH.
+     */
+    val HELD_TOUCH = CandidateTouch.Lean(shelfDbPerDepth = TOUCH.shelfDbPerDepth, levelDbPerDepth = 0f, riseSecondsPerDepth = TOUCH.riseSecondsPerDepth, cornerRatio = TOUCH.cornerRatio)
+
+    /** A candidate's held note [x] at [hz] as blown at [breath] ([HELD_TOUCH]); untouched at the default BREATH and above. */
+    fun heldTouched(x: FloatArray, hz: Float, breath: Float): FloatArray =
+        CandidateTouch.touched(x, hz, CandidateTouch.depth(breath, DEFAULT_BREATH), HELD_TOUCH)
 
     fun bellHz(s: Spec, hz: Float, breath: Float, lip: Float): Float = when (s.kind) {
         Kind.JET, Kind.VESSEL -> hz * Dsp.expMap(lip, s.bellLow, s.bellHigh) * Dsp.lin(breath, s.bellBreathLow, s.bellBreathHigh)

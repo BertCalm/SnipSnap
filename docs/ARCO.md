@@ -114,7 +114,7 @@ byte the heard note and is pinned in `HoldHumanizePinsTest` with each new
 voice's default note, default LOOP and three second note. Being 2.5 s long, each
 reads and is filed LOOP by length (a one-shot, not a HOLD 1 loop).
 
-**Held keys: not offered yet.** The owner heard the new voices only as one-shots,
+**Held keys: not offered yet** (offered and kept since 21 Nov, below). The owner heard the new voices only as one-shots,
 so MAKE INSTRUMENT stays on CELLO, ERHU and SARANGI (`ArcoPadMaker.VOICES`), as
 LIBRATION's new voices stay finite only. Every zone of every new voice closes in
 both layers, but WHEEL's D4 hard key reaches its level more than 20 ms later
@@ -124,3 +124,38 @@ held soft layer (`ArcoKeys`' lighter bow and GRIP, levelled to one target).
 The LOOP (HOLD 1) is offered, unleaned, and closes at every note
 (`ArcoLoopFuzzTest`), but has not been heard either. No kit pad or starter has
 been made for them.
+
+## Verdict of 21 Nov 2026 (round held-arco-1): held keys and LOOP kept
+
+**The change.** WHEEL, BAR, GLASS and VIOL are now offered on held keys: MAKE
+INSTRUMENT (`ArcoPadMaker.VOICES`) is every kept voice. A candidate's soft
+layer plays the soft touch the owner kept on the one-shot (round touch-arco-1):
+the bow and GRIP at `ArcoKeys.CANDIDATE_SOFT_SHARE` (0.496, the heard soft
+touch 0.3 of the way from the keys' soft share to the whole), with the same
+darker shelf and slower rise (`ArcoCandidates.HELD_TOUCH`) but not its lower
+level, since on keys the host applies velocity as gain once and every zone is
+levelled on its loop. The touch goes on before the loop is cut and levelled,
+so the seam and join are checked on what ships. Hard layers and every held
+render of CELLO, ERHU and SARANGI are unchanged.
+
+**WHEEL's late start was the measure, not the sound.** `HeldStartTest` flagged
+WHEEL's D4 hard key as reaching its level 60 ms later than its whole stroke.
+The whole stroke hovers at -2.9 to -3.4 dB re its loop from 90 to 150 ms and
+the shaped start runs about 0.2 dB under it there, so a bare -3 dB crossing
+jumps 60 ms. The fix is in the test only: the shaped start counts as arrived
+0.5 dB under the whole start's -3 dB (`ARRIVAL_SLACK_DB`), well inside the
+test's own 2 dB handover-dip bar. No sound moved for it.
+
+**Verdict.** HA1 (WHEEL), HA2 (BAR), HA3 (GLASS), HA4 (VIOL): **KEEP**, no
+notes. Each clip played the hard key held 7 s, the soft key held 5 s (middle C,
+through the keys instrument's player), then the LOOP at HOLD 1 at the voice's
+default note. So the held keys ship as heard, and the LOOP (shipped in #1278,
+pinned in `HoldHumanizePinsTest`) is now heard and kept. The zones the clips
+played are pinned in `HeldKeysHeardPinsTest`, and a re-render of the round
+matches the heard clips' SHA-256, 9 of 9 with BORE's.
+
+**Still open.** A LOOP at a BOW lighter than the default gets no touch (the
+one-shot's `CandidateTouch` is not applied to HOLD 1); nobody has asked for it.
+WHEEL's and BAR's middle C sits between zone roots, so the instrument plays the
+root below repitched; the clip rendered the zone maker at that key. No kit pad
+or starter has been made for the new voices.
