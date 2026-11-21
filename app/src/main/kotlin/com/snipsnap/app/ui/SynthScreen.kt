@@ -2715,7 +2715,7 @@ fun SynthScreen(
     } }
     // The name MAKE will land under, read off the shelf when the sheet opens
     // so the sheet can say it; MAKE asks the shelf again at write time.
-    val supportsHeldInstrument = engine == Engine.BRISTLE || (engine == Engine.SPLAY && !embouchureRestore.waitsForRecipe(engine, voice)) || engine == Engine.WICK || engine == Engine.ACCORD || engine == Engine.ETCH || engine == Engine.HALOBAR || engine == Engine.CAUSTIC || engine == Engine.LIBRATION || engine == Engine.RIME || (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR || engine == Engine.BALLAST || engine == Engine.MERIDIAN || engine == Engine.MERCURY || engine == Engine.KEEL || engine == Engine.ARCO ||
+    val supportsHeldInstrument = engine == Engine.BRISTLE || (engine == Engine.SPLAY && !embouchureRestore.waitsForRecipe(engine, voice)) || engine == Engine.WICK || engine == Engine.ACCORD || engine == Engine.ETCH || engine == Engine.HALOBAR || (engine == Engine.CAUSTIC && CausticInstrument.HELD_VOICES.any { it == voice }) || engine == Engine.LIBRATION || engine == Engine.RIME || (engine == Engine.TIDAL && !embouchureRestore.pending.containsKey(engine to voice)) || engine == Engine.CREASE || engine == Engine.ORPHICA || engine == Engine.RESIN || engine == Engine.SIREN || engine == Engine.GLINT || engine == Engine.REGISTERS || engine == Engine.BELLOWS || engine == Engine.CONTOUR || engine == Engine.BALLAST || engine == Engine.MERIDIAN || engine == Engine.MERCURY || engine == Engine.KEEL || engine == Engine.ARCO ||
         (engine == Engine.OPENSKY && OpenSkyPadMaker.supports(voice as OpenSkyVoice)) ||
         (engine == Engine.ORIGAMI && OrigamiPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as OrigamiPatch)) ||
         (engine == Engine.FLOCK && FlockPadMaker.supports(buildCurrentPatch(engine.patchDisplayName(voice)) as FlockPatch)) ||
@@ -2815,8 +2815,11 @@ fun SynthScreen(
             if (LatticePadMaker.supports(patch))
                 HeldSpec.Lattice(LatticePadMaker.spec(patch, heldSheet.holdRelease)) else null
         }
-        Engine.CAUSTIC -> HeldSpec.Caustic(CausticPadMaker.spec(
-            buildCurrentPatch(engine.patchDisplayName(voice)) as CausticPatch, heldSheet.holdRelease))
+        Engine.CAUSTIC -> {
+            // BOWL, SCATTER and TONGUE are finite only for now: no held key.
+            val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as CausticPatch
+            if (CausticPadMaker.supports(patch)) HeldSpec.Caustic(CausticPadMaker.spec(patch, heldSheet.holdRelease)) else null
+        }
         Engine.LIBRATION -> {
             val patch = buildCurrentPatch(engine.patchDisplayName(voice)) as LibrationPatch
             if (LibrationPadMaker.supports(patch)) HeldSpec.Libration(
@@ -5227,7 +5230,8 @@ private fun macroReadout(
     engine == Engine.PLUCK && voice == PluckVoice.UPRIGHT && name == "TUNE" ->
         Scales.nameOf(28 + (macros.getValue(name) * Pluck.TUNE_SEMITONES).roundToInt())
     engine == Engine.APSIS && name == "HOLD" && Apsis.isLoop(macros.getValue(name)) -> "LOOP"
-    engine == Engine.CAUSTIC && name == "HOLD" -> if (macros.getValue(name) == 1f) "LOOP"
+    // BOWL, SCATTER and TONGUE have no loop: their top HOLD step is a longer note.
+    engine == Engine.CAUSTIC && name == "HOLD" -> if (macros.getValue(name) == 1f && CausticInstrument.HELD_VOICES.any { it == voice }) "LOOP"
         else if (macros.getValue(name) == 0f) "NOTE"
         else "%.1fs".format(Locale.ROOT, CausticInstrument.durationSeconds(voice as CausticVoice, macros, 2))
     engine == Engine.PRISM && name == "HOLD" && prismFiniteMotion(loadedPatch as? PrismPatch) -> "NOTE"
@@ -6794,8 +6798,10 @@ private enum class Engine {
         TANGLE -> TangleVoice.entries
         SHOAL -> ShoalVoice.entries
         CREASE -> CreaseVoice.entries
-        CAUSTIC -> CausticVoice.entries
-        LATTICE -> LatticeVoice.entries
+        // Every voice since 20 Nov 2026: BOWL, SCATTER and TONGUE (CAUSTIC) and VANE, RAKE and
+        // BOW (LATTICE) were kept in caustic-voices-1 and lattice-voices-1.
+        CAUSTIC -> CausticInstrument.KEPT_VOICES
+        LATTICE -> Lattice.KEPT_VOICES
         RELAY -> RelayVoice.entries
         EMBOUCHURE -> EmbouchureVoice.entries
         BELLOWS -> BellowsVoice.entries
@@ -7653,6 +7659,9 @@ private fun chipLabel(engine: Engine, voice: Enum<*>): String = when (engine) {
         CausticVoice.HOLLOW_MALLET -> "Hollow Mallet"
         CausticVoice.RUBBED_RING -> "Rubbed Ring"
         CausticVoice.TRAVELLING_CATCHES -> "Travelling Catches"
+        CausticVoice.BOWL -> "Bowl"
+        CausticVoice.SCATTER -> "Scatter"
+        CausticVoice.TONGUE -> "Tongue"
     }
     else -> voice.name
 }
@@ -8166,6 +8175,7 @@ private fun CausticNoteControls(
     )
     TapeText(
         if (patch.model == 1) "Original finite note · move hold or motion to explore further."
+        else if (patch.voice !in CausticInstrument.HELD_VOICES) "Length sets the note · hold lengthens it."
         else "Length sets the note · the top hold step sustains.",
         TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2,
     )

@@ -574,7 +574,7 @@ class DeterminismTest {
 
     @Test
     fun `native Caustic saved finite notes are byte identical across renders`() {
-        for (voice in CausticVoice.entries) {
+        for (voice in CausticInstrument.KEPT_VOICES) {
             val patch = CausticPatch("Native finite canary", voice,
                 mapOf("SOURCE" to .61f, "FOCUS" to .23f, "BODY" to .72f, "LENGTH" to .08f),
                 midi = 57, velocity = .63f, model = 1)

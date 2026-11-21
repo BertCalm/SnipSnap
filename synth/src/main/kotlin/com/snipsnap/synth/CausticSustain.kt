@@ -56,8 +56,9 @@ internal object CausticSustain {
         val gain: Double, val spatial: DoubleArray)
     private data class SourceGroup(val source: DoubleArray, val modes: IntArray,
         val sourcePosition: Double, val radiation: Boolean = false, val trajectoryFrames: Int = 0)
+    /** [rise] is a linear change per sample from [from], as a share of [amplitude]; it needs a still route. */
     private data class ExpTerm(val from: Int, val until: Int, val origin: Int,
-        val lambda: Double, val amplitude: Double, val phase: Double = 0.0)
+        val lambda: Double, val amplitude: Double, val phase: Double = 0.0, val rise: Double = 0.0)
     private data class ForcePole(val mode: Int, val lambda: Double, val omega: Double)
     private data class SparseKernel(val offsets: IntArray, val weights: DoubleArray)
     private data class ForcePacket(val at: Int, val pole: Int, val kernel: SparseKernel,
@@ -101,6 +102,64 @@ internal object CausticSustain {
     private const val RECEPTION_CACHE_BYTES = 8L * 1024 * 1024
     // Fixed held-drive headroom, shared by every position; no per-position makeup.
     private const val HELD_FORCE_GAIN = .25
+
+    /**
+     * How far the hand on a held key varies. [stroke] is the spread of each repeated strike,
+     * catch or re-excitation tick (a share of its strength), [pressureDb] the slow drift of the
+     * continued pressure (dB either way, with a smaller drift of how bright it is), and
+     * [lateSeconds] how late a strike may land. The body's modes are not touched: a metal body
+     * does not drift in pitch, so this is variation of the excitation only. Authored amounts.
+     */
+    data class Human(val stroke: Double, val pressureDb: Double, val lateSeconds: Double) {
+        init {
+            require(stroke.isFinite() && stroke in 0.0..(.4) && pressureDb.isFinite() && pressureDb in 0.0..3.0 &&
+                lateSeconds.isFinite() && lateSeconds in 0.0..(.03)) { "CAUSTIC hold variation is out of its authored range" }
+        }
+    }
+    val HUMAN_MODEST = Human(stroke = .12, pressureDb = .6, lateSeconds = .006)
+    val HUMAN_STRONGER = Human(stroke = .22, pressureDb = 1.1, lateSeconds = .012)
+    /** A varied hold repeats only after this many of the still hold's periods. */
+    const val HUMAN_REPEATS = 4
+
+    /** A varied hold needs a still path: with MOTION the path itself already moves, and that hold is unchanged. */
+    fun heldRepeats(macros: Map<String, Float>, human: Human?): Int =
+        if (human != null && motion(macros) == 0.0) HUMAN_REPEATS else 1
+
+    /**
+     * One seeded performance of a held loop: sixteen strikes (four per original period), each
+     * with its own strength and lateness, under a slow drift of pressure and brightness that
+     * returns exactly where the loop wraps ([HoldDrift]). Nothing is drawn while rendering.
+     * The first strike is the note's own onset and is left as it was.
+     */
+    private class Hand(voice: CausticVoice, midi: Int, val human: Human, repeats: Int, val count: Int, rate: Int) {
+        val events = 4 * repeats
+        val quarter = count / events
+        val touch = DoubleArray(events)
+        val late = IntArray(events)
+        private val effort = HoldDrift(Dsp.seedFor("CAUSTIC_SUSTAIN", voice.name, midi, "hand-effort"), intArrayOf(1, 2, 3))
+        private val shade = HoldDrift(Dsp.seedFor("CAUSTIC_SUSTAIN", voice.name, midi, "hand-colour"), intArrayOf(2, 3, 5))
+        private val swing = 10.0.pow(human.pressureDb / 20.0) - 1.0
+
+        init {
+            check(quarter * events == count) { "CAUSTIC held strikes must divide the loop" }
+            val random = kotlin.random.Random(Dsp.seedFor("CAUSTIC_SUSTAIN", voice.name, midi, "hand-strokes"))
+            for (e in 1 until events) {
+                touch[e] = 2.0 * random.nextDouble() - 1.0
+                late[e] = (random.nextDouble() * human.lateSeconds * rate).roundToInt()
+            }
+        }
+
+        fun pressure(n: Int): Double = 1.0 + swing * effort.at(n.toDouble() / count)
+        fun colour(n: Int): Double = shade.at(n.toDouble() / count)
+        fun strength(event: Int): Double = (1.0 + human.stroke * touch[event]) * pressure(event * quarter)
+
+        /** Pressure on harmonic [h] at strike boundary [q]; a firmer moment leans a little brighter or darker. */
+        fun harmonicPressure(q: Int, h: Int): Double {
+            val at = (q % events).toDouble() / events
+            val lean = 2.0 * ln(h.toDouble()) / ln(12.0) - 1.0
+            return 10.0.pow(human.pressureDb * (effort.at(at) + .5 * shade.at(at) * lean) / 20.0)
+        }
+    }
     private val geometryCache = object : LinkedHashMap<GeometryKey, GeometryTable>(CACHE_LIMIT, .75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<GeometryKey, GeometryTable>?) = size > CACHE_LIMIT
     }
@@ -246,11 +305,40 @@ internal object CausticSustain {
         }
     }
     private fun heldGroups(voice: CausticVoice, m: Map<String, Float>, midi: Int, velocity: Double,
-        hz: Double, count: Int, rate: Int, cancelled: () -> Boolean): Sequence<SourceGroup> = sequence {
+        hz: Double, count: Int, rate: Int, cancelled: () -> Boolean, hand: Hand? = null): Sequence<SourceGroup> = sequence {
         val b = body(voice, m); val deviation = 2 * b - 1
         val source = value(m, "SOURCE", .5).coerceIn(0.0, 1.0)
         val period = count.toDouble() / rate; val scale = (.5 + 7.5 * length(m)) / 8.0
-        if (voice == CausticVoice.HOLLOW_MALLET || voice == CausticVoice.RUBBED_RING) {
+        if (hand != null) {
+            // The same mallet roll and the same rub, in a hand that varies. Only strike strength,
+            // strike time, contact length and pressure change; the tone, grain and body do not.
+            require(voice == CausticVoice.HOLLOW_MALLET || voice == CausticVoice.RUBBED_RING) { "metal holds use their exact terms" }
+            val hollow = voice == CausticVoice.HOLLOW_MALLET
+            val harmonic = if (hollow) CausticCharacters.hollowHarmonics else CausticCharacters.rubbedHarmonics
+            val weights = if (hollow) CausticCharacters.hollowWeights else CausticCharacters.rubbedWeights
+            val grain = periodicNoise(voice, midi, count, period, if (hollow) 2400.0 else 5000.0, cancelled)
+            val rough = if (hollow) DoubleArray(0) else periodicNoise(voice, midi, count, period, 45.0, cancelled)
+            val width = (.025 - .01 * velocity) * scale * 2.0.pow(-.65 * deviation)
+            val force = if (hollow) 1000.0 else 120.0
+            val wave = DoubleArray(count) { n ->
+                if ((n and 8191) == 0) stop(cancelled)
+                val t = n.toDouble() / rate
+                val tone = CausticCharacters.harmonic(t, hz, harmonic, weights, (if (hollow) .35 else .30) * deviation)
+                val x = if (hollow) {
+                    val event = n / hand.quarter
+                    // A firmer strike leaves the bar sooner, so it is also a little brighter.
+                    val contactSeconds = width * (1.0 - .5 * hand.human.stroke * hand.touch[event])
+                    val phase = (n - event * hand.quarter - hand.late[event]).toDouble() / rate
+                    val contact = if (phase >= 0.0 && phase < contactSeconds) .5 - .5 * cos(TAU * phase / contactSeconds) else 0.0
+                    hand.strength(event) * contact * (tone + .055 * 2.0.pow(.4 * deviation) * grain[n]) * velocity.pow(.9)
+                } else hand.pressure(n) * (tone * (1 + .65 * 2.0.pow(.8 * deviation) * rough[n] * 6 *
+                    (1.0 + 2.0 * hand.human.stroke * hand.colour(n))) + .26 * 2.0.pow(.6 * deviation) * grain[n]) * velocity.pow(.85)
+                HELD_FORCE_GAIN * force * x
+            }
+            yield(SourceGroup(wave, IntArray(if (hollow) 6 else 7) { it }, source))
+            if (!hollow)
+                yield(SourceGroup(DoubleArray(count) { grain[it] * velocity * HELD_FORCE_GAIN * hand.pressure(it) }, intArrayOf(0), source, true))
+        } else if (voice == CausticVoice.HOLLOW_MALLET || voice == CausticVoice.RUBBED_RING) {
             val harmonic = if (voice == CausticVoice.HOLLOW_MALLET) CausticCharacters.hollowHarmonics else CausticCharacters.rubbedHarmonics
             val weights = if (voice == CausticVoice.HOLLOW_MALLET) CausticCharacters.hollowWeights else CausticCharacters.rubbedWeights
             val grain = periodicNoise(voice, midi, count, period, if (voice == CausticVoice.HOLLOW_MALLET) 2400.0 else 5000.0, cancelled)
@@ -351,7 +439,7 @@ internal object CausticSustain {
      * Contacts share poles and differ only in local segment/event coefficients. */
     private fun metalTerms(voice: CausticVoice, p: Caustic.RichProfile, b: Double,
         h: Int, contact: Int, held: Boolean, count: Int, hz: Double, rate: Int,
-        velocity: Double, scale: Double): List<ExpTerm> {
+        velocity: Double, scale: Double, hand: Hand? = null): List<ExpTerm> {
         val omega = TAU * h * hz / rate
         val catches = voice == CausticVoice.TRAVELLING_CATCHES
         val gain = if (catches) doubleArrayOf(.75 / 2.4, .65 / 2.4, .55 / 2.4, .45 / 2.4)[contact] else 1.0
@@ -366,6 +454,38 @@ internal object CausticSustain {
                 ExpTerm(at, count, at, p.edgeFast, -edge, -omega * at))
         }
         val amplitude = HELD_FORCE_GAIN * p.source(h, hz, velocity, false)
+        if (hand != null) {
+            // The same pressure laws in a hand that varies. Carrier phase is absolute, so every
+            // piece continues the one sinusoid; the pieces only reshape its envelope.
+            val terms = ArrayList<ExpTerm>()
+            if (!catches) {
+                val edge = amplitude * 1500.0 * (.05 + .30 * (1 - b))
+                for (q in 0 until hand.events) {
+                    val at = q * hand.quarter; val end = at + hand.quarter
+                    // Continued pressure glides in a straight line between strike boundaries
+                    // and returns to its first value at the wrap.
+                    val from = hand.harmonicPressure(q, h); val to = hand.harmonicPressure(q + 1, h)
+                    terms.add(ExpTerm(at, end, at, 0.0, amplitude * p.force * from, rise = (to / from - 1.0) / hand.quarter))
+                    val tick = edge * (1.0 + 2.0 * hand.human.stroke * hand.touch[q]); val start = at + hand.late[q]
+                    terms.add(ExpTerm(start, end, start, 1 / .006, tick))
+                    terms.add(ExpTerm(start, end, start, 1 / .0005, -tick))
+                }
+                return terms
+            }
+            var event = contact
+            while (event < hand.events) {
+                val at = event * hand.quarter + hand.late[event]
+                val amount = amplitude * 1500 * gain * h.toDouble().pow(-.25 * b) * hand.strength(event)
+                for ((lambda, sign) in listOf(1 / (.08 * 2.0.pow(.8 * b)) to 1.0, 1 / .002 to -1.0)) {
+                    // Sixteen time constants: what is left is below the float output's own step.
+                    val end = at + ceil(16.0 / lambda * rate).toInt()
+                    terms.add(ExpTerm(at, min(count, end), at, lambda, amount * sign))
+                    if (end > count) terms.add(ExpTerm(0, min(at, end - count), at - count, lambda, amount * sign))
+                }
+                event += 4
+            }
+            return terms
+        }
         if (!catches) {
             val terms = ArrayList<ExpTerm>()
             terms.add(ExpTerm(0, count, 0, 0.0, amplitude * p.force))
@@ -454,7 +574,7 @@ internal object CausticSustain {
     private fun metalFields(voice: CausticVoice, m: Map<String, Float>, midi: Int,
         velocity: Double, hz: Double, count: Int, rate: Int, h: Int, held: Boolean,
         onsetSeconds: Double, modes: List<BodyMode>, evidence: Evidence,
-        cancelled: () -> Boolean): MetalFields {
+        cancelled: () -> Boolean, hand: Hand? = null): MetalFields {
         val b = body(voice, m); val p = alloyProfile(m, b)
         val contacts = if (voice == CausticVoice.TRAVELLING_CATCHES) 4 else 1
         val source = value(m, "SOURCE", .5).coerceIn(0.0, 1.0)
@@ -471,7 +591,8 @@ internal object CausticSustain {
             stop(cancelled)
             val position = if (contacts == 1) source else shiftedSource(source, contact)
             val table = table(position, focus, motion(m), cancelled); evidence.include(table)
-            val terms = metalTerms(voice, p, b, h, contact, held, count, hz, rate, velocity, scale)
+            val terms = metalTerms(voice, p, b, h, contact, held, count, hz, rate, velocity, scale, hand)
+            check(hand == null || table.points.size == 1) { "a varied CAUSTIC hold needs a still path" }
             val indices = intArrayOf(h - 1, h + 11)
             val baseline = if (held) null else CausticGeometry.prepare(position, focus)
             val original = indices.map { index -> baseline?.let { kernel(it, modes[index].spatial, hz, rate).samples } }
@@ -489,6 +610,18 @@ internal object CausticSustain {
                     for ((wl, wr, slope) in pieces) for (term in terms) {
                         val left = max(0, max(wl, term.from)); val right = min(count, min(wr, term.until))
                         val weight = if (table.points.size == 1) 1.0 else if (slope > 0) (left - wl) * slope else (left - wr) * slope
+                        if (term.rise != 0.0) {
+                            // A gliding pressure uses the segment's own line; the route is still.
+                            addForceSegment(packets, poles, localMode, k, term, left, right, 1.0, term.rise, omega, rate)
+                            val end = min(right, onsetEnd)
+                            if (onsetEnd > left && end > left) {
+                                val sideband = PI / (onsetSeconds * rate)
+                                addForceSegment(deficit, deficitPoles, localMode, k, term, left, end, 1.0, term.rise, omega, rate, .5)
+                                addForceSegment(deficit, deficitPoles, localMode, k, term, left, end, 1.0, term.rise, omega + sideband, rate, .25)
+                                addForceSegment(deficit, deficitPoles, localMode, k, term, left, end, 1.0, term.rise, omega - sideband, rate, .25)
+                            }
+                            continue
+                        }
                         addForceSegment(packets, poles, localMode, k, term, left, right, weight, slope, omega, rate)
                         val end = min(right, onsetEnd)
                         if (held && onsetEnd > left && end > left) {
@@ -676,9 +809,9 @@ internal object CausticSustain {
         val count = frames * 4
         val hz = if (held) periods(midi, length(macros)) * Dsp.RATE.toDouble() / frames else nominalHz(midi)
         val modes = bodyModes(voice, macros, hz); val rise = if (held) .025 else 0.0
-        val fast = metalFields(voice, macros, midi, velocity, hz, count, rate, harmonic, held, rise, modes, Evidence()) { false }
+        val fast = metalFields(voice, macros, midi, velocity, hz, count, rate, harmonic, held, rise, modes, Evidence(), { false })
         val reference = Array(2) { FloatArray(count) }; val referenceOnset = Array(2) { FloatArray(count) }
-        val groups = if (held) heldGroups(voice, macros, midi, velocity, hz, count, rate) { false }
+        val groups = if (held) heldGroups(voice, macros, midi, velocity, hz, count, rate, { false })
             else finiteGroups(voice, macros, midi, velocity, hz, count, rate) { false }
         for (group in groups) {
             if (group.modes.first() != harmonic - 1) continue
@@ -770,13 +903,17 @@ internal object CausticSustain {
         evidence.collectionMin, evidence.collectionMax, evidence.delay, evidence.snapshots,
         evidence.fir, prepare, render, periodic, seam)
 
+    /** [human] null is the still hold: every strike identical, the loop one original period long. */
     fun held(voice: CausticVoice, macros: Map<String, Float>, midi: Int, velocity: Double,
-        oversample: Int = 4, cancelled: () -> Boolean = { false }): HeldRaw {
+        oversample: Int = 4, cancelled: () -> Boolean = { false }, human: Human? = null): HeldRaw {
         stop(cancelled); val started = System.nanoTime()
         require(midi in 36..84 && velocity.isFinite() && velocity in 0.0..1.0)
         require(oversample == 4 || oversample == 16)
-        val frames = loopFrameCount(midi, length(macros).toFloat()); val count = frames * oversample
-        val rate = Dsp.RATE * oversample; val hz = periods(midi, length(macros)) * Dsp.RATE.toDouble() / frames
+        val repeats = heldRepeats(macros, human)
+        val baseFrames = loopFrameCount(midi, length(macros).toFloat())
+        val frames = baseFrames * repeats; val count = frames * oversample
+        val rate = Dsp.RATE * oversample; val hz = periods(midi, length(macros)) * Dsp.RATE.toDouble() / baseFrames
+        val hand = if (repeats > 1 && human != null) Hand(voice, midi, human, repeats, count, rate) else null
         val modes = bodyModes(voice, macros, hz); val evidence = Evidence()
         if (velocity == 0.0) {
             evidence.include(table(value(macros, "SOURCE", .5).coerceIn(0.0, 1.0),
@@ -791,11 +928,11 @@ internal object CausticSustain {
         val rise = when (voice) { CausticVoice.RUBBED_RING -> .34 * 2.0.pow(-.7 * (2 * body(voice, macros) - 1)); CausticVoice.HOLLOW_MALLET -> 0.0; else -> .025 }
         if (voice == CausticVoice.ALLOY || voice == CausticVoice.TRAVELLING_CATCHES) {
             for (h in 1..12) {
-                val fields = metalFields(voice, macros, midi, velocity, hz, count, rate, h, true, rise, modes, evidence, cancelled)
+                val fields = metalFields(voice, macros, midi, velocity, hz, count, rate, h, true, rise, modes, evidence, cancelled, hand)
                 forces[h - 1] = fields.steady[0]; forces[h + 11] = fields.steady[1]
                 onset[h - 1] = fields.onset[0]; onset[h + 11] = fields.onset[1]
             }
-        } else for (group in heldGroups(voice, macros, midi, velocity, hz, count, rate, cancelled)) {
+        } else for (group in heldGroups(voice, macros, midi, velocity, hz, count, rate, cancelled, hand)) {
             val causal = route(group, modes, macros, hz, rate, count, false, 0.0, false, evidence, cancelled, true)
             val steady = Array(group.modes.size) { causal[it].copyOf(count) }
             val attack = Array(group.modes.size) { causal[it].copyOf(count) }

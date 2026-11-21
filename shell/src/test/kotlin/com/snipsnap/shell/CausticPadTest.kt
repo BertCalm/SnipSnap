@@ -13,7 +13,7 @@ import kotlin.test.assertTrue
 
 class CausticPadTest {
     @Test fun `explicit held recipes gate and repeat the whole pure-loop sample`() {
-        for (voice in CausticVoice.entries) {
+        for (voice in CausticInstrument.HELD_VOICES) {
             val patch = CausticPatch("Held vessel", voice,
                 CausticInstrument.defaults(voice, 2) + mapOf("HOLD" to 1f, "MOTION" to .3f),
                 midi = 57, velocity = .43f, model = 2)
@@ -31,7 +31,7 @@ class CausticPadTest {
     }
 
     @Test fun `finite old and new recipes remain one shots even when duration files them LOOP`() {
-        for (voice in CausticVoice.entries) for (model in listOf(1, 2)) {
+        for (voice in CausticInstrument.KEPT_VOICES) for (model in listOf(1, 2)) {
             val patch = CausticPatch("Finite vessel", voice, CausticInstrument.defaults(voice, model), model = model)
             val original = KitPad(1, "finite.wav", drumClass = DrumClass.LOOP,
                 oneShot = false, loop = true, attack = .2f, decay = .4f)
