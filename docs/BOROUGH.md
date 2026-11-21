@@ -644,7 +644,11 @@ Listening page (private until shared): https://claude.ai/artifact/6y32yHPUszWK58
     round 3.1, level-matched: A now; B the stack at the kit's rest trim with tails -30 dB by 250 ms (bells and
     rides 600 ms) and RIDE & RIMS' ride at 600 ms; C B plus tape-style saturation before the glue, driven to the
     loop's crest (at most 6 dB). A lighter, faster glue was tried and dropped: it raised every crest 2-4 dB.
-    Awaiting the owner's pick.
+  - round 3.1 pick: "C for all except rides and rims. It blows iout the snare and chocks the ride" (2026-11-21).
+    Built: every stack at its kit's rest trim with the shorter tails (recipes rules.stack_tail; the drums
+    unchanged, RIDE AND RIMS' ride at its full ring); each kit's live glue pinned in recipes kits[].glue
+    (glue_recipe.py: saturation on five kits, none on RIDE AND RIMS). Read as: RIDE AND RIMS takes the perc fix
+    only, full ride, plain glue; on the page for the owner to confirm.
   Heard as better is not accepted for the shelf: no kit has been approved yet.
 
 ## Why it is built this way
