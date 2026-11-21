@@ -6,7 +6,7 @@ and exporting a drum kit your Akai MPC can load.
 
 > You heard it. You snipped it. It's on pad A03.
 
-[Sunroom](docs/SUNROOM.md) adds three studio-pop factory kits with the approved brush, woodblock and cymbal models, three touch levels and three alternate outputs. These are frozen synthesis banks with owner-reported hardware acceptance; the crescendo's timbral-velocity gate remains open.
+[Sunroom](docs/SUNROOM.md) adds three studio-pop factory kits with the approved brush, woodblock and cymbal models, three touch levels and three alternate outputs. These are frozen synthesis banks with owner-reported hardware acceptance; the v2 crescendo adds timbral velocity shading, awaiting listening approval.
 
 **Status:** a tested pure-Kotlin core — capture buffer, cleanup DSP, the
 synth engines, and writers for both MPC generations, **hardware-verified on

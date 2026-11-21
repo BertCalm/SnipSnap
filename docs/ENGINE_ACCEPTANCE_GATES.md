@@ -1226,8 +1226,9 @@ See [SUNROOM](SUNROOM.md). The owner approved the assembled R10 audition with
 432 approved printed synthesis/resynthesis WAVs, three velocity zones and
 three alternate outputs, including finite roll/riser gestures. This is a
 factory bank, not an editable engine. Software evidence is in `SunroomKitsTest`
-and `SunroomRoundTripTest`. The Psych cymbal crescendo has level-only dynamics;
-its timbral-velocity gate remains open. The owner reported “Hardware passes- proceed”
+and `SunroomRoundTripTest`. The v1 Psych cymbal crescendo has level-only dynamics. Version 2 adds authored
+upper-mode damping to its six soft/medium files while preserving all hard takes;
+software verification is implemented and listening acceptance remains open. The owner reported “Hardware passes- proceed”
 on 2026-11-19; device models and individual format results were not specified.
 All JVM, Android build, native and emulator CI checks passed on `a16dd8da8`.
 The shared MPC 3 slice-map limitation is unchanged. MPC 2's combined

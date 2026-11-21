@@ -1,0 +1,188 @@
+{
+  "revision": 2,
+  "method": "authored, energy-dependent upper-mode damping of R10 magnitude resynthesis; unchanged phase and timing; hard layers unchanged",
+  "parameters": {
+    "nfft": 2048,
+    "hop": 256,
+    "kneeHz": 2800,
+    "depthDb": [
+      11,
+      4.5,
+      0
+    ]
+  },
+  "listening": "pending for revised soft and medium layers",
+  "rows": [
+    {
+      "zone": 0,
+      "take": 0,
+      "original": {
+        "centroidHz": 4731.502074385634,
+        "upperBandFraction": 0.32928507127099704,
+        "rms": 0.006136151504410479,
+        "peak": 0.152984619140625
+      },
+      "revised": {
+        "centroidHz": 2582.892190197521,
+        "upperBandFraction": 0.12913254204031308,
+        "rms": 0.006136286058887189,
+        "peak": 0.13897705078125
+      },
+      "envelopeCorrelation": 0.9904348637990141,
+      "sha256": "0c07c4aa7bd88b793a39c8a747b7f8cc7c8337fed1f5ef3bea900d4bc88680d3",
+      "frames": 354560
+    },
+    {
+      "zone": 0,
+      "take": 1,
+      "original": {
+        "centroidHz": 4729.940633314078,
+        "upperBandFraction": 0.33019370322111274,
+        "rms": 0.006136158000576216,
+        "peak": 0.153350830078125
+      },
+      "revised": {
+        "centroidHz": 2581.9700964436875,
+        "upperBandFraction": 0.12958719058252582,
+        "rms": 0.006136280144591346,
+        "peak": 0.117950439453125
+      },
+      "envelopeCorrelation": 0.9902445202718548,
+      "sha256": "06b9eb5dccdec158bb973fd9651e2d4239901a40733e02783edddc4c93bb6a08",
+      "frames": 354560
+    },
+    {
+      "zone": 0,
+      "take": 2,
+      "original": {
+        "centroidHz": 4726.573160773721,
+        "upperBandFraction": 0.32987279101069755,
+        "rms": 0.0061361735326149955,
+        "peak": 0.149169921875
+      },
+      "revised": {
+        "centroidHz": 2577.1334668193867,
+        "upperBandFraction": 0.12919630810159768,
+        "rms": 0.006136315864856722,
+        "peak": 0.11871337890625
+      },
+      "envelopeCorrelation": 0.9909880065367684,
+      "sha256": "6f1fef964c91e2bf0d207caf7f070bc4066d442d326dc5612139fe943e0cda60",
+      "frames": 354560
+    },
+    {
+      "zone": 1,
+      "take": 0,
+      "original": {
+        "centroidHz": 4721.763643443062,
+        "upperBandFraction": 0.32860471440053823,
+        "rms": 0.012228897515265676,
+        "peak": 0.28955078125
+      },
+      "revised": {
+        "centroidHz": 3832.257585391489,
+        "upperBandFraction": 0.2404811238880346,
+        "rms": 0.012228940961772338,
+        "peak": 0.25628662109375
+      },
+      "envelopeCorrelation": 0.9984389780106779,
+      "sha256": "ff4d2f4a83c52cf1dea38bde178552c374e4496608600e28733c288b0340e3eb",
+      "frames": 354560
+    },
+    {
+      "zone": 1,
+      "take": 1,
+      "original": {
+        "centroidHz": 4727.844286250293,
+        "upperBandFraction": 0.32961936664503494,
+        "rms": 0.012228852321782342,
+        "peak": 0.307708740234375
+      },
+      "revised": {
+        "centroidHz": 3841.6100922968085,
+        "upperBandFraction": 0.24166305238643396,
+        "rms": 0.012228909701516182,
+        "peak": 0.2952880859375
+      },
+      "envelopeCorrelation": 0.9984374012869083,
+      "sha256": "740e2830bc888a13bb95640ea2321be985912443563ed8b354349f6e09d3f461",
+      "frames": 354560
+    },
+    {
+      "zone": 1,
+      "take": 2,
+      "original": {
+        "centroidHz": 4726.449565566726,
+        "upperBandFraction": 0.32899203554187156,
+        "rms": 0.012228871711764573,
+        "peak": 0.28057861328125
+      },
+      "revised": {
+        "centroidHz": 3838.58574500621,
+        "upperBandFraction": 0.2409705207658646,
+        "rms": 0.012228944216755662,
+        "peak": 0.268035888671875
+      },
+      "envelopeCorrelation": 0.99848133727297,
+      "sha256": "306ad683d65b17d52e881030d52ba4c47c91bdb0649aac9b21dbad7e1682e86a",
+      "frames": 354560
+    },
+    {
+      "zone": 2,
+      "take": 0,
+      "original": {
+        "centroidHz": 4732.319753470141,
+        "upperBandFraction": 0.33068886451788154,
+        "rms": 0.01979263939579029,
+        "peak": 0.49639892578125
+      },
+      "revised": {
+        "centroidHz": 4732.319753470141,
+        "upperBandFraction": 0.33068886451788154,
+        "rms": 0.01979263939579029,
+        "peak": 0.49639892578125
+      },
+      "envelopeCorrelation": 0.9999999999999998,
+      "sha256": "2a8c378c4db859d9e0d7070e8841be4dccdef83b4803cc449f5b3c55507364c8",
+      "frames": 354560
+    },
+    {
+      "zone": 2,
+      "take": 1,
+      "original": {
+        "centroidHz": 4727.672784321094,
+        "upperBandFraction": 0.33054029141627705,
+        "rms": 0.019792601160607572,
+        "peak": 0.4613037109375
+      },
+      "revised": {
+        "centroidHz": 4727.672784321094,
+        "upperBandFraction": 0.33054029141627705,
+        "rms": 0.019792601160607572,
+        "peak": 0.4613037109375
+      },
+      "envelopeCorrelation": 1.0,
+      "sha256": "a55d61a7e3577e23c829e9acaef99dab768c0eef69d2cab84c649a6cc1fdf0ef",
+      "frames": 354560
+    },
+    {
+      "zone": 2,
+      "take": 2,
+      "original": {
+        "centroidHz": 4734.684614663519,
+        "upperBandFraction": 0.3301658790963478,
+        "rms": 0.019792644539598753,
+        "peak": 0.491455078125
+      },
+      "revised": {
+        "centroidHz": 4734.684614663519,
+        "upperBandFraction": 0.3301658790963478,
+        "rms": 0.019792644539598753,
+        "peak": 0.491455078125
+      },
+      "envelopeCorrelation": 1.0,
+      "sha256": "6e60c3cd9dd26c7fcf4332ff2840dbee6440c7d52d9dfd2e79c61c2c00daf973",
+      "frames": 354560
+    }
+  ]
+}
