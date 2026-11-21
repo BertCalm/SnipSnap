@@ -9,8 +9,8 @@ import java.util.concurrent.CancellationException
  *
  * Each sample is one held note played from its first sample: the note's own attack, then its held
  * middle as a sustain loop. It is cut exactly as BORE's held keys are ([BoreKeys.cutHeld]): the loop
- * starts no sooner than [Bore.LOOP_START_SECONDS], is about [Consort.PAD_PERIOD_SECONDS] long (the held
- * pads' cycle, the owner's pick for both, 2026-11-21), and closes by blending its last [Bore.LOOP_BLEND_SECONDS] into the audio
+ * starts no sooner than [Bore.LOOP_START_SECONDS], is about [Consort.KEYS_PERIOD_SECONDS] long (the held
+ * pads' wanders on a shorter cycle, the owner's middle ground, 2026-11-21), and closes by blending its last [Bore.LOOP_BLEND_SECONDS] into the audio
  * just before its start, so the first pass from the attack into the loop is the note's own audio. A
  * join whose two waves correlate under [Bore.LOOP_MIN_CORRELATION], or whose level dips more than
  * [Bore.LOOP_MAX_DIP_DB] in the blend, is refused by name, not shipped. The start is then shaped
@@ -67,9 +67,9 @@ object ConsortKeys {
         val name = "CONSORT ${patch.voice}${if (patch.chairs.isEmpty()) "" else " section"} ${Scales.nameOf(cell.midi)} " +
             "touch ${cell.touch + 1} take ${cell.take + 1}"
         stop(cancelled, name)
-        // the held pads' note (Consort.PAD_HELD: an eight-second cycle, deeper wanders): the owner asked for the
-        // keys to be like the held pads (2026-11-21, "Keys should be like held")
-        val held = Consort.PAD_HELD
+        // the held pads' deeper wanders on a four-second cycle (Consort.KEYS_HELD), the owner's middle ground
+        // between the held pads' sound and the size of an instrument (2026-11-21)
+        val held = Consort.KEYS_HELD
         val x = Consort.heldNote(patch.voice, zoneMacros(patch, cell.midi), patch.chairs, TOUCHES[cell.touch], TAKES[cell.take], held)
         stop(cancelled, name)
         return BoreKeys.cutHeld(

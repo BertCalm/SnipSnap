@@ -8,9 +8,10 @@ import kotlin.test.assertEquals
 /**
  * What the owner heard in round K3 and kept (2026-11-20, "All sounds good"), pinned: the held key
  * samples behind clips K1 to K9 (samples and loop start), the fourteen character presets (P1 to P14),
- * the CONSORT TAKES renders (T1 to T3) and the low BASSOON (B1). `consort/k3-heard-v2.sha256` holds
- * the SHA-256 of each render's float samples. Version 2 (2026-11-21): the key samples (K lines) moved to the
- * held pads' eight-second cycle, the owner's call ("Keys should be like held"); every other line is version 1's. The chord clips (C1, C2) play the CLARINET keys pinned here.
+ * the CONSORT TAKES renders (T1 to T3) and the low BASSOON (B1). `consort/k3-heard-v3.sha256` holds
+ * the SHA-256 of each render's float samples. Version 3 (2026-11-21): the key samples (K lines) are the held pads'
+ * deeper wanders on a four-second cycle, the owner's middle ground (version 2 had the pads' eight-second cycle);
+ * every other line is version 1's. The chord clips (C1, C2) play the CLARINET keys pinned here.
  */
 class ConsortK3PinsTest {
     private fun sha(samples: FloatArray, extra: Long = 0L): String {
@@ -57,7 +58,7 @@ class ConsortK3PinsTest {
         val write = System.getenv("CONSORT_PINS_WRITE")
         val rows = renders().map { (label, hash) -> label to hash() }
         if (write != null) { File(write).writeText(rows.joinToString("") { "${it.first}\t${it.second}\n" }); return }
-        val pinned = javaClass.getResourceAsStream("/consort/k3-heard-v2.sha256")!!.bufferedReader().readLines()
+        val pinned = javaClass.getResourceAsStream("/consort/k3-heard-v3.sha256")!!.bufferedReader().readLines()
             .filter { it.isNotBlank() }.map { it.split('\t').let { (a, b) -> a to b } }
         assertEquals(pinned.map { it.first }, rows.map { it.first })
         for ((i, row) in rows.withIndex()) assertEquals(pinned[i].second, row.second, row.first)

@@ -980,10 +980,13 @@ object Consort {
     }
 
     /**
-     * The held note kept by ear in round K3: a two-second period, BORE's held length, the one-shot's wanders. The keys
-     * used it until the owner asked for them to be like the held pads (2026-11-21); both use [PAD_HELD] now.
+     * The keys' held note: the held pads' deeper wanders ([PAD_WANDER]) on a four-second cycle. Round K3 kept a
+     * two-second cycle with a one-shot's wanders; the owner asked for the keys to be like the held pads, then for a
+     * middle ground on size (2026-11-21): eight seconds made a solo instrument about 60 MB and twice as slow to make,
+     * four seconds about 31 MB, and a key is rarely held long enough to reach a second wrap.
      */
-    internal val KEYS_HELD = Held(HELD_PERIOD_SECONDS, HELD_SECONDS, 1f)
+    internal val KEYS_HELD: Held = heldFor(KEYS_PERIOD_SECONDS, PAD_WANDER)
+    const val KEYS_PERIOD_SECONDS = 4f
 
     /** A held note blown long enough to cut and retune a loop of [period] seconds: settle, trim window, blend and margin. */
     internal fun heldFor(period: Float, wander: Float): Held = Held(period, max(HELD_SECONDS, period + 2.6f), wander)
@@ -991,7 +994,7 @@ object Consort {
     /**
      * A sustaining pad's held note: an eight-second cycle with the slow wanders 1.6 times as deep as a one-shot's.
      * The owner heard the keys' two-second cycle on a held pad and asked for more humanization, then heard this
-     * against a six-second cycle and the two-second one, and chose it (2026-11-21, "I like c"); the keys followed ("Keys should be like held").
+     * against a six-second cycle and the two-second one, and chose it (2026-11-21, "I like c"). The keys take its wanders on a shorter cycle ([KEYS_HELD]).
      */
     internal val PAD_HELD: Held = heldFor(PAD_PERIOD_SECONDS, PAD_WANDER)
     const val PAD_PERIOD_SECONDS = 8f
