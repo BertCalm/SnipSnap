@@ -2,7 +2,7 @@
 
 Three 16-pad studio-pop kits preserve the approved R10 audition, including the R9 brush correction. The owner accepted the assembled sound on 2026-11-18: “Sounds much better, continue.”
 
-This is a frozen factory collection, not a new editable Kotlin synthesis engine. The sources combine procedural synthesis and magnitude-spectrum resynthesis of CC0 acoustic references. Loading preserves the 432 approved mono 44.1 kHz PCM files exactly. There is no live phase solver, claim of independent physical modeling, or audio from the commercial reference songs.
+This is a frozen factory collection, not a new editable Kotlin synthesis engine. The sources combine procedural synthesis and magnitude-spectrum resynthesis of CC0 acoustic references. Version 1 preserves all 432 approved mono 44.1 kHz PCM files exactly. Version 2 changes only the six soft/medium Psych A12 crescendo files; its three hard takes and the other 423 sounds are unchanged. There is no live phase solver, claim of independent physical modeling, or audio from the commercial reference songs.
 
 ## Kits and articulation
 
@@ -14,7 +14,7 @@ This is a frozen factory collection, not a new editable Kotlin synthesis engine.
 
 All occupy SKINS, use the audition's 116 BPM and preserve pad level 0.65. Only Early Pop A03/A04/A10 share a hat choke group. Every pad remains a finite one-shot, including the long crescendo. Melodic voices, keys, chord tools, HOLD and STRUM gates do not apply to these finite drum banks.
 
-Each pad holds three velocity zones (1–41, 42–84, 85–127), each with three alternate outputs. Brush layers use separate recorded source strikes; other pads combine procedural and reconstructed-phase variations. These are not all nine independently recorded performances. The Psych crescendo's touch changes overall level over one measured gesture; its timbral-velocity gate remains open. Do not relabel that limitation as a passing timbral-dynamics test.
+Each pad holds three velocity zones (1–41, 42–84, 85–127), each with three alternate outputs. Brush layers use separate recorded source strikes; other pads combine procedural and reconstructed-phase variations. These are not all nine independently recorded performances. Version 2 adds authored upper-mode damping at soft/medium touch over that measured crescendo. It retains timing and matches each original layer's RMS. These six revised files await listening; the previous hardware pass applies to version 1.
 
 ## Reproduction and source ownership
 
@@ -34,7 +34,7 @@ Each pad holds three velocity zones (1–41, 42–84, 85–127), each with three
 | Roll/riser | Finite authored gestures in all three kits; brush gestures use corrected contacts |
 | Rendered asset identity | `SunroomKitsTest` checks all 432 decoded WAVs against the approved hashes and frame counts |
 | Velocity / round robin software | `SunroomRoundTripTest` checks save/reload, all 127 MIDI velocities over three cycles, SFZ import, actual saved and MPC 3 PCM, and exported slice/velocity metadata |
-| Timbral velocity | Mixed recorded-profile/authored dynamics; crescendo level-only limitation remains open |
+| Timbral velocity | v2 crescendo has authored energy-dependent upper-mode damping at soft/medium touch; measured and software-tested, listening pending |
 | MPC 2 | Preserves first take per velocity zone under the owner's combined velocity/RR format exception; XML boundaries checked |
 | Hardware playback | Owner-reported pass, 2026-11-19: “Hardware passes- proceed.” Device models and individual format results were not specified |
 | Editable engine / source controls | Not supplied by this frozen bank |
@@ -50,3 +50,17 @@ The shared MPC 3 chain-WAV slice-map limitation remains unchanged; see `ENGINE_A
 - Independent decoded buffers allow pad edits without changing another kit or the source assets.
 - Finite long gestures retain their complete tails; the eight-second swell is not silently shortened for export.
 - The provenance distinguishes recorded-profile dynamics, authored dynamics and phase variants so software success does not overstate musical or hardware acceptance.
+
+## Crescendo velocity refinement, 2026-11-21
+
+[Compare original and revised](https://sunroom-drums.bertcalm.chatgpt.site/crescendo.html), including an optional loudness-matched three-touch sweep. The full-kit audition remains the approved R10 version.
+
+`prototype/sunroom/crescendo_velocity.py` builds the six v2 overrides from the immutable v1 bank. A smooth frequency weighting above a 2.8 kHz knee reduces upper-mode excitation at lighter touches; the damping relaxes with the measured envelope. The depths (11 / 4.5 / 0 dB) are authored values, not independently measured acoustic parameters. Original phase, length and gesture timing are retained. Each modified layer is matched to its original energy; all hard WAV bytes remain unchanged. No new phase solver or pitch modulation is introduced.
+
+Python harness measurements: mean power spectral centers are 2581 / 3837 / 4732 Hz, and energy above 6 kHz is 12.93 / 24.10 / 33.05 percent, soft through hard. Every layer stays within 0.2 percent of its previous RMS and has envelope correlation above 0.99. Three phase variants remain per zone. This is authored spectral shaping of reference-derived resynthesis, not separate acoustic performances or an independent cymbal simulation.
+
+Version 2 resolves overrides explicitly and reads all unaffected assets from v1. The manifest pins every output. Tests reject gain-only dynamics, altered hard takes, changes outside the intended six files, collapsed round robin or changed lengths. The existing end-to-end test carries the revised grid through saving, SFZ playback and MPC export.
+
+Why this change: upper-mode damping gives the light touch less high-frequency wash; retaining phase avoids introducing reconstruction warping; matching layer energy isolates timbre in the comparison. Loading remains a WAV decode, with the expensive analysis precomputed. Numerical success does not establish that the new touches are musically right; listening acceptance is pending.
+
+Validation on the v2 branch: `SunroomKitsTest`, `SunroomRoundTripTest` and `generateSunroomKits` completed successfully (Gradle exit 0). The deployed audition FLAC decodes exactly to all nine native crescendo WAVs. Browser interaction was not independently automated because the managed browser helper was unavailable.

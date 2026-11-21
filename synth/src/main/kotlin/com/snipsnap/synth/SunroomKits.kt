@@ -6,12 +6,13 @@ import com.snipsnap.json.Json
 import com.snipsnap.kit.ArrangedPad
 import java.util.zip.GZIPInputStream
 
-/** Frozen, listening-approved synthesis and CC0 magnitude resynthesis, not an editable engine.
+/** Frozen synthesis and CC0 magnitude resynthesis, not an editable engine.
+ * The approved R10 base is preserved except six v2 crescendo layers awaiting listening.
  * Offline phase solvers are precomputed; loading never reruns them or changes the approved PCM.
  * Builds own their buffers so editing a pad cannot mutate the factory bank.
  */
 object SunroomKits {
-    const val VERSION = 1
+    const val VERSION = 2
     const val TAKES = 3
     const val PADS = 16
     enum class Choice(val id: String, val title: String, val bank: String, val tempoBpm: Float = 116f) {
@@ -21,9 +22,13 @@ object SunroomKits {
     }
     private val manifest by lazy { Json.parse(resource("manifest.json").decodeToString()).obj() }
     internal fun resource(name: String): ByteArray {
-        require(name in setOf("manifest.json", "NOTICE.txt", "percussion-provenance.json", "acoustic-provenance.json", "brush-provenance.json") ||
+        require(name in setOf("manifest.json", "NOTICE.txt", "percussion-provenance.json", "acoustic-provenance.json", "brush-provenance.json", "crescendo-provenance.json") ||
             Regex("(early|orchestral|psych)/(?:[1-9]|1[0-6])-[0-2]-[0-2]\\.wav\\.gz").matches(name))
-        return requireNotNull(javaClass.getResourceAsStream("/sunroom/v$VERSION/$name")) { "Missing Sunroom asset: $name" }
+        // v2 overrides only the two softer crescendo zones. Keep every other approved
+        // resource in v1, including all three hard takes, rather than duplicate the bank.
+        val version = if (name in setOf("manifest.json", "crescendo-provenance.json") ||
+            Regex("psych/12-[0-1]-[0-2]\\.wav\\.gz").matches(name)) VERSION else 1
+        return requireNotNull(javaClass.getResourceAsStream("/sunroom/v$version/$name")) { "Missing Sunroom asset: $name" }
             .use { if (name.endsWith(".gz")) GZIPInputStream(it).use { gz -> gz.readBytes() } else it.readBytes() }
     }
     fun build(choice: Choice): List<ArrangedPad> {
@@ -48,7 +53,7 @@ object SunroomKits {
                     "kit" to choice.bank, "role" to voice, "slot" to slot.toString(),
                     "sourceKind" to "frozen synthesis and reference-derived resynthesis", "rendered" to "true",
                     "articulation" to "finite", "zones" to "3", "takes" to TAKES.toString(),
-                    "velocityKind" to if (voice == "cymbal-swell") "level-only over one measured crescendo" else "authored or recorded-profile layers",
+                    "velocityKind" to if (voice == "cymbal-swell") "authored upper-mode damping over the measured crescendo" else "authored or recorded-profile layers",
                     "roundRobin" to if (voice == "brush-snare" || choice == Choice.ORCHESTRAL && slot >= 15)
                         "resynthesis of separate source strikes" else "distinct procedural or reconstructed-phase variants",
                     "approval" to manifest.getValue("approval").str(),
