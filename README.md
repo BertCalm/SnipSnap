@@ -472,7 +472,7 @@ explicit MIDI root (24–96), strike velocity and model version; TUNE is a
 relative ±12-semitone offset, neutral at 0.5, so the effective note spans
 12–108 without clamping back to the saved-root range. Seven provisional presets
 and a dry sixteen-pad C minor pentatonic kit are included, with PITCHWHEEL among
-FRESH TAPE's 269 starters. Run `./gradlew :synth:generatePitchwheelAudition`
+FRESH TAPE's 270 starters. Run `./gradlew :synth:generatePitchwheelAudition`
 for the compact first listening set, or add `-PpitchwheelFull` for the broader
 dry probes. HOLD's top step returns settled loop-only material with a
 deterministic attachment cycle and capped adhesion. The owner heard R1 as six
@@ -1813,7 +1813,8 @@ kit screen, and `snipsnap kerf`. As an engine (round 4) it is on the SYNTH picke
 BLEED and SLOP controls pick and shape a hit. It also has sixteen genre kits on FRESH TAPE (KERF DUST, SOUL,
 FUNK, STOMP, RUSH, POCKET, MURK, CHATTER, JUNGLE, CLANG, HOUSE, DEEP, SWAY, CASSETTE, BOOM and TIGHT), each with three
 touch zones, four takes, a roll and a riser. Three pitched-pad kits (KERF METAL, GONG and WOOD) rebuild struck
-bars, gongs and keys from the owner's melodic loops, rung out past their cuts and laid out as sixteen notes of a scale. No audio from the
+bars, gongs and keys from the owner's melodic loops, rung out past their cuts and laid out as sixteen notes of a scale;
+KERF BELLS is their bells as a percussion kit, each strike at its own pitch, with a roll and a riser. No audio from the
 loops is stored, only fitted numbers. [Design, rounds and measurements](docs/superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md).
 
 Fired Bronze is an MPC-approved sixteen-pad skin, clay and bronze kit with four

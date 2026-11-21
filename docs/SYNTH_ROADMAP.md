@@ -3976,5 +3976,7 @@ in the genre kits of rounds 5 and 6. A model-1 save keeps its pools; the presets
 ### KERF, pitched pads (2026-11-21)
 
 Struck bars, gongs and keys from the owner's melodic loops, rung out past their cuts (`KerfRender.ring`), as three
-pitched-pad kits of sixteen scale notes: KERF METAL (E-flat major), GONG (F minor), WOOD (F minor). Not yet heard.
+pitched-pad kits of sixteen scale notes: KERF METAL (E-flat major), GONG (F minor), WOOD (F minor). Heard: "Sounds good,
+continue" (2026-11-21). KERF BELLS follows: fourteen bell strikes at their own pitches, a roll and a riser. Heard: "Sounds great"
+(2026-11-21).
 

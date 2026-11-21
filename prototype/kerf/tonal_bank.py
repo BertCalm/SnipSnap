@@ -146,3 +146,31 @@ for f, lps in sorted(fam.items()):
     out[f] = dict(tonic=tonic, mode=mode, bpm=int(np.median(tempos)), pads=pads)
 json.dump(out, open(OUT, 'w'), separators=(',', ':'))
 print('wrote', OUT, os.path.getsize(OUT) // 1024, 'KB')
+
+# ---- KERF BELLS (2026-11-21): the bright metal loops as a percussion kit, each hit at its own pitch
+# The owner asked for bells first; the pitched bell family had six clean notes. Bells need not be pitched pads: the
+# loops whose clean notes centre at 4 kHz or brighter (sleigh and Tibetan bells, glockenspiel, gamelan metals) give
+# fourteen strikes, picked as kits.py picks (loudest, then least alike), ordered low to high.
+def feat(r): return np.array([np.log2(r['centroid']+50), 3*r['sub'], 3*r['low'], 3*r['mid'], 3*r['pres'], 3*r['air'], np.log2(r['dur']), 0.5*np.log2(r['t60'])])
+def pick(rows, n):
+    rows = sorted(rows, key=lambda r: -r['peak']); got = [rows[0]]
+    while len(got) < min(n, len(rows)):
+        d = [min(np.linalg.norm(feat(r)-feat(g)) for g in got) for r in rows]; i = int(np.argmax(d))
+        if d[i] < 0.05: break
+        got.append(rows[i])
+    return got
+clean = [r for r in R if good(r)]
+bright = [lp for lp in sorted({r['loop'] for r in clean})
+          if np.median([r['centroid'] for r in clean if r['loop'] == lp]) >= 4000 and sum(r['loop'] == lp for r in clean) >= 10]
+def own_root(r):
+    ps = [p for p in r['patch']['partials'] if 20 < p['hz_end'] < 12000]
+    top = max(p['amp'] for p in ps)
+    return float(midi(min(p['hz_end'] for p in ps if p['amp'] >= 0.3 * top)))
+hits = sorted(pick([r for r in clean if r['loop'] in bright], 14), key=own_root)
+tempos = [int(x) for lp in bright for x in re.findall(r'(?<![0-9])(\d{2,3})(?![0-9])', os.path.basename(next(r['path'] for r in clean if r['loop'] == lp))) if 60 <= int(x) <= 180]
+bells = dict(bpm=int(np.median(tempos)), pads=[dict(root=own_root(r), patch=r['patch']) for r in hits])
+print(f"BELLS: {len(bright)} bright loops, {sum(r['loop'] in bright for r in clean)} clean notes, {len(hits)} strikes picked, "
+      f"MIDI {bells['pads'][0]['root']:.1f} to {bells['pads'][-1]['root']:.1f}, tempo {bells['bpm']} BPM")
+BELL_OUT = os.path.join(os.path.dirname(OUT), 'bell_patches.json')
+json.dump(bells, open(BELL_OUT, 'w'), separators=(',', ':'))
+print('wrote', BELL_OUT, os.path.getsize(BELL_OUT) // 1024, 'KB')

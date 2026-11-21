@@ -1070,6 +1070,11 @@ object StarterKits {
             seeded = false, tempoBpm = com.snipsnap.synth.KerfTonalKits.bpm(com.snipsnap.synth.KerfTonalKits.Kit.WOOD).toFloat(),
         ) { com.snipsnap.synth.KerfTonalKits.build(com.snipsnap.synth.KerfTonalKits.Kit.WOOD) },
         Starter(
+            com.snipsnap.synth.KerfBellKit.ID, "KERF BELLS",
+            "Bells rebuilt from fitted numbers: fourteen sleigh, Tibetan, glockenspiel and gamelan strikes at their own pitches, rung out past their cuts. Three touch zones, four takes; a bell roll and a rising riser.",
+            seeded = false, tempoBpm = com.snipsnap.synth.KerfBellKit.bpm().toFloat(),
+        ) { com.snipsnap.synth.KerfBellKit.build() },
+        Starter(
             MurmurKeptBank.ID, "MURMUR KEPT",
             "Kept plucks, vowel keys and lower-air choir. Held pads have a short delivery fade.",
             seeded = false,

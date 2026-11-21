@@ -150,6 +150,16 @@ object KerfBank {
         }
     }
 
+    /** KERF BELLS's strikes (2026-11-21), each with its own root, low to high, and the kit's tempo ([KerfBellKit]). */
+    val bells: Pair<Int, List<KerfTonalNote>> by lazy {
+        val text = requireNotNull(javaClass.getResourceAsStream("/kerf/v$VERSION/bell_patches.json")) { "Missing KERF bell bank" }
+            .use { it.readBytes().toString(Charsets.UTF_8) }
+        val o = Json.parse(text).obj()
+        o.getValue("bpm").int() to o.getValue("pads").arr().map { it.obj() }.map { p ->
+            KerfTonalNote(KerfPatchData.fromJsonValue(p.getValue("patch")), p.getValue("root").num())
+        }
+    }
+
     private fun load(file: String): Map<String, List<KerfPad>> {
         val text = requireNotNull(javaClass.getResourceAsStream("/kerf/v$VERSION/$file")) { "Missing KERF bank $file" }
             .use { it.readBytes().toString(Charsets.UTF_8) }

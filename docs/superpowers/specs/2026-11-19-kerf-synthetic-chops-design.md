@@ -1076,10 +1076,32 @@ pitched pads laid out as a scale in each kit's key ("b").
     soft strikes, and distinct takes.
   - `KerfTonalKitTest` (shell): saving, playback and MPC 3 export.
   - `:shell:generateKerfKits` proves every pad.
+- **Heard.** The owner heard the three kits (each note, a scale run and arpeggios per kit):
+  "Sounds good, continue" (2026-11-21). Phone and MPC playback is open.
 - **Not yet.**
-  - The owner has not heard these kits.
   - The melodic gate is only partly met: these are premade kits, not six voices with presets,
     keygroups or chord tools. The owner chose pitched pads.
   - There is no roll or riser: all 16 pads are scale notes.
   - Vibraphone tremolo is not modelled.
+
+### KERF BELLS (2026-11-21)
+
+Bells were first on the owner's list, and the pitched bell family had six clean notes. So bells
+are a percussion kit, not a scale (`KerfBellKit`).
+
+- **The strikes.** They come from the loops whose clean notes centre at 4 kHz or brighter: sleigh
+  and Tibetan bells, glockenspiel, gamelan metals. That is 4 loops and 69 clean notes. Fourteen
+  strikes are picked, as `kits.py` picks: loudest, then least alike. Each is rung out at its own
+  pitch, ordered low to high (MIDI 79 to 122), and named for its note. The bank is
+  `bell_patches.json`; the pitched kits' bank is byte for byte unchanged.
+- **The roll and riser.** A15 is a roll: sixteen strikes speeding up over one bar, softest
+  first, each a fresh take. A16 is a riser: twenty-four strikes tightening over one bar and
+  climbing seven semitones.
+- **The pads.** Every pad is 3 zones × 4 takes, levelled, and declared PERC: bells ring past the
+  classifier's loop threshold. The tempo is 98 BPM, the loops' median.
+- **Tests.** `KerfBellKitTest` (3 tests): low to high, the cap, levels, softer soft strikes,
+  distinct takes, and a roll and riser that build. Shell `KerfBellKitTest` (2 tests): a strike,
+  the roll and the riser through save, reload and MPC 3.
+- **Heard.** The owner heard the bells (each strike, the roll, the riser and two patterns): "Sounds
+  great" (2026-11-21). Phone and MPC playback is open.
 

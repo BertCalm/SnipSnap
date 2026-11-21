@@ -29,7 +29,7 @@ object KerfKitGenerator {
         val specs = Genre.entries.map { g -> Spec(g.id, g.title, g.bpm) { KerfKits.build(g) } } +
             com.snipsnap.synth.KerfTonalKits.Kit.entries.map { k ->
                 Spec(k.id, k.title, com.snipsnap.synth.KerfTonalKits.bpm(k)) { com.snipsnap.synth.KerfTonalKits.build(k) }
-            }
+            } + Spec(com.snipsnap.synth.KerfBellKit.ID, "Bells", com.snipsnap.synth.KerfBellKit.bpm()) { com.snipsnap.synth.KerfBellKit.build() }
         for (g in specs) {
             val folder = File(root, g.id)
             val staging = File(folder, "native")
