@@ -132,3 +132,8 @@ faster (solo presets' median 72 -> 64 ms, sections' 143 -> 131 ms, 4 cores). Of 
 step, 80 samples rounding to the neighbouring 24-bit value. The owner adopted it on that measurement;
 `ConsortPinsTest` moved to `oneshot-k2-v2.sha256`. What is left of a render is the room, the house
 decimator and the pipe itself.
+
+## Complete (2026-11-21)
+
+The owner closed every acceptance gate ("Acceptance gates closed"): the phone and MPC passes, after
+keeping every sound by ear. See [the gates' CONSORT entry](ENGINE_ACCEPTANCE_GATES.md).
