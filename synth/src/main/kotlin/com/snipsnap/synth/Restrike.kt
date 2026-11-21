@@ -34,7 +34,7 @@ object Restrike {
     /** True when [patch] has a strike model to vary, so a chain of it can re-strike. */
     fun canRestrike(patch: Patch?): Boolean =
         (patch is SkinPatch && patch.voice in Skin.STRUCK) || patch is TerraPatch ||
-            patch is DrumlinePatch || patch is HalobarPatch || patch is BreakerPatch || patch is SootPatch || (patch is BackwashPatch && patch.model == 5) || patch is EtchPatch ||
+            patch is DrumlinePatch || patch is HalobarPatch || patch is BreakerPatch || patch is SootPatch || patch is KerfPatch || (patch is BackwashPatch && patch.model == 5) || patch is EtchPatch ||
             (patch is ThumpPatch && patch.voice == ThumpVoice.SUB) ||
             (patch is FiredBronzePatch && patch.model >= 2) || patch is KindredPatch || patch is AccordPatch
 
@@ -81,6 +81,7 @@ object Restrike {
             is FiredBronzePatch -> patch.render(v, take)
             // SOOT's takes are fresh strikes: new noise, a moved strike position, fresh metal phases.
             is SootPatch -> patch.render(velocity = v, take = take)
+            is KerfPatch -> patch.render(velocity = v, take = take)
             // KINDRED's takes are fresh strikes: free-running oscillator phases, new noise, a few cents of drift.
             is KindredPatch -> patch.copy(velocity = v, take = (patch.take + take) % (Kindred.MAX_TAKE + 1)).render()
             is TerraPatch -> {

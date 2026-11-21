@@ -73,6 +73,12 @@ object LatticePresets {
         p(LatticeVoice.TRACE, "Ringing Trace", "TUNE" to .5f, "SPEED" to .5f, "HOLD" to 0f),
         p(LatticeVoice.TRACE, "Slow Trace", "TUNE" to .5f, "SPEED" to .25f, "HOLD" to 0f),
         p(LatticeVoice.TRACE, "Quick Trace", "TUNE" to .5f, "SPEED" to .75f, "HOLD" to 0f),
+
+        // Kept in lattice-voices-1 (20 Nov 2026): each voice's default controls at C3, medium
+        // touch, the performance the owner heard and kept.
+        p(LatticeVoice.VANE, "Turning Vane"),
+        p(LatticeVoice.RAKE, "Raked Bars"),
+        p(LatticeVoice.BOW, "Bowed Passage"),
     )
 
     fun all(): List<LatticePatch> = presets

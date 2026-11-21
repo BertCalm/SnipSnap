@@ -114,6 +114,11 @@ fun KitsScreen(
     onOpenProject: (ShelfModel.ProjectRow) -> Unit,
     /** A capture session is listening (`MicSessionService.armed`): the empty panel names the next step (D-7). */
     listening: Boolean = false,
+    /**
+     * Kit folders on the shelf whose `kit.json` will not load (`KitShelf.unreadable`), named
+     * under the kit list so they are reported, not hidden (UAT 2026-11 user states, S-15).
+     */
+    unreadableKits: List<String> = emptyList(),
     /** The open project's folder name, so its row can say it is the one open; null while none is. */
     openProjectName: String? = null,
     /** NEW PROJECT ▸: an empty project, opened. */
@@ -336,7 +341,9 @@ fun KitsScreen(
     // footer. The panel is drawn only when nothing at all is on the shelf; a
     // cold shelf that still lists a binned kit or a room draws a list, not the
     // panel, and keeps the footer pair.
-    val startsInPanel = coldShelf && rooms.isEmpty() && binnedRooms.isEmpty()
+    // A shelf whose only kits will not load draws the list (it names them), so its ways in
+    // stay in the footer too.
+    val startsInPanel = coldShelf && rooms.isEmpty() && binnedRooms.isEmpty() && unreadableKits.isEmpty()
 
     // DELETE/RENAME (Task 4): screen-level, not per-row — same shape as
     // SnipsScreen's own `confirmDelete`, so only one row's dialog is ever
@@ -515,7 +522,9 @@ fun KitsScreen(
                 } else {
                     Box(Modifier.fillMaxWidth().weight(1f).lcdPanel(scheme))
                 }
-            } else if (kits.isEmpty() && rooms.isEmpty() && binnedRooms.isEmpty() && (projects.isEmpty() || picking)) {
+            } else if (kits.isEmpty() && rooms.isEmpty() && binnedRooms.isEmpty() &&
+                ((projects.isEmpty() && unreadableKits.isEmpty()) || picking)
+            ) {
                 // The cold shelf's two ways in live in the panel (startsInPanel);
                 // mid-hand-off the footer below still carries them. See
                 // [EmptyShelfPanel]. Projects with no kit left on the shelf draw
@@ -626,6 +635,14 @@ fun KitsScreen(
                     // A legend cannot be dismissed, so the gesture cannot be
                     // forgotten - and RENAME is the only place a kit is ever
                     // named by hand (September UAT, finding 17).
+                    // Kits that will not load (S-15): named, so a damaged kit.json
+                    // reads as damage, not as a kit that was never there. Not mid-pick:
+                    // none of them can be picked.
+                    if (unreadableKits.isNotEmpty() && !picking) {
+                        item(key = "kits-unreadable") {
+                            TapeText(Copy.kitsWontOpen(unreadableKits), TapeType.pixelSmall, scheme.ink2.tape, maxLines = 3)
+                        }
+                    }
                     item(key = "kits-note") {
                         TapeText(Copy.SHELF_LEGEND, TapeType.pixelSmall, scheme.ink2.tape, maxLines = 2)
                     }

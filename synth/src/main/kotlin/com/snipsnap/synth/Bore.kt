@@ -67,9 +67,18 @@ import kotlin.random.Random
  * by another name; a BORE pad *lands* with it in its recipe ([landingChain]) the
  * way SIREN lands with ECHO, and the pad's tape stays editable like every other.
  */
-enum class BoreVoice { FLUTE, SAX }
+/** BORE's seven voices. FLUTE and SAX came first; HOLLOW, SHAWM, SHAKU, PANPIPE and VESSEL ([BoreCandidates]) were kept on 2026-11-20
+ * (rounds bore-voices-1 and touch-bore-1) and are appended after them so saved names and ordinals never move. */
+enum class BoreVoice { FLUTE, SAX, HOLLOW, SHAWM, SHAKU, PANPIPE, VESSEL }
 
 object Bore {
+
+    /**
+     * The voices players are offered: all seven. HOLLOW, SHAWM, SHAKU, PANPIPE and VESSEL ([BoreCandidates]) joined on 2026-11-20, when the
+     * owner kept their range clips (bore-voices-1) and their touch (touch-bore-1). The touch the owner heard is the one-shot's
+     * ([BoreCandidates.touched]); their held keys and LOOP play the engine's held path, unleaned, as every voice's do.
+     */
+    val KEPT_VOICES = listOf(BoreVoice.FLUTE, BoreVoice.SAX, BoreVoice.HOLLOW, BoreVoice.SHAWM, BoreVoice.SHAKU, BoreVoice.PANPIPE, BoreVoice.VESSEL)
 
     /** TUNE: two octaves, snapped to semitones (every melodic engine's rule; SPREAD and in-key need it). */
     const val TUNE_SEMITONES = 24
@@ -700,7 +709,8 @@ object Bore {
     internal val OPENING_SOFTENED = Opening(centred = false, trimDb = 3f)
 
     /** The opening a voice plays. */
-    internal fun openingFor(voice: BoreVoice): Opening = if (voice == BoreVoice.SAX) OPENING_SOFTENED else OPENING_AS_HEARD
+    internal fun openingFor(voice: BoreVoice): Opening =
+        BoreCandidates.of(voice)?.opening ?: if (voice == BoreVoice.SAX) OPENING_SOFTENED else OPENING_AS_HEARD
 
     // ---- the output --------------------------------------------------------
 
@@ -784,6 +794,7 @@ object Bore {
     fun macrosFor(voice: BoreVoice): List<MacroSpec> = when (voice) {
         BoreVoice.FLUTE -> R1_MACROS + MacroSpec(OVERBLOW, 0f)
         BoreVoice.SAX -> R1_MACROS
+        else -> R1_MACROS
     }
 
     private val R1_MACROS = listOf(
@@ -807,6 +818,7 @@ object Bore {
     fun rootMidi(voice: BoreVoice): Int = when (voice) {
         BoreVoice.FLUTE -> FLUTE_ROOT_MIDI
         BoreVoice.SAX -> SAX_ROOT_MIDI
+        else -> BoreCandidates.spec(voice).rootMidi
     }
 
     /** The snapped MIDI note TUNE lands on. */
@@ -816,7 +828,7 @@ object Bore {
 
     /** The frequency the loop is *tuned* to so the note *plays* at [hz]: the pin ([SAX_PIN_CENTS], [FLUTE_PIN_CENTS]) applied. */
     internal fun tunedHz(voice: BoreVoice, hz: Float): Float {
-        val cents = if (voice == BoreVoice.FLUTE) FLUTE_PIN_CENTS else SAX_PIN_CENTS
+        val cents = BoreCandidates.of(voice)?.pinCents ?: if (voice == BoreVoice.FLUTE) FLUTE_PIN_CENTS else SAX_PIN_CENTS
         return hz * 2f.pow(cents / 1200f)
     }
 
@@ -855,12 +867,12 @@ object Bore {
     internal fun flutePressure(breath: Float): Float = Dsp.lin(breath, FLUTE_PRESSURE_LOW, FLUTE_PRESSURE_HIGH)
 
     internal fun turbulenceFor(voice: BoreVoice, breath: Float): Float =
-        if (voice == BoreVoice.FLUTE) Dsp.lin(breath, FLUTE_TURBULENCE_LOW, FLUTE_TURBULENCE_HIGH)
+        BoreCandidates.of(voice)?.let { BoreCandidates.turbulence(it, breath) } ?: if (voice == BoreVoice.FLUTE) Dsp.lin(breath, FLUTE_TURBULENCE_LOW, FLUTE_TURBULENCE_HIGH)
         else Dsp.lin(breath, REED_TURBULENCE_LOW, REED_TURBULENCE_HIGH)
 
     /** The bore's one-pole cutoff at [hz] for these macros: BREATH brightens both voices, LIP the flute's by the note. */
     internal fun bellHzFor(voice: BoreVoice, hz: Float, breath: Float, lip: Float): Float =
-        if (voice == BoreVoice.FLUTE) {
+        BoreCandidates.of(voice)?.let { BoreCandidates.bellHz(it, hz, breath, lip) } ?: if (voice == BoreVoice.FLUTE) {
             hz * Dsp.expMap(lip, FLUTE_BELL_RATIO_LOW, FLUTE_BELL_RATIO_HIGH) * Dsp.lin(breath, FLUTE_BELL_BREATH_LOW, FLUTE_BELL_BREATH_HIGH)
         } else {
             REED_BELL_HZ * Dsp.lin(breath, BELL_BREATH_LOW, BELL_BREATH_HIGH)
@@ -868,15 +880,15 @@ object Bore {
 
     /** The presence bell's gain in dB: the reed voice's [BITE_DB], eased down to [BITE_TIGHT_SHARE] of it as LIP tightens. The flute has none. */
     internal fun biteBoostDb(voice: BoreVoice, lip: Float): Float =
-        if (voice == BoreVoice.FLUTE) 0f else BITE_DB * Dsp.lin(lip, 1f, BITE_TIGHT_SHARE)
+        if (voice == BoreVoice.FLUTE || BoreCandidates.of(voice) != null) 0f else BITE_DB * Dsp.lin(lip, 1f, BITE_TIGHT_SHARE)
 
     /** The output voicing ([VOICE_LOW_DB], [VOICE_HIGH_DB]): the reed's; the flute has none. */
     internal fun voicingFor(voice: BoreVoice): Voicing =
-        if (voice == BoreVoice.FLUTE) Voicing.NONE else Voicing(VOICE_LOW_DB, VOICE_HIGH_DB)
+        BoreCandidates.of(voice)?.voicing ?: if (voice == BoreVoice.FLUTE) Voicing.NONE else Voicing(VOICE_LOW_DB, VOICE_HIGH_DB)
 
     /** The rasp's amount, 0..1 ([RASP_DRIVE]): the reed's looseness times its breath. The flute has none. */
     internal fun raspAmount(voice: BoreVoice, lip: Float, breath: Float): Float =
-        if (voice == BoreVoice.FLUTE) 0f else Dsp.lin(lip, 1f, RASP_TIGHT_SHARE) * Dsp.lin(breath, RASP_SOFT_SHARE, 1f)
+        if (voice == BoreVoice.FLUTE || BoreCandidates.of(voice) != null) 0f else Dsp.lin(lip, 1f, RASP_TIGHT_SHARE) * Dsp.lin(breath, RASP_SOFT_SHARE, 1f)
 
     /**
      * The rasp bend, in place, on the wave at [rate] (the oversampled one). [amount] 0 leaves it
@@ -910,8 +922,8 @@ object Bore {
      * the length. `BoreTest` pins this against a real render across the LOOP line, so a
      * change to the decimator cannot move it silently.
      */
-    internal fun renderFrames(macros: Map<String, Float>): Int =
-        gateFor(macros, RATE * Dsp.OVERSAMPLE, null).total / Dsp.OVERSAMPLE
+    internal fun renderFrames(macros: Map<String, Float>, voice: BoreVoice? = null): Int =
+        gateFor(macros, RATE * Dsp.OVERSAMPLE, null, voice).total / Dsp.OVERSAMPLE
 
     /**
      * What a pad holding this sound is filed as. Derived from the *rendered frame
@@ -928,7 +940,7 @@ object Bore {
      */
     fun drumClassFor(voice: BoreVoice, macros: Map<String, Float> = emptyMap()): DrumClass {
         val m = settled(macros, voice)
-        val long = isLoop(m.getValue("HOLD")) || renderFrames(m).toFloat() / RATE > LOOP_THRESHOLD_SECONDS
+        val long = isLoop(m.getValue("HOLD")) || renderFrames(m, voice).toFloat() / RATE > LOOP_THRESHOLD_SECONDS
         return if (long) DrumClass.LOOP else DrumClass.PERC
     }
 
@@ -997,7 +1009,7 @@ object Bore {
         human: Float = Humanize.OFF,
         period: Double = Humanize.ONE_SHOT_PERIOD_SECONDS,
     ): FloatArray {
-        return blow(voice, hz, macros, rate, gateFor(macros, rate, gateSeconds), turbulence, pressure, pop, seed, human, period)
+        return blow(voice, hz, macros, rate, gateFor(macros, rate, gateSeconds, voice), turbulence, pressure, pop, seed, human, period)
     }
 
     /**
@@ -1027,10 +1039,12 @@ object Bore {
     internal fun held(m: Map<String, Float>): Map<String, Float> = if (OVERBLOW in m) m + (OVERBLOW to 0f) else m
 
     /** A one-shot's gate in raw samples at [rate]: the one place its length is worked out, for [blow] and [renderFrames] alike. */
-    private fun gateFor(macros: Map<String, Float>, rate: Int, gateSeconds: Float?): Gate {
+    private fun gateFor(macros: Map<String, Float>, rate: Int, gateSeconds: Float?, voice: BoreVoice? = null): Gate {
         val attackN = (attackSeconds(macros.getValue("CHIFF")) * rate).toInt().coerceAtLeast(1)
         val holdN = ((gateSeconds ?: holdSeconds(macros.getValue("HOLD"))) * rate).toInt()
-        val releaseN = (RELEASE_SECONDS * rate).toInt().coerceAtLeast(1)
+        // A candidate lets its note go over its own release ([BoreCandidates.Spec.releaseSeconds]); the kept voices' is [RELEASE_SECONDS].
+        val release = voice?.let { BoreCandidates.of(it)?.releaseSeconds } ?: RELEASE_SECONDS
+        val releaseN = (release * rate).toInt().coerceAtLeast(1)
         return Gate(attackN, holdN, releaseN)
     }
 
@@ -1063,6 +1077,12 @@ object Bore {
             out[i] = player.tick(env, i.toDouble() / rate)
         }
 
+        // A candidate's ending: the sound itself, not only the breath, falls away under a raised cosine over the release, so a pipe
+        // or a cavity still ringing when the breath stops is let go and never cut ([BoreCandidates.Spec.releaseSeconds]).
+        if (BoreCandidates.of(voice) != null) {
+            val from = gate.attackN + gate.holdN
+            for (i in from until gate.total) out[i] *= (0.5 + 0.5 * cos(PI * (i - from) / gate.releaseN)).toFloat()
+        }
         val chiff = macros.getValue("CHIFF")
         val thumpGain = ((chiff - THUMP_FROM) / (1f - THUMP_FROM)).coerceIn(0f, 1f)
         if (thumpGain > 0f && pressure == null) addThump(out, rate, thumpGain * THUMP_LEVEL * player.basePressure)
@@ -1102,34 +1122,68 @@ object Bore {
         }
 
         private val flute = voice == BoreVoice.FLUTE
+        // A candidate's numbers ([BoreCandidates]); null on FLUTE and SAX, whose every line below runs as it always did.
+        private val cand = BoreCandidates.of(voice)
         private val breath = macros.getValue("BREATH")
         // An overblown FLUTE plays its LIP at [OVERBLOW_LIP_FLOOR] or above from its first sample, for the jet's offset and the
         // bore's bell alike; without a crack (OVERBLOW 0) this is the patch's own LIP, untouched.
         private val lip = macros.getValue("LIP").let { if (flute && crackAt != null) it.coerceAtLeast(OVERBLOW_LIP_FLOOR) else it }
         private val chiff = macros.getValue("CHIFF")
         private val bellHz = bellHzFor(voice, hz, breath, lip)
-        private val dcHz = if (flute) Strings.DC_BLOCK_HZ else hz / SAX_BLOCKER_DIVISOR
+        private val dcHz = when {
+            cand != null -> if (cand.dcDivisor > 0f) hz / cand.dcDivisor else Strings.DC_BLOCK_HZ
+            flute -> Strings.DC_BLOCK_HZ
+            else -> hz / SAX_BLOCKER_DIVISOR
+        }
         private val vibCents = VIBRATO_MAX_CENTS * (macros.getValue("HOLD") / LOOP_THRESHOLD).coerceIn(0f, 1f)
-        private val flatCents = if (human != null) human.flatCents(vibCents) else vibCents
-        private val tuning = Strings.tune(hz * 2f.pow(-(flatCents + maxDetuneCents) / 1200f), bellHz, rate, dcBlock = true, dcHz = dcHz)
-        private val loop = Strings.Loop(tuning.n, tuning.a, LOOP_GAIN, bellHz, rate, dcBlock = true, dcHz = dcHz).also {
+        private val flatCents = (if (human != null) human.flatCents(vibCents) else vibCents) + (cand?.bendCents ?: 0f)
+        private val tuning = if (cand == null) Strings.tune(hz * 2f.pow(-(flatCents + maxDetuneCents) / 1200f), bellHz, rate, dcBlock = true, dcHz = dcHz)
+            else Strings.tune(hz * 2f.pow(-(flatCents + maxDetuneCents) / 1200f), bellHz, rate, dcBlock = cand.dcBlock, dcHz = dcHz, roundTrip = cand.roundTrip)
+        private val loop = (if (cand == null) Strings.Loop(tuning.n, tuning.a, LOOP_GAIN, bellHz, rate, dcBlock = true, dcHz = dcHz)
+            else Strings.Loop(tuning.n, tuning.a, cand.loopGain, bellHz, rate, dcBlock = cand.dcBlock, dcHz = dcHz, roundTrip = cand.roundTrip)).also {
             if (flatCents > 0f || maxDetuneCents > 0f) it.retune(hz)
         }
+        // VESSEL's cavity in the pipe's place, a candidate's own part ([BoreCandidates]).
+        private val vessel = if (cand?.kind == BoreCandidates.Kind.VESSEL) {
+            // A harder breath drives the cavity wider (a lower Q lets more of the jet's own harmonics through).
+            BoreCandidates.Helmholtz(hz, Dsp.lin(macros.getValue("LIP"), cand.qLow, cand.qHigh) * Dsp.lin(macros.getValue("BREATH"), 1.4f, 0.6f), LOOP_GAIN, rate)
+        } else null
+        private val edge = if (cand != null && cand.edgeHigh > 0f) BoreCandidates.Edge(cand.edgeHz, rate) else null
+        private val edgeNoise = Dsp.Noise(Dsp.seedFor("BORE", "EDGE", voice, hz))
+        private val edgeLevel = if (cand != null) Dsp.lin(macros.getValue("BREATH"), cand.edgeLow, cand.edgeHigh) else 0f
         private var humanPressure = 1f
         private var humanTurbulence = 1f
         private val noise = Dsp.Noise(noiseSeed ?: Dsp.seedFor("BORE", voice, hz))
         private val turb = turbulence ?: turbulenceFor(voice, breath)
-        private val offset = reedOffset(lip)
-        private val closing = closingPressure(offset)
+        private val offset = if (cand != null) BoreCandidates.offset(cand, lip) else reedOffset(lip)
+        private val closing = if (cand != null) BoreCandidates.closing(cand, offset) else closingPressure(offset)
+        private val reedSlope = cand?.slope ?: REED_SLOPE
         internal val basePressure = when {
+            cand != null -> when {
+                pressure == null -> BoreCandidates.pressure(cand, breath, lip)
+                cand.kind == BoreCandidates.Kind.REED -> closing * pressure
+                else -> pressure
+            }
             pressure == null -> if (flute) flutePressure(breath) else reedPressure(breath, offset)
             flute -> pressure
             else -> closing * pressure
         }
-        private val cap = if (flute) FLUTE_PRESSURE_HIGH * 1.3f else closing * CAP_SHARE
+        private val cap = when {
+            cand == null -> if (flute) FLUTE_PRESSURE_HIGH * 1.3f else closing * CAP_SHARE
+            cand.kind == BoreCandidates.Kind.REED -> closing * CAP_SHARE
+            else -> cand.pressureHigh * 1.3f
+        }
         // The breath's drift for this note's player: FLUTE's share, or the reed's, held clear of the speaking threshold.
         private val humanDrift = when {
             human == null -> 0f
+            cand != null -> when (cand.kind) {
+                BoreCandidates.Kind.REED -> {
+                    val share = basePressure / closing
+                    val room = ((share - (cand.shareLow - 0.06f) - HUMAN_REED_ROOM) / share).coerceAtLeast(0.005f)
+                    (HUMAN_REED_BREATH * human.amount).coerceAtMost(room)
+                }
+                else -> HUMAN_BREATH * Dsp.lin(breath, HUMAN_BREATH_SOFT, 1f) * human.amount
+            }
             flute -> HUMAN_BREATH * Dsp.lin(breath, HUMAN_BREATH_SOFT, 1f) * human.amount
             else -> {
                 val share = basePressure / closing
@@ -1142,7 +1196,7 @@ object Bore {
         private val jetDelay = (JET_RATIO * rate / hz).coerceAtLeast(2f)
         private val jet = FloatArray(ceil(jetDelay).toInt() + 2)
         private var jw = 0
-        private val jetBias = Dsp.lin(lip, JET_OFFSET_LOW, JET_OFFSET_HIGH)
+        private val jetBias = if (cand != null) Dsp.lin(lip, cand.jetOffsetLow, cand.jetOffsetHigh) else Dsp.lin(lip, JET_OFFSET_LOW, JET_OFFSET_HIGH)
         private val crack: Crack? = if (flute && crackAt != null) {
             val amount = (macros[OVERBLOW] ?: 0f).coerceIn(0f, 1f)
             Crack(
@@ -1156,13 +1210,18 @@ object Bore {
                 riseN = (OVERBLOW_RASP_RISE_SECONDS * rate).toInt().coerceAtLeast(1),
             )
         } else null
-        private val chiffNoise = CHIFF_NOISE * chiff
-        private val overshoot = if (flute) 0f else OVERSHOOT
-        private val popLevel = if (flute) 0f else pop ?: POP_LEVEL
+        private val chiffNoise = if (cand != null) CHIFF_NOISE * chiff * cand.chiffScale else CHIFF_NOISE * chiff
+        private val overshoot = if (cand != null) (if (cand.tongued) OVERSHOOT else 0f) else if (flute) 0f else OVERSHOOT
+        private val popLevel = if (cand != null) (if (cand.tongued) pop ?: POP_LEVEL else 0f) else if (flute) 0f else pop ?: POP_LEVEL
         private val attackN = (attackSeconds(chiff) * rate).toInt().coerceAtLeast(1)
         private val popStart = (attackN * POP_AT).toInt()
         private val popN = (POP_SECONDS * rate).toInt().coerceAtLeast(2)
-        private val seedAmp = if (flute) 0f else seed ?: run {
+        private val seedAmp = if (cand != null) {
+            if (!cand.tongued) 0f else seed ?: run {
+                val level = basePressure / TONGUE_SEED_PRESSURE
+                (cand!!.seedLevel * chiff.pow(TONGUE_SEED_CHIFF_CURVE) * Dsp.lin(breath, TONGUE_SEED_SOFT, 1f) * level * level).coerceAtMost(TONGUE_SEED_MAX)
+            }
+        } else if (flute) 0f else seed ?: run {
             val level = basePressure / TONGUE_SEED_PRESSURE
             (TONGUE_SEED * chiff.pow(TONGUE_SEED_CHIFF_CURVE) * Dsp.lin(breath, TONGUE_SEED_SOFT, 1f) * level * level).coerceAtMost(TONGUE_SEED_MAX)
         }
@@ -1182,7 +1241,21 @@ object Bore {
             val i = frame++
             val t = elapsedSeconds
             val pitch = if (pitchCents.isFinite()) pitchCents.coerceIn(-maxDetuneCents, maxDetuneCents) else 0f
-            if (human != null) {
+            if (cand != null) {
+                // A candidate: the same player and vibrato, its own bend (SHAKU's meri), and the vessel retuned in the pipe's place.
+                if (i % VIBRATO_BLOCK == 0) {
+                    val cents = if (human != null) human.cents(t, vibCents) else if (vibCents > 0f && t > VIBRATO_DELAY_SECONDS) {
+                        val rise = ((t - VIBRATO_DELAY_SECONDS) / VIBRATO_RISE_SECONDS).coerceAtMost(1.0)
+                        vibCents * (rise * sin(2.0 * PI * VIBRATO_HZ * t)).toFloat()
+                    } else 0f
+                    val f = hz * 2f.pow((pitch + cents + BoreCandidates.bend(cand, t)) / 1200f)
+                    if (vessel != null) vessel.retune(f) else loop.retune(f)
+                    if (human != null) {
+                        humanPressure = human.pressure(t, humanDrift)
+                        humanTurbulence = human.turbulence(t)
+                    }
+                }
+            } else if (human != null) {
                 // The player, once a control block: the pitch (the vibrato, the lean, the scoop), the breath and its turbulence.
                 if (i % VIBRATO_BLOCK == 0) {
                     loop.retune(hz * 2f.pow((pitch + human.cents(t, vibCents)) / 1200f))
@@ -1205,8 +1278,8 @@ object Bore {
             val burst = if (chiffNoise > 0f) chiffNoise * exp(-t / CHIFF_NOISE_SECONDS).toFloat() else 0f
             val popNow = if (popLevel > 0f && i >= popStart && i < popStart + popN) popLevel * pMax * sin(PI * (i - popStart) / popN).toFloat() else 0f
             val pm = (pMax * env * over * (1f + (turb + burst) * turbulenceGain * noise.next()) + popNow).coerceAtMost(cap)
-            val returning = loop.reflected()
-            val y = if (flute) {
+            val returning = if (vessel != null) vessel.reflected() else loop.reflected()
+            val y = if (cand != null) candidateValve(pm, returning) else if (flute) {
                 // The returning wave deflects the jet; the disturbance crosses the mouth (the jet line);
                 // the labium turns it into a pressure through a soft clip. Pressure is the jet's input gain.
                 // An overblown note's jet glides to its quarter-period transit time at the crack ([crackFrame]); without
@@ -1232,12 +1305,45 @@ object Bore {
                 (seedAmp * scale) * (0.5f - 0.5f * cos(2.0 * PI * (i - seedStart) / seedN).toFloat()) * sin(2.0 * PI * hz * (i - seedStart) / rate).toFloat()
             } else if (crack != null) crack.seed(i) else 0f
             val excitation = if (externalExcitation.isFinite()) externalExcitation else 0f
-            loop.inject(if (excitation == 0f) y + tongue else y + tongue + excitation)
+            val injected = if (excitation == 0f) y + tongue else y + tongue + excitation
+            if (vessel != null) vessel.inject(injected) else loop.inject(injected)
+            // SHAKU's edge noise is heard, not fed back: the rush past the labium, outside the pipe.
+            if (edge != null) {
+                // It comes in once the jet is speaking (over [BoreCandidates.EDGE_RISE_SECONDS]): a rush on the note, not a burst before it.
+                val rise = (t / BoreCandidates.EDGE_RISE_SECONDS).coerceAtMost(1.0).toFloat()
+                return returning + edgeLevel * env * rise * rise * edge.next(edgeNoise.next())
+            }
             // What is heard is the wave in the bore, not the sample the valve injects: `y` carries the
             // mouth's DC pressure, which after the output high-pass is a sub-200 Hz swell at every
             // onset (the classifier read it as a snare or a clap: R1's first preset roster had 8 of 16
             // in a drum's choke group). The returning wave has been through the loop's DC blocker.
             return returning
+        }
+
+        /**
+         * A candidate's valve ([BoreCandidates]): the jet (SHAKU, and VESSEL's jet across its cavity) is the flute's line for line with
+         * the candidate's own offset and gain and no crack; the reed is Smith's table at the candidate's slope.
+         */
+        private fun candidateValve(pm: Float, returning: Float): Float {
+            val c = cand!!
+            return when (c.kind) {
+                BoreCandidates.Kind.JET, BoreCandidates.Kind.VESSEL -> {
+                    val at = jw - jetDelay
+                    val i0 = kotlin.math.floor(at).toInt()
+                    val frac = at - i0
+                    val older = jet[Math.floorMod(i0, jet.size)]
+                    val newer = jet[Math.floorMod(i0 + 1, jet.size)]
+                    val jetOut = older + (newer - older) * frac
+                    jet[jw] = -JET_REFLECTION * returning
+                    jw = (jw + 1) % jet.size
+                    tanh(c.jetGain * pm * jetOut + jetBias) * pm.coerceAtMost(1f) + END_REFLECTION * returning
+                }
+                BoreCandidates.Kind.REED -> {
+                    val delta = returning - pm
+                    val r = (offset + reedSlope * delta).coerceIn(-1f, 1f)
+                    pm + delta * r
+                }
+            }
         }
 
         /**
@@ -1299,7 +1405,9 @@ object Bore {
      * decimator, the DC removed twice. The level and the tail come after: [finish] for a
      * one-shot, and for a LOOP its own levelling, after the blend ([renderLoopMeasured]).
      */
-    internal fun condition(raw: FloatArray, rate: Int, biteDb: Float, rasp: Float, voicing: Voicing, centred: Boolean = true): FloatArray {
+    internal fun condition(
+        raw: FloatArray, rate: Int, biteDb: Float, rasp: Float, voicing: Voicing, centred: Boolean = true, candidate: BoreCandidates.Spec? = null,
+    ): FloatArray {
         stopIfUnwanted()
         raspBend(raw, rate, rasp)
         stopIfUnwanted()
@@ -1321,13 +1429,18 @@ object Bore {
             bell.peaking(BITE_HZ, biteDb, BITE_Q)
             for (i in out.indices) out[i] = bell.process(out[i])
         }
+        // A candidate's fixed formants (SHAWM's); a kept voice has none and never reaches this.
+        if (candidate != null) BoreCandidates.formants(candidate, out)
         stopIfUnwanted()
         voice(out, voicing)
         return out
     }
 
-    internal fun finish(raw: FloatArray, rate: Int, biteDb: Float = 0f, rasp: Float = 0f, voicing: Voicing = Voicing.NONE, centred: Boolean = true): FloatArray {
-        val out = condition(raw, rate, biteDb, rasp, voicing, centred)
+    internal fun finish(
+        raw: FloatArray, rate: Int, biteDb: Float = 0f, rasp: Float = 0f, voicing: Voicing = Voicing.NONE, centred: Boolean = true,
+        candidate: BoreCandidates.Spec? = null,
+    ): FloatArray {
+        val out = condition(raw, rate, biteDb, rasp, voicing, centred, candidate)
         stopIfUnwanted()
         Dsp.levelTo(out, RATE, target = Dsp.MELODIC_LOUDNESS_TARGET)
         Dsp.fadeTail(out)
@@ -1515,7 +1628,7 @@ object Bore {
         val raw = blow(voice, hz, h + ("HOLD" to LOOP_HOLD), rate, gateSeconds = heldSeconds(loopSeconds), human = human, period = loopSeconds.toDouble())
         return condition(
             raw, rate, biteBoostDb(voice, h.getValue("LIP")), raspAmount(voice, h.getValue("LIP"), h.getValue("BREATH")),
-            voicingFor(voice).copy(openingTrimDb = opening.trimDb), opening.centred,
+            voicingFor(voice).copy(openingTrimDb = opening.trimDb), opening.centred, BoreCandidates.of(voice),
         )
     }
 
@@ -1751,6 +1864,9 @@ object Bore {
         val bite = biteBoostDb(voice, m.getValue("LIP"))
         val rasp = raspAmount(voice, m.getValue("LIP"), m.getValue("BREATH"))
         val voicing = voicingFor(voice).copy(openingTrimDb = opening.trimDb)
-        return Snip(finish(blow(voice, hz, m, rate, human = human), rate, bite, rasp, voicing, opening.centred), channels = 1, sampleRate = RATE)
+        val cand = BoreCandidates.of(voice)
+        val done = finish(blow(voice, hz, m, rate, human = human), rate, bite, rasp, voicing, opening.centred, cand)
+        // A candidate blown softer than its default BREATH is darker, quieter and slower ([BoreCandidates.touched]); a kept voice is not.
+        return Snip(if (cand != null) BoreCandidates.touched(done, hz, m.getValue("BREATH")) else done, channels = 1, sampleRate = RATE)
     }
 }
