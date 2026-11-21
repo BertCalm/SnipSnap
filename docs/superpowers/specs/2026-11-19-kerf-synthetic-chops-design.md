@@ -1102,5 +1102,6 @@ are a percussion kit, not a scale (`KerfBellKit`).
 - **Tests.** `KerfBellKitTest` (3 tests): low to high, the cap, levels, softer soft strikes,
   distinct takes, and a roll and riser that build. Shell `KerfBellKitTest` (2 tests): a strike,
   the roll and the riser through save, reload and MPC 3.
-- **Not yet.** The owner has not heard the bells.
+- **Heard.** The owner heard the bells (each strike, the roll, the riser and two patterns): "Sounds
+  great" (2026-11-21). Phone and MPC playback is open.
 
