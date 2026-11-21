@@ -511,6 +511,11 @@ object UserPresets {
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
             return "ClutterPatch.fromJsonText($recipe),"
         }
+        if (patch is com.snipsnap.synth.KerfPatch) {
+            // The model version lives outside the macro map; promotion keeps the engine the hit was heard on.
+            val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")
+            return "KerfPatch.fromJsonText($recipe),"
+        }
         if (patch is HiccupPatch) {
             // Velocity, take and model version live outside the macro map; promotion keeps the strike saved.
             val recipe = Json.write(JsonValue.Str(patch.toJsonText())).replace("$", "\\$")

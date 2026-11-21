@@ -258,7 +258,7 @@ internal object CausticCharacters {
     }
 
     /** Double zero-state transfer of Modes.Bank's rotation followed by its velocity kick. */
-    private fun ringAdd(out: DoubleArray, drive: DoubleArray, frequency: Double, t60: Double,
+    internal fun ringAdd(out: DoubleArray, drive: DoubleArray, frequency: Double, t60: Double,
         force: Double, gain: Double, rate: Int) {
         val radius = exp(-ln(1000.0) / (t60 * rate))
         val cr = radius * cos(TAU * frequency / rate)
