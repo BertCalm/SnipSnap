@@ -2887,6 +2887,20 @@ object Copy {
      */
     fun putOnCardOver(what: String): String = "Card · replace $what?"
 
+    /**
+     * The phone write landed and the card refused the copy (UAT 2026-11 user states, S-4): pulled,
+     * full, read-only. It read "EXPORT failed. Check your storage", which denied the copy the
+     * phone holds and named the wrong storage. Says *phone* first, as [dubCardWouldReplace] does.
+     */
+    const val DUB_DONE_CARD_REFUSED = "EXPORT done, on the phone. The card refused the copy, so check it and try again."
+    /** [DUB_DONE_CARD_REFUSED]'s door on the completion stage: the card leg again, over the same export. */
+    @field:CopyLabel const val CARD_TRY_AGAIN = "TRY THE CARD AGAIN"
+    /**
+     * The phone write landed and Android no longer lets the app write to the card's folder (S-4):
+     * a retry cannot work, so this names where the folder is picked again.
+     */
+    const val DUB_DONE_CARD_GRANT_GONE = "EXPORT done, on the phone. The card needs picking again on CARD."
+
     /** The card leg went ahead after [dubCardWouldReplace] held it, and the old export is gone. */
     fun dubCardReplacedOne(what: String): String =
         "$what is on the card. The old one is gone for good."
