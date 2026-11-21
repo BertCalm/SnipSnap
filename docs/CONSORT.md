@@ -102,3 +102,17 @@ editor, and fourteen character presets. The owner heard all 29 clips of the K3 r
 ("All sounds good"); the 27 recipes are the factory bank. The one-shot sound is unchanged (156
 renders pinned in `ConsortPinsTest`); the K3 renders are pinned in `ConsortK3PinsTest`. Gate status:
 [the gates' CONSORT entry](ENGINE_ACCEPTANCE_GATES.md).
+
+## Sustaining pads (2026-11-21)
+
+HOLD's top step (0.99 and up) makes a gated pad that sustains while held: one seamless loop of the
+held note. The owner heard it on a two-second cycle and asked for more humanization, then chose,
+from a 2 s, a 6 s and an 8 s cycle, the 8 s cycle with the slow wanders (breath, pitch drift, vibrato
+speed and depth, air) 1.6 times as deep ("I like c"). `ConsortSustainPinsTest` pins those loops. The
+keyboard's held keys keep the two-second cycle kept in round K3; whether they follow is the owner's
+call. Every HOLD under the step renders as before.
+
+The same day's speed pass stopped the filters working through the silence after the breath (subnormal
+floats) and fused the house band limit's four passes into one: the default OBOE note went from 92 to
+56 ms, the factory solos' median from 69 to 56 ms and the sections' from 134 to 110 ms, with all 214
+compared renders identical to the bit.

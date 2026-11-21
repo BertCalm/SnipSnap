@@ -23,12 +23,12 @@ class ConsortLoopTest {
     }
 
     @Test
-    fun `every voice's top step is one two-second loop whose wrap is no steeper than its own audio`() {
+    fun `every voice's top step is one eight-second loop whose wrap is no steeper than its own audio`() {
         for (voice in ConsortVoice.entries) for (tune in listOf(0f, 0.5f, 1f)) {
             val m = Consort.settled(top + ("TUNE" to tune), voice)
             val r = Consort.renderLoop(voice, m, emptyList(), Consort.DEFAULT_VELOCITY, 0)
             val label = "$voice TUNE $tune"
-            assertTrue(abs(r.lengthFrames - Consort.HELD_PERIOD_SECONDS * rate) <= rate / 40, "$label loops at ${r.lengthFrames}")
+            assertTrue(abs(r.lengthFrames - Consort.PAD_PERIOD_SECONDS * rate) <= rate / 40, "$label loops at ${r.lengthFrames}")
             assertEquals(r.lengthFrames, r.loop.size, label)
             assertTrue(r.correlation >= Bore.LOOP_MIN_CORRELATION, "$label correlates ${r.correlation}")
             assertTrue(r.blendDipDb >= -Bore.LOOP_MAX_DIP_DB, "$label dips ${r.blendDipDb}")
@@ -47,7 +47,7 @@ class ConsortLoopTest {
         for (preset in ConsortPresets.all().filter { it.chairs.isNotEmpty() }) {
             val p = preset.withMacros(preset.macros + top)
             val s = p.render()
-            assertTrue(abs(s.frameCount - Consort.HELD_PERIOD_SECONDS * rate) <= rate / 40, "${preset.name} renders ${s.frameCount}")
+            assertTrue(abs(s.frameCount - Consort.PAD_PERIOD_SECONDS * rate) <= rate / 40, "${preset.name} renders ${s.frameCount}")
             assertTrue(wrapStep(s.samples) <= steepest(s.samples), "${preset.name} steps at its wrap")
         }
         val flute = ConsortPresets.forVoice(ConsortVoice.FLUTE).first()

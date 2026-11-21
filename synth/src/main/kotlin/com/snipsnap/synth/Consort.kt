@@ -66,9 +66,9 @@ enum class ConsortGesture { PLAIN, SCOOP, TRILL, FLUTTER, FALL }
  * that moves the sound needs a new listen, and a change that should not is measured against it.
  *
  * HOLD is breath length. Its top step ([LOOP_FROM], BORE's) is a held note as one seamless loop
- * ([renderLoop]), for a gated pad that sustains while it is held: the keys' held note
- * ([heldNote], whose slow motions, noise and players repeat every two seconds), cut once and
- * closed by a blend. Every HOLD under the step renders as before.
+ * ([renderLoop]), for a gated pad that sustains while it is held: a held note ([heldNote]) whose slow
+ * motions, noise and players repeat every eight seconds with deeper wanders ([PAD_HELD], the owner's
+ * pick), cut once and closed by a blend. Every HOLD under the step renders as before.
  */
 object Consort {
 
@@ -986,10 +986,13 @@ object Consort {
     internal fun heldFor(period: Float, wander: Float): Held = Held(period, max(HELD_SECONDS, period + 2.6f), wander)
 
     /**
-     * A sustaining pad's held note. The owner heard the keys' two-second cycle on a held pad and asked for more
-     * humanization (2026-11-21); the candidates are on the listening round, and this stays the keys' until one is kept.
+     * A sustaining pad's held note: an eight-second cycle with the slow wanders 1.6 times as deep as a one-shot's.
+     * The owner heard the keys' two-second cycle on a held pad and asked for more humanization, then heard this
+     * against a six-second cycle and the two-second one, and chose it (2026-11-21, "I like c"). The keys keep theirs.
      */
-    internal var PAD_HELD: Held = KEYS_HELD
+    internal val PAD_HELD: Held = heldFor(PAD_PERIOD_SECONDS, PAD_WANDER)
+    const val PAD_PERIOD_SECONDS = 8f
+    const val PAD_WANDER = 1.6f
 
     /**
      * How much of a [heldNote] a loop may use: the breath, less the earliest a player lets go (7 % of a
