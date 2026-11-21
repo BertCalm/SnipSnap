@@ -178,6 +178,11 @@ fun KitScreen(
     /** Re-deal the kit's followers on new dial settings (also UNDO). */
     onRobinSet: (KitRobin) -> Unit = {},
     onRobinOff: () -> Unit = {},
+    /** PERC STACK, a BOROUGH kit's only ([PercStackRow]): another stack onto A13-A16; true once the player said REPLACE. */
+    onPercStack: (com.snipsnap.synth.BoroughKits.Stack, Boolean) -> Unit = { _, _ -> },
+    /** The swap waiting on the player's REPLACE or CANCEL on this kit, or null. */
+    percStackAsk: PercStackAsk? = null,
+    onPercStackKeep: () -> Unit = {},
     onTwins: () -> Unit,
     /** Flipped to a bank (0-based) with nothing on it: say what fills it (`Copy.bankEmpty`) as the blanks come up. */
     onBankEmpty: (Int) -> Unit = {},
@@ -927,6 +932,9 @@ fun KitScreen(
             var performanceSaving by remember(entry.dir) { mutableStateOf(false) }
             var performanceStatus by remember(entry.dir) { mutableStateOf<String?>(null) }
             val performanceDirty = host.performance != host.savedPerformance || host.performanceWarning != null
+            // PERC STACK (BOROUGH round 3.2): above KIT TOOLS, not in it, because it is the one choice a BOROUGH kit
+            // was made around; it draws nothing for any other kit.
+            PercStackRow(kit, busy, percStackAsk, onPercStack, onPercStackKeep)
             // KIT TOOLS (UX pass, 2026-11-15, shared fix c): everything that changes the whole kit rather than
             // one pad, behind one closed box under the grid - the VELOCITY STRIP's settings, PERFORMANCE (the
             // kit's live effects) and what THIS KIT held. Closing it closes PERFORMANCE the way PERFORMANCE's own

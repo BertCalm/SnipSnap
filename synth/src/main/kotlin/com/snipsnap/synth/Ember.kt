@@ -171,12 +171,18 @@ object Ember {
     }
 
     /** One hit before the peak match. */
-    internal fun renderRaw(voice: EmberVoice, macros: Map<String, Float>, velocity: Float, take: Int): FloatArray {
+    internal fun renderRaw(voice: EmberVoice, macros: Map<String, Float>, velocity: Float, take: Int): FloatArray =
+        renderRaw(voice, macros, velocity, EmberDsp.rngFor(voice.name, take.coerceIn(0, MAX_TAKE)))
+
+    /**
+     * One hit before the peak match, its strike drawn from [tr] rather than from one of the four takes. BOROUGH
+     * (docs/BOROUGH.md, round 3) seeds every strike by its own kit, pad, zone and take, as its prototype did.
+     */
+    internal fun renderRaw(voice: EmberVoice, macros: Map<String, Float>, velocity: Float, tr: Rng): FloatArray {
         val v = if (velocity.isFinite()) velocity.toDouble().coerceIn(0.05, 1.0) else 1.0
         val m = settled(voice, macros).mapValues { it.value.toDouble() }
         val seconds = secondsFor(voice, macros)
         val n = ((seconds + 0.05) * FS).roundToInt()
-        val tr = EmberDsp.rngFor(voice.name, take.coerceIn(0, MAX_TAKE))
         val raw = when (voice) {
             EmberVoice.KICK -> kick(m, v, tr, n)
             EmberVoice.SNARE -> snare(m, v, tr, n)
@@ -220,10 +226,10 @@ object Ember {
     // ------------------------------------------------------------------ implements
 
     /** A hickory tip: contact time ~ v^-0.3 (Hertz gives v^-0.2; widened for audibility, shape), force v^1.25. */
-    private fun stick(v: Double, rng: Rng, n: Int, widthHard: Double = 0.28e-3, at: Double = 0.0): DoubleArray =
+    internal fun stick(v: Double, rng: Rng, n: Int, widthHard: Double = 0.28e-3, at: Double = 0.0): DoubleArray =
         hannForce(widthHard * v.pow(-0.3) * (1 + 0.07 * rng.normal()), v.pow(1.25), n, at, FSD)
 
-    private fun mallet(v: Double, rng: Rng, n: Int, at: Double = 0.0, widthHard: Double = 1.6e-3): DoubleArray =
+    internal fun mallet(v: Double, rng: Rng, n: Int, at: Double = 0.0, widthHard: Double = 1.6e-3): DoubleArray =
         hannForce(widthHard * v.pow(-0.35) * (1 + 0.06 * rng.normal()), v.pow(1.3), n, at, FSD)
 
     /** [stick] and [mallet] added straight into [f] (scaled by [k]): a roll's strokes without a full-length buffer each. */
@@ -268,12 +274,13 @@ object Ember {
      * A calf-headed drum's impulse response, struck at radius [r] (0 centre to 1 edge). t60 of mode k is
      * t1 (f_k / f1)^-alpha: calf's high modes die far faster than its low ones. Strike weight |J_m(z r)|, times
      * cos^2(m angle) for m > 0; radiation favours m = 0. A take's [scatter] varies each mode by 1.5 dB rms. The
-     * second head ([reso]) rings the low modes 2.5% higher, so the drum beats. [sag] starts every mode that much
-     * sharp, settling over [sagTau]; [bend] (a pitch-ratio curve) replaces it for the elbow.
+     * second head ([reso]) rings the low modes 2.5% higher ([resoRatio]; BOROUGH's designed kick sets 2%), so the drum
+     * beats. [sag] starts every mode that much sharp, settling over [sagTau]; [bend] (a pitch-ratio curve) replaces it
+     * for the elbow.
      */
     internal fun membraneIr(
         f1: Double, n: Int, t1: Double, alpha: Double, r: Double, angle: Double, sag: Double = 0.0, sagTau: Double = 0.05,
-        reso: Boolean = true, bend: DoubleArray? = null, scatter: Rng? = null,
+        reso: Boolean = true, bend: DoubleArray? = null, scatter: Rng? = null, resoRatio: Double = 1.025,
     ): DoubleArray {
         val fr = ArrayList<Double>(); val am = ArrayList<Double>(); val tt = ArrayList<Double>(); val ph = ArrayList<Double>()
         val j01 = BESSEL[0].z
@@ -286,7 +293,7 @@ object Ember {
             if (scatter != null) a *= 10.0.pow(scatter.normal(0.0, 1.5) / 20)
             val t60 = t1 * ratio.pow(-alpha)
             fr.add(f); am.add(a); tt.add(t60); ph.add(0.0)
-            if (reso && ratio < 3.2) { fr.add(f * 1.025); am.add(a * 0.35); tt.add(t60 * 1.15); ph.add(0.4) }
+            if (reso && ratio < 3.2) { fr.add(f * resoRatio); am.add(a * 0.35); tt.add(t60 * 1.15); ph.add(0.4) }
         }
         val warp = when {
             bend != null -> { val w = DoubleArray(n); var s = 0.0; for (i in 0 until n) { s += bend[i]; w[i] = s / FSD }; w }
@@ -299,7 +306,7 @@ object Ember {
     // ------------------------------------------------------------------ threshold parts
 
     /** Calibrated at round 0: a hard snare hit's wires near 0.4 of the head's rms; the ride's sizzle near 0.35 of the ride's. Shape. */
-    private const val WIRE_GAIN = 9.0
+    internal const val WIRE_GAIN = 9.0
     private const val RIVET_GAIN = 0.17
 
     /**
@@ -722,14 +729,20 @@ object Ember {
      */
     private val TAILS by lazy { mapOf(EmberVoice.CYMBAL_SWELL to (2.8 to -50.0), EmberVoice.BOWED_CYMBAL to (2.4 to -30.0)) }
 
+    /** [raw] at 176.4 kHz heard in the club at [distance], the same length: the first step of [finish], and BOROUGH's room. */
+    internal fun club(raw: DoubleArray, distance: Double): DoubleArray {
+        val n = raw.size
+        val room = roomIr(distance)
+        val size = EmberDsp.fftSize(n + room.size - 1)
+        val key = round(distance * 1000).toLong() * 100_000_000L + size
+        val spec = roomSpectra.get(key) { EmberDsp.spectrum(room, size) }
+        return EmberDsp.convFft(raw, room, n, spec)
+    }
+
     /** DISTANCE, WARMTH, voicing, then the house band limit and decimator, DC out, the cut and a 60 ms fade (and the [TAILS] decay). */
     internal fun finish(raw: DoubleArray, m: Map<String, Double>, v: Double, seconds: Double, tail: Pair<Double, Double>? = null): FloatArray {
         val n = raw.size
-        val room = roomIr(m.getValue("DISTANCE"))
-        val size = EmberDsp.fftSize(n + room.size - 1)
-        val key = round(m.getValue("DISTANCE") * 1000).toLong() * 100_000_000L + size
-        val spec = roomSpectra.get(key) { EmberDsp.spectrum(room, size) }
-        var y = EmberDsp.convFft(raw, room, n, spec)
+        var y = club(raw, m.getValue("DISTANCE"))
         y = warmthChain(y, m.getValue("WARMTH"), v)
         y = voicing(y)
         val f = FloatArray(n) { y[it].toFloat() }

@@ -137,6 +137,9 @@ class ReversalTest {
         "EXPORT_CARD_LEGEND" to "a legend, not a landing",
         // The FORGET CARD button's label: it says what the tap does, and the landing it raises is CARD_FORGOTTEN (listed in awaitingWords).
         "CARD_FORGET" to "a button label, not a landing",
+        // The REPLACE button under PERC_STACK_ASK (BOROUGH's stack picker): it says what the tap does, and the ask
+        // above it already answers the question ("The trash keeps them 30 days."). Nothing has happened yet.
+        "PERC_STACK_REPLACE" to "a button label under an ask that names the way back, not a landing",
         // The YOURS preset FORGET door: it opens the same PresetForgetDialog a hold on the chip opens, which names the bin.
         "PRESET_FORGET_DOOR" to "a button label that opens the forget dialog; nothing has happened yet",
     )
