@@ -443,14 +443,21 @@ Java_com_snipsnap_app_NativePads_aquariumOutputCeiling(JNIEnv*, jobject) {
     return snipsnap::aquarium::PerformanceBus::kOutputCeiling;
 }
 
-/** The whole-kit glue (GlueBus.h): the complete settings, queued for the callback; false queues nothing. */
+/**
+ * The whole-kit glue (GlueBus.h): the complete settings in chain order (trim,
+ * saturator, compressor, makeup, limiter drive, ceiling), queued for the
+ * callback; false queues nothing.
+ */
 JNIEXPORT jboolean JNICALL
 Java_com_snipsnap_app_NativePads_configureGlue(
-    JNIEnv*, jobject, jlong handle, jboolean enabled, jfloat thresholdDbfs, jfloat ratio,
-    jfloat makeupDb, jfloat driveDb, jfloat ceilingDbfs) {
+    JNIEnv*, jobject, jlong handle, jboolean enabled, jfloat inputTrimDb, jboolean saturate, jfloat saturationDb,
+    jfloat thresholdDbfs, jfloat ratio, jfloat makeupDb, jfloat driveDb, jfloat ceilingDbfs) {
     if (!handle) return JNI_FALSE;
     snipsnap::GlueSettings settings;
     settings.enabled = enabled == JNI_TRUE;
+    settings.inputTrimDb = inputTrimDb;
+    settings.saturate = saturate == JNI_TRUE;
+    settings.saturationDb = saturationDb;
     settings.thresholdDbfs = thresholdDbfs;
     settings.ratio = ratio;
     settings.makeupDb = makeupDb;

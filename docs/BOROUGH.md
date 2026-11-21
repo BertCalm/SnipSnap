@@ -3,7 +3,8 @@
 Status (round 3, 2026-11-20): the owner accepted the round-2 Python kits ("I think they are all ready") and chose to
 generate them in the app. The Kotlin port (`Borough.kt`, `BoroughKits.kt`) is built and measured against the
 prototype (see "Round 3: Kotlin port"), and the six kits are on the shelf with their default stacks. The Kotlin
-render has not been heard; the stack picker and the live glue are later steps.
+render has not been heard; the stack picker is a later step. Round 3.1 (2026-11-21): each kit carries the live glue the
+owner picked and the app's native bus plays it when the kit loads (see "Round 3.1: the live glue"); not yet heard.
 Repository read: `afb0fa98` (2026-11-18); round 3 from `1b1d2d65b`.
 
 The characteristic gesture is **heavy swept kick → papery snare crack with late wires → dark, driven recording chain → a perc stack riding on top**.
@@ -210,7 +211,85 @@ through save and MPC 3. The generator does all six kits: "Verified BOROUGH STOOP
 
 **Not done this round:** the stack-picker UI; persisting a kit's glue settings in the kit format; switching the
 glue compressor and limiter on when a BOROUGH kit loads (`glue_limiter_drive_db` is parsed, not used).
-Nothing has been heard from the Kotlin render, and no phone or MPC has played the kits.
+Nothing has been heard from the Kotlin render, and no phone or MPC has played the kits. (The glue items are done in
+round 3.1 below.)
+
+### Round 3.1: the live glue (native, built; not yet heard)
+
+The owner picked C, "C for all except rides and rims" (2026-11-21): the round-2 glue with tape-style saturation in
+front on five kits, and the round-2 glue alone on RIDE AND RIMS. `glue_recipe.py` pinned the numbers per kit in
+`recipes.json` `kits[].glue`. This round makes the app play them.
+
+**What was built.**
+
+- **Native bus** (`app/src/main/cpp/GlueBus.h`). Two stages now sit in front of the existing compressor and limiter:
+  an input trim (-24..+24 dB) and an optional saturator `tanh(g x) / tanh(g)`, g = 10^(saturationDb/20) (0..12 dB).
+  The order is `model()`'s: trim, saturation, the compressor, makeup x drive, the lookahead limiter. The bus stays
+  stereo-linked and applies the same curve on each channel. Off is still bit-exact bypass. A 0 dB trim with no
+  saturation is the old chain sample for sample (`glue_a_default_front_end_is_the_chain_it_was_sample_for_sample`),
+  so every existing setting and test is unchanged.
+  - The trim and the saturator's drive glide in dB over 20 ms, like the other settings.
+  - Switching the saturator on or off while the glue is on **crossfades** the curve's input and output over 20 ms.
+    It does not glide g from a neutral value, because the curve has no neutral setting in its range: it is the
+    identity only as g -> 0 (-inf dB), and its smallest setting, 0 dB (CELLAR's), already lifts quiet material by
+    1/tanh(1), +2.4 dB. Both ends of the crossfade are continuous in the signal, so nothing steps.
+  - `glue_tests` holds the curve values at 0, 2.7, 6 and 12 dB on both channels, the trim alone and in front of the
+    saturator, the glides (a line in dB, halfway at 10 ms), the toggle with no click, bypass still bit-exact with a
+    front end set, and the ceiling held with the guard's clamped count 0 on +24 dB trim, 12 dB saturation and 24 dB
+    of drive into a kick and snare at four times full scale. The no-click check fails, as it should, when the
+    crossfade is replaced by a hard switch. The JNI carries the nine values in chain order (`jni_tests`).
+- **Kit format** (`:kit`). An optional `Kit.glue` field (`KitGlue`: trim, saturation or null, threshold, ratio,
+  makeup, limiter drive, ceiling) is written to kit.json as `"glue"`. A kit without it writes no key, and old kit
+  files load unchanged with no glue. A damaged field loads as no glue and the kit's pads still load. The field round
+  trips through save and load and survives ordinary edits (`KitStoreTest`). `Borough.KitRecipe.glue` parses the
+  recipe's object and `BoroughKits.glueOf(kit)` returns it. The six BOROUGH starters write it into their kit.json,
+  and no other starter carries one (`BoroughKitTest`).
+- **App.** `PadEngine.load` publishes `GlueSettings.forKit(kit)` with the bank: the kit's glue, on, or
+  `GlueSettings.OFF` for every kit without one (`app/src/test/.../GlueSettingsTest`).
+- **Live calibration.** I traced the gain from a pad's exported file to the bus's input in the pads' mix. Velocity
+  scales it by v (1 at full velocity). The pad's level scales it by 0.707946, the default every BOROUGH pad carries.
+  The linear balance law is unity on both sides at centre. A mono sample feeds both channels unscaled, and the
+  master gain comes after the glue. So a default pad at full velocity reaches the glue at **0.708 x its sample,
+  -3.0 dB** (`PadHit.DEFAULT_HIT_GAIN`). The recipe's trim assumes 1.0x, so the app adds +3.0 dB to each kit's
+  trim (`GlueSettings.LIVE_TRIM_CALIBRATION_DB`). The recipe is not changed. The mix is clamped at +-1 before the
+  glue (the engine's existing guard). At default levels the demo grooves peak at 0.65 to 0.96 there (DRY ROOM
+  1.36 x 0.708), so the clamp does not touch them. A pad turned up to full level could reach it on DRY ROOM, RIDE
+  AND RIMS, CRANKED and CELLAR. Softer hits arrive at v x level, where the Python groove plays a zone's sample at
+  (v / zone)^0.8. The trim is calibrated to the hardest default hit, which sets the demo groove's peak.
+- **Render tool** (`app/src/main/cpp/test/glue_render.cpp`, built by the native harness only, not in the app's
+  CMake, not in the APK). It runs a WAV through the real bus, on from its first frame, and writes 32-bit float.
+  The 3 ms lookahead stays in the file: the output is 132 frames late at 44.1 kHz and 132 frames longer.
+
+**Measured: native against `model()`.** `prototype/borough/glue_native.py` builds each kit's raw demo groove as
+`glue_recipe.py` does, from `:shell:generateBoroughKits`' pads. It renders the groove through `glue_render` with the
+kit's recipe glue and compares the result sample for sample with `model()`.
+
+| Kit | Trim (recipe) | Saturation | Limiter drive | Native vs model | `model()` as is |
+|---|---:|---:|---:|---:|---:|
+| STOOP DUST | +0.79 dB | 2.7 dB | 7.13 dB | -148.0 dB | -58.7 dB |
+| CELLAR BOOM | -1.29 | 0.0 | 7.67 | -148.0 | -49.6 |
+| CRANKED | -1.81 | 6.0 | 7.00 | -148.1 | -148.1 |
+| WAX | +0.63 | 6.0 | 7.00 | -148.2 | -55.1 |
+| DRY ROOM | -2.67 | 6.0 | 7.00 | -148.0 | -50.0 |
+| RIDE AND RIMS | -2.37 | none | 7.00 | -148.3 | -50.7 |
+
+Every kit peaks at 0.8913 (-1 dBFS) and the guard clamps nothing. -148 dB is the float output's rounding: the
+arithmetic is the same. The right-hand column is `model()` run unchanged. Its sliding minimum is scipy's
+`minimum_filter1d` with the default `mode='reflect'`, which mirrors a groove's first hit (frame 0) into the time
+before the file. The model's limiter therefore ducks ahead of a signal that has not started. Every difference sits in
+the first 120 frames after the latency. CRANKED's groove does not open on a hit loud enough to limit. Given the
+silence the native bus starts from (a one-second lead-in, dropped afterwards), the model agrees. `model()` against
+what the owner heard stays as `glue_recipe.py` reports it, -30.6 to -34.6 dB, with crest within 0.1 dB.
+
+**What exports do not carry.** The glue is live playback only. The pads on disk are not glued, so the MPC 3 track,
+the MPC 2 program, SFZ and DecentSampler all play the drums dry of it. None of those formats has a whole-kit bus, and
+none applies the glue. An SFZ round trip comes back with no glue (`BoroughKitTest`). Where an export writes SnipSnap's
+own sidecar kit.json beside its samples, that sidecar is a copy of the kit, so the field travels in it for a later
+SnipSnap import. No MPC reads it.
+
+**Not done:** the stack picker. Nothing has been heard from the native glue. No phone or MPC has played it, and the
+app's `GlueSettingsTest` and `:app:assembleDebug` need an Android SDK this session does not have. Both are for CI's
+android-build job; the mapping and its test ran here once, compiled under `:shell`'s test source set.
 
 ## Round 2: designed boom-bap drums in all six kits
 
@@ -650,6 +729,9 @@ Listening page (private until shared): https://claude.ai/artifact/6y32yHPUszWK58
     (glue_recipe.py: saturation on five kits, none on RIDE AND RIMS). Read as: RIDE AND RIMS takes the perc fix
     only, full ride, plain glue; on the page for the owner to confirm.
   Heard as better is not accepted for the shelf: no kit has been approved yet.
+- **Round 3.1, the live glue (measured, not heard):** the native bus matches `model()` to -148 dB on every kit's demo
+  groove (`glue_native.py`, with `model()`'s reflect edge removed); the live calibration is +3.0 dB (a default pad's
+  level). Nobody has listened to the native glue, on any device.
 
 ## Why it is built this way
 

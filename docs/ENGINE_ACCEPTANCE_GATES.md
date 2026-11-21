@@ -1330,4 +1330,12 @@ Python kits the owner accepted ("I think they are all ready", 2026-11-20), on to
 | Velocity and round robin: rendering | Pass in software | Three zones are different strikes on all 88 pads (gain-matched residual above -20 dB); three distinct takes per zone |
 | Velocity and round robin: saving, playback, export | Pass in software | Save, reload, the pad resolver at all 127 velocities, SFZ round trip and MPC 3 for a shelf kit; every kit by the generator (864 slices); MPC 2 keeps each zone's first take (format limit). No phone or MPC playback yet |
 
-Open: the owner's listen to the Kotlin kits, the stack picker, the glue compressor on load, phone and MPC hardware.
+Round 3.1 (2026-11-21), the live glue: each kit's kit.json carries the chain the owner picked ("C for all except
+rides and rims"). The app's native bus (`GlueBus.h`: input trim, saturator, compressor, limiter) plays it when the kit
+loads and switches it off for every other kit. On each kit's demo groove the native bus matches the Python
+`model()` to -148 dB. The live trim adds +3.0 dB for a default pad's level. The glue changes no velocity or
+round-robin gate: it is a whole-kit bus after the pads, the pads on disk are not glued, and no export (MPC 3, MPC 2,
+SFZ, DecentSampler) applies it. Nothing has been heard from the native glue, and no phone or MPC has played it. The
+app-side mapping test and `:app:assembleDebug` wait on CI's Android SDK.
+
+Open: the owner's listen to the Kotlin kits and to the native glue, the stack picker, phone and MPC hardware.

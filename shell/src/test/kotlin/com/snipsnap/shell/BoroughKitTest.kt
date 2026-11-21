@@ -45,6 +45,9 @@ class BoroughKitTest {
             val kit = starter.render(k.title, dir)
             assertEquals(kit, KitStore.load(dir))
             assertEquals(16, kit.pads.size)
+            // The live glue rides the saved kit (round 3.1) and the player reads it back from there.
+            assertEquals(BoroughKits.glueOf(k), kit.glue)
+            assertEquals(BoroughKits.glueOf(k), KitStore.load(dir).glue)
             assertFalse(Preflight.check(kit, dir).blocked(), k.id)
             // The saved PCM is the engine's grid, take for take, and the hats still choke as one.
             val rendered = BoroughKits.build(k)
@@ -84,6 +87,8 @@ class BoroughKitTest {
             val sfz = SfzWriter.write(kit, dir, root.resolve("sfz"))
             val imported = SfzImporter.import(sfz, root.resolve("import"))
             assertTrue(imported.skipped.isEmpty())
+            // SFZ has no whole-kit bus: the glue does not travel, the samples it carries are the dry pads.
+            assertNull(imported.kit.glue)
             assertEquals(16, imported.kit.pads.size)
             for ((i, pad) in kit.pads.withIndex()) {
                 assertNull(pad.recipe)
@@ -136,10 +141,17 @@ class BoroughKitTest {
         for (kit in Kit.entries) {
             val starter = assertNotNull(StarterKits.byId(kit.id), kit.id)
             assertEquals(kit.bpm.toFloat(), starter.tempoBpm)
+            assertEquals(BoroughKits.glueOf(kit), starter.glue, kit.id)
             assertEquals(kit.title, starter.displayName)
             assertFalse(starter.seeded)
             assertEquals(1, StarterShelf.GROUPS.count { kit.id in it.ids }, kit.id)
             assertTrue(starter.displayName.startsWith("BOROUGH "))
         }
+    }
+
+    /** "Off for every other kit": only the six BOROUGH starters carry a live glue. */
+    @Test fun `only the BOROUGH starters carry a glue`() {
+        val glued = StarterKits.ALL.filter { it.glue != null }.map { it.id }.toSet()
+        assertEquals(Kit.entries.map { it.id }.toSet(), glued)
     }
 }

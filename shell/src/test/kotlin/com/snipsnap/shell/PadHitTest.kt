@@ -94,4 +94,17 @@ class PadHitTest {
         assertFailsWith<IllegalArgumentException> { PadHit.resolve(KitPad(1, "kick.wav"), 1.5f, 0, framesOf) }
         assertFailsWith<IllegalArgumentException> { PadHit.resolve(KitPad(1, "kick.wav"), 1f, -1, framesOf) }
     }
+
+    /**
+     * The live calibration the whole-kit glue's input trim is corrected by (docs/BOROUGH.md, round 3.1): a new pad hit
+     * at full velocity, centred, reaches the mix at its level, 0.707946 (-3.0 dB), on both sides; nothing else scales it.
+     */
+    @Test
+    fun `a default pad at full velocity reaches the mix 3 dB under its sample`() {
+        near(0.707946, PadHit.DEFAULT_HIT_GAIN.toDouble())
+        near(-3.0, PadHit.DEFAULT_HIT_GAIN_DB, 1e-4)
+        val hit = PadHit.resolve(KitPad(1, "kick.wav"), 1f, 0, framesOf)!!
+        assertEquals(PadHit.DEFAULT_HIT_GAIN, hit.gainLeft)
+        assertEquals(PadHit.DEFAULT_HIT_GAIN, hit.gainRight)
+    }
 }
