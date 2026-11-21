@@ -6381,4 +6381,24 @@ class ConventionTest {
         }
         return out.toList()
     }
+
+    // ---- Law: a text-size change does not throw the user out of where they are ----
+
+    /**
+     * UAT 2026-11 user states, D-4: a system text-size change recreated the Activity, and the
+     * place, the open pad and its selection are plain `remember`, so the pad editor closed under
+     * the user. MainActivity declares `fontScale` and `density` in `configChanges`, which keeps it
+     * through a text-size or display-size change while Compose re-lays out. Removing either brings
+     * the bug back without any other test noticing.
+     */
+    @Test
+    fun `law - MainActivity keeps itself through a text-size or display-size change`() {
+        val manifest = File("../app/src/main/AndroidManifest.xml").readText(Charsets.UTF_8)
+        val activity = Regex("""<activity\s[^>]*android:name="\.MainActivity"[^>]*>""", RegexOption.DOT_MATCHES_ALL).find(manifest)
+        assertTrue(activity != null, "MainActivity's <activity> was not found in the manifest")
+        val changes = Regex("""android:configChanges="([^"]*)"""").find(activity!!.value)?.groupValues?.get(1)?.split('|').orEmpty()
+        for (need in listOf("fontScale", "density")) {
+            assertTrue(need in changes, "MainActivity's configChanges lost $need: a ${if (need == "fontScale") "text-size" else "display-size"} change will recreate it and close the pad editor again (D-4)")
+        }
+    }
 }
