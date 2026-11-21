@@ -223,16 +223,17 @@ class MeridianPresetsTest {
     }
 
     @Test
+    // Rack section names (FxChain.SECTION_NAMES) are not reserved: the owner's ruling of 2026-11-21, when the rack gained
+    // GRAIN and MERIDIAN's approved CLOSE GRAIN would otherwise have had to change. Engine and voice names still are.
     fun `preset names are short uppercase unique and avoid reserved or maker names`() {
         val patches = MeridianPresets.all()
         assertEquals(patches.size, patches.map { it.name.trim().uppercase(Locale.ROOT) }.toSet().size)
-        val reserved = PatchTypes.engines + MeridianVoice.entries.map { it.name } +
-            FxChain.SECTION_NAMES.map { it.uppercase(Locale.ROOT) }
+        val reserved = PatchTypes.engines + MeridianVoice.entries.map { it.name }
         for (patch in patches) {
             assertTrue(patch.name.isNotBlank() && patch.name.length <= 14, patch.name)
             assertEquals(patch.name.uppercase(Locale.ROOT), patch.name)
             val words = patch.name.split(Regex("[^A-Z0-9]+")).filter { it.isNotBlank() }
-            assertTrue(words.none { it in reserved }, "${patch.name} borrows a reserved engine, voice or rack label")
+            assertTrue(words.none { it in reserved }, "${patch.name} borrows a reserved engine or voice name")
             assertFalse(PresetTestSupport.trademarkBlocklist.containsMatchIn(patch.name), patch.name)
         }
     }
