@@ -121,10 +121,39 @@ data class KerfPad(
 object KerfBank {
     const val VERSION = 1
 
-    val kits: Map<String, List<KerfPad>> by lazy {
-        val text = requireNotNull(javaClass.getResourceAsStream("/kerf/v$VERSION/kit_patches.json")) { "Missing KERF bank" }
+    val kits: Map<String, List<KerfPad>> by lazy { load("kit_patches.json") }
+
+    /**
+     * The second bank (round 5, 2026-11-21): four genre kits' hits the first bank does not hold, keyed by genre
+     * ([KerfKits.Genre.name]), written by `prototype/kerf/genre_bank.py`; round 6 (2026-11-21) adds eight more from
+     * `genre_bank_r6.py` (`genre_patches_r6.json`), from 31 new loops and the first loops' leftovers. Only those kits
+     * read it; the engine's pools
+     * ([Kerf.pool]) stay on [kits], so a saved patch's HIT keeps its hit.
+     */
+    val genreKits: Map<String, List<KerfPad>> by lazy { load("genre_patches.json") + load("genre_patches_r6.json") }
+
+    /**
+     * The pitched-pad bank (2026-11-21): struck notes from the owner's melodic loops, laid out as scales by
+     * `prototype/kerf/tonal_bank.py`, keyed by family ([KerfTonalKits.Kit.family]). Fitted numbers only.
+     */
+    val tonalKits: Map<String, KerfTonalKitData> by lazy {
+        val text = requireNotNull(javaClass.getResourceAsStream("/kerf/v$VERSION/tonal_patches.json")) { "Missing KERF tonal bank" }
             .use { it.readBytes().toString(Charsets.UTF_8) }
-        Json.parse(text).obj().mapValues { (_, pads) ->
+        Json.parse(text).obj().mapValues { (_, k) ->
+            val o = k.obj()
+            KerfTonalKitData(
+                tonic = o.getValue("tonic").int(), minor = o.getValue("mode").str() == "minor", bpm = o.getValue("bpm").int(),
+                pads = o.getValue("pads").arr().map { it.obj() }.map { p ->
+                    p.getValue("target").int() to KerfTonalNote(KerfPatchData.fromJsonValue(p.getValue("patch")), p.getValue("root").num())
+                },
+            )
+        }
+    }
+
+    private fun load(file: String): Map<String, List<KerfPad>> {
+        val text = requireNotNull(javaClass.getResourceAsStream("/kerf/v$VERSION/$file")) { "Missing KERF bank $file" }
+            .use { it.readBytes().toString(Charsets.UTF_8) }
+        return Json.parse(text).obj().mapValues { (_, pads) ->
             pads.arr().map { it.obj() }.map { p ->
                 KerfPad(
                     pad = p.getValue("pad").int(), drumClass = p.getValue("cls").str(),
@@ -137,3 +166,7 @@ object KerfBank {
         }
     }
 }
+
+/** One pitched kit's numbers: its key ([tonic], a pitch class; [minor] or major), tempo and its 16 (MIDI note, note) pads. */
+data class KerfTonalKitData(val tonic: Int, val minor: Boolean, val bpm: Int, val pads: List<Pair<Int, KerfTonalNote>>)
+

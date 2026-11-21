@@ -900,3 +900,186 @@ a pad made from a capture keeps its own numbers in the pad recipe, as before.
   I listen"). They played the kits on phone and MPC: "2 is complete" (2026-11-21). The round-4
   gate is met, and KERF is complete under the owner's gates.
 
+## As built: round 5, four more genre kits (2026-11-21)
+
+The owner asked for more genre kits, from fresh hits, with the loops deciding the genres. The
+owner picked fresh hits, four kits, and genres measured from the loops (2026-11-21).
+
+- **The second bank.** Every loop was fitted in round 2: 462 hits, of which the first bank uses
+  63. `prototype/kerf/genre_bank.py` groups the loops by what they measure, never by name, so no
+  loop or pack name reaches the repository:
+  - RUSH: 100 BPM and up, spectral centre at least 700 Hz.
+  - MURK: centre under 850 Hz.
+  - POCKET: at least a quarter of the hits are ghosts.
+  - CHATTER: at least 13 hits a bar, or hats over a third of the hits.
+
+  It then picks 14 hits per kit, with the first bank's picker: loudest first, then least like the
+  ones already chosen. It only uses hits the first bank does not hold, that fit well (envelope
+  match at least 0.85, band error at most 5 dB; medians 2.9 to 3.6 dB) and that last 0.08 to
+  1.2 s. The result is `synth/src/main/resources/kerf/v1/genre_patches.json`
+  (`KerfBank.genreKits`), fitted numbers only.
+- **The engine does not change.** The second bank's hits are not in the engine's pools, so a
+  saved patch's HIT and the 27 presets keep their hits (`KerfKitsTest`: the pools are still the
+  first bank's 63). The new kits read their bank through `Kerf.recipeFor`. The first four kits keep
+  their exact render path. All 64 of their pads came out byte for byte as before, compared by
+  checksum against the pack printed before the change.
+- **The kits** (`KerfKits.Genre`, `second = true`):
+  - RUSH, 115 BPM: tight knife, short decays, a touch high.
+  - POCKET, 96 BPM: loose knife, long decays.
+  - MURK, 80 BPM: tuned down, the wash and bleed pushed. It has six snares, one ghost, four open
+    cymbals and no closed hats, because those loops have none.
+  - CHATTER, 90 BPM: short decays, the wash up.
+
+  Each has fourteen hits, a roll and a riser, with 3 zones × 4 takes per pad. Every pair of the
+  eight kits shares at most three hits (round 5's share none with anything) and has a different
+  lead kick, lead snare and tempo, and at least three settings apart.
+- **Proof.** `KerfKitTest` builds all eight kits and pushes a hit, the roll and the riser of each
+  through save, reload, `PadHit.resolve` and MPC 3 export. `:shell:generateKerfKits` verified all
+  128 pads (1,536 slices).
+- **Heard.** The owner heard the round-5 page (each new kit's sixteen pads and a two-bar groove):
+  "These are great" (2026-11-21). MURK stays as its loops are, without closed hats. Phone and
+  MPC playback of these four is open.
+
+## As built: round 6, eight more genre kits (2026-11-21)
+
+The owner asked to do all three of the round-5 follow-ups: more kits from the leftovers, kits from
+new loops, and a bigger engine. They sent 31 new loops (four zips, deduplicated by content),
+cleared for commercial use, and left the genres to the loops. This round is the kits. The engine
+comes after the owner hears these hits.
+
+- **Fitting.** `chop.py` and `run_fit.py`, unchanged, made 1,179 hits: band error median 4.0 dB
+  (p90 5.8), envelope match median 0.92, a little looser than the first loops. Only hits at 5 dB
+  or better are used.
+- **The third bank** (`prototype/kerf/genre_bank_r6.py` writes `genre_patches_r6.json`;
+  `KerfBank.genreKits` reads both genre files). From the new loops, by measurement:
+  - JUNGLE: 160 BPM and up (2 loops).
+  - CLANG: kicks under 13% of the hits at 100 BPM and up (5 loops). Their bright metal hits label
+    as snares, so CLANG plays them as PERC.
+  - HOUSE and DEEP: 118 to 132 BPM with kicks at least 20% of the hits, split at a spectral
+    centre of 800 Hz (10 and 7 loops).
+  - SWAY: 70 to 115 BPM (7 loops).
+
+  One loop's name has no tempo, so it was estimated from where its onsets sit (129.5 BPM, HOUSE).
+  From the first loops' leftovers:
+  - CASSETTE: the leftovers of round 5 CHATTER's loops.
+  - BOOM: per kind, the third of what remains that rings longest (ring median 0.90 s).
+  - TIGHT: then per kind the shortest third (length median 0.15 s).
+
+  A first pass sorted BOOM and TIGHT only for their first pick, and TIGHT came out longer than
+  BOOM, so each now picks inside its third.
+- **The kits** (`KerfKits.Genre`, `second = true`):
+
+  | Kit | Tempo |
+  |---|---:|
+  | JUNGLE | 172 |
+  | CLANG | 112 |
+  | HOUSE | 124 |
+  | DEEP | 127 |
+  | SWAY | 86 |
+  | CASSETTE | 92 |
+  | BOOM | 78 |
+  | TIGHT | 100 |
+
+  Each kit has fourteen hits, a roll and a riser, and 3 zones × 4 takes per pad. Pad names come
+  from what each hit measures beside the first of its kind (darker, brighter, longer, shorter; a
+  kick with little under 150 Hz is a knock); otherwise they are numbered. All sixteen kits differ
+  pairwise in tempo, lead kick and lead snare. They share at most three hits (round 6 shares none)
+  and differ in at least three settings (`KerfKitsTest`).
+  CLANG is held to a percussion kit's roles (two kicks, at least eight struck hits) instead of a
+  break's.
+- **Proof.** `KerfKitTest` puts every kit's fourth pad through save, reload, `PadHit.resolve` and
+  MPC 3. It puts the roll and riser, one code path for all kits, through the same on one kit per
+  bank: DUST, RUSH, JUNGLE and CLANG. `:shell:generateKerfKits` proves every pad of all sixteen.
+  `KerfKits.build(g, roles)` builds chosen pads, each levelled by its own grid, so they are the same
+  bytes as in a full build.
+- **Heard.** The owner heard the round-6 page (each new kit's sixteen pads and a two-bar groove
+  in its style): "Those are great. Proceed" (2026-11-21). CLANG stays a percussion kit. Phone and
+  MPC playback of rounds 5 and 6 is open. The engine's bigger pools (model 2) follow.
+
+## As built: round 7, engine model 2 (2026-11-21)
+
+This is the third of the owner's "do all 3", after they heard round 6 ("Those are great.
+Proceed"). It gives the engine's HIT control more hits.
+
+- **Model 2's pools.** Each voice's pool is model 1's, unchanged and in the same order. After it
+  come the voice's hits from the twelve genre kits of rounds 5 and 6, each filed under the voice
+  its kit plays it as (so CLANG's struck hits are PERC), in kit then pad order. That is 231 hits in
+  all: the first bank's 63 and 168 the owner has heard in those kits (`KerfTest`).
+- **Nothing heard moves.**
+  - A model-1 save keeps its model and its pools.
+  - A save without a model reads as model 1, the only model before this one.
+  - A preset's hit index names the same hit on either model, so the 27 presets render as before.
+    All 108 of their renders (the picker's and three touch zones each) are byte for byte the pack
+    printed before the change (checksums, `:synth:generateKerfEngineAudition`).
+  - The genre kits are pinned to the engine model they were printed on (`KerfKits.ENGINE_MODEL`,
+    1), so a new engine model never moves an approved kit. All 16 kits rebuilt on this code: their
+    256 pads are byte for byte the round-6 pack (checksums, `:shell:generateKerfKits`).
+- **Tests.** `KerfTest` checks the pools: model 1's in place, the genre hits after them, 231 in
+  all, the presets on model-1 hits, and a model-1 save round-trips to its hit. Its bounds test now
+  renders every model-2 hit. Its offset bound widened from 0.02 to 0.03: model 2's worst is an
+  83 ms ghost from DEEP's loops with a 41 Hz kick bleeding under it from both sides (0.022 at
+  DECAY and SLOP 1), real chop content rather than a bias.
+- **Not yet.** The new hits have been heard inside their kits, at those kits' settings, not as
+  the engine's HIT steps at its defaults. The engine's picker on a phone with model 2 is not yet
+  played.
+
+## As built: pitched pads (2026-11-21)
+
+The owner asked whether KERF could do melodics. They chose bells, struck bars (marimba,
+vibraphone), tuning forks and the like, from melodic loops they cleared for commercial use, as
+pitched pads laid out as a scale in each kit's key ("b").
+
+- **The loops.** 53 files arrived; deduplicated by content, there are 51 loops. Five sustained
+  ones (winds, two organs, two sub basses) are held for a later held-sound round. 46 struck,
+  plucked and mixed loops were chopped (2,852 hits). The 1,108 most distinct notes (up to 25 a
+  loop, `kits.py`'s picker) were fitted unchanged: band error median 4.2 dB, envelope match
+  median 0.75. The envelope suffers because the next note lands on a ringing one.
+- **The ring** (`KerfRender.ring`). A loop shows only the front of each ring: chops are 0.18 s
+  median, rings 0.8 s median and 4.5 s at the 90th percentile.
+  - Every partial and band keeps its fitted decay past the cut.
+  - The floor, the loop's wash, stops at the slice's end through `Controls.floorUntil`. Its
+    default is infinite, so every chop renders as before.
+  - The note runs until its slowest part within 40 dB of the loudest falls 60 dB, at most 4 s, and
+    ends on a 150 ms fade.
+- **Notes** (`KerfTonal`). A note is played at any MIDI note within an octave of its fractional
+  root.
+  - Velocity is the drums' `KerfVelocity`.
+  - A take nudges each partial's level (1 dB) and tuning (2 cents) and draws fresh noise, because
+    a bell is mostly partials.
+- **The bank** (`prototype/kerf/tonal_bank.py` writes `tonal_patches.json`).
+  - **Roots.** A note's root is the lowest partial at least 30% as loud as the strongest, in the
+    loop's key from its file name. The strongest partial was tried first: for bells it is a
+    shimmer far above the heard note, and it put a bell kit at MIDI 98 to 124.
+  - **What is left out.** Roots above MIDI 100 are dropped, and so are loops whose names give no
+    key: their pitch cannot be checked, and they are barely pitched.
+  - **Families, by measurement.** Gongs are low and long; bells ring longest or brightest; wood
+    rings under 0.6 s; metal is the rest.
+  - **Layout.** Each family's 16 pads are the scale run, over every key its loops are in and every
+    octave, that needs the least retuning.
+  - **The bell family** had six clean notes and is left out.
+- **The kits** (`KerfTonalKits`):
+
+  | Kit | Loops | Key | MIDI | Tempo | Median retune | Worst retune |
+  |---|---:|---|---|---:|---:|---:|
+  | KERF METAL | 11 | E-flat major | 51 to 77 | 96 | 0.2 | 0.9 |
+  | KERF GONG | 3 | F minor | 41 to 67 | 120 | 0.5 | 2.0 |
+  | KERF WOOD | 4 | F minor | 65 to 91 | 125 | 1.0 | 5.9 |
+
+  Retunes are in semitones. Every pad is a TONAL one-shot named for its note, with 3 zones × 4
+  takes, levelled so the notes of a kit sit even. The kits are on the shelf under METAL WOOD AND
+  GLASS.
+- **Tests.**
+  - `KerfTonalTest`, 5 tests on a hand-built note: length, the floor's stop, pitch to the hertz,
+    takes, velocity, and the default render unchanged.
+  - `KerfTonalKitsTest`, 3 tests: each kit is 16 rising notes in its key, none retuned past an
+    octave; every pad's note stands at least 20 dB above its spectrum's median; the cap, softer
+    soft strikes, and distinct takes.
+  - `KerfTonalKitTest` (shell): saving, playback and MPC 3 export.
+  - `:shell:generateKerfKits` proves every pad.
+- **Not yet.**
+  - The owner has not heard these kits.
+  - The melodic gate is only partly met: these are premade kits, not six voices with presets,
+    keygroups or chord tools. The owner chose pitched pads.
+  - There is no roll or riser: all 16 pads are scale notes.
+  - Vibraphone tremolo is not modelled.
+

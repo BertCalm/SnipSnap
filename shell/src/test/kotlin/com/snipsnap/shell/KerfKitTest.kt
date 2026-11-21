@@ -23,14 +23,19 @@ class KerfKitTest {
         for (g in Genre.entries) {
             val dir = Files.createTempDirectory("kerf-${g.name.lowercase()}").toFile()
             try {
-                val all = KerfKits.build(g)
+                // a snare, the roll and the riser: KerfKits.build(g, roles) levels each pad by its own grid, so these
+                // are the kit's own pads (`:shell:generateKerfKits` proves every pad of every kit the same way)
+                // The roll and riser are one code path for every kit; they are proved here on one kit per bank (the
+                // pool, round 5's, round 6's new loops and its percussion kit), every kit's fourth pad on all.
+                val sample = setOf(Genre.DUST, Genre.RUSH, Genre.JUNGLE, Genre.CLANG)
+                val roles = if (g in sample) listOf(3, KerfKits.HITS, KerfKits.HITS + 1) else listOf(3)
+                val pads = KerfKits.build(g, roles)
                 // one gain per pad: its loudest cell sits at its level, so nothing a pad deals clips
-                for ((role, pad) in all.withIndex()) {
+                for ((role, pad) in roles.zip(pads)) {
                     val loudest = pad.velocityTakes.flatten().maxOf { s -> s.samples.maxOf { kotlin.math.abs(it) } }
                     val want = com.snipsnap.synth.Kerf.PEAK * Math.pow(10.0, KerfKits.levelDb(g, role) / 20.0).toFloat()
                     assertEquals(want, loudest, 1e-5f, "${g.title} pad ${role + 1} level")
                 }
-                val pads = listOf(all[3], all[KerfKits.HITS], all[KerfKits.HITS + 1])
                 val kit = KitAssembler.assembleArranged("Kerf ${g.title}", pads, dir, tempoBpm = g.bpm.toFloat())
                 val saved = KitStore.load(dir)
                 assertEquals(kit, saved, g.title)
