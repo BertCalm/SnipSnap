@@ -3883,6 +3883,9 @@ fun App(shelf: KitShelf) {
                             // and a pick still pending for a pad survives it.
                             onBin = { nav.open(Bench.BIN) },
                             onToast = { dock.say(it) },
+                            // LISTEN · MIC on the empty list (D-6): the mic, as the button says, not
+                            // the dock's kept source; not offered while a session is already listening.
+                            onListen = if (armed) null else ({ requestArm() }),
                             onOpenInTape = { file ->
                                 nav.closeBench()
                                 tapeOpenOverride = file
@@ -4965,6 +4968,7 @@ fun App(shelf: KitShelf) {
                         top == null && location.place == Place.MAKE -> MakeList(
                             onOpen = { nav.open(it) }, hasKit = open != null, onMyVoice = { nav.open(Bench.MY_VOICE) },
                             kitName = open?.kit?.name,
+                            onOpenLibrary = { landOn(AppScreen.KITS) },
                         )
                         top == Bench.INSTRUMENTS -> InstrumentsBench(
                             instruments = instruments,
@@ -4979,6 +4983,7 @@ fun App(shelf: KitShelf) {
                             murmurInstrumentEnabled = busy == null,
                             roundRobinShelf = shelf.root,
                             onOpenRoundRobin = { openInstrument = null; openRoundRobin = it; landOn(AppScreen.KEYS) },
+                            onOpenSynth = { nav.open(Bench.SYNTH) },
                         )
                         // The pad editor benches (PAD SHEET, GRAIN FIELD,
                         // SPLICE, STACK, SPREAD) and SNAP's own panels (LIVE,
