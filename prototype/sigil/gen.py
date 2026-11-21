@@ -137,10 +137,11 @@ def groove_stems(kid):
 
 def balance(kid):
     """Peak of each role's stem against the main kick's, in dB (the references: snare within about 3 dB of the
-    kick, hats 10 to 20 dB under it)."""
+    kick, hats 10 to 20 dB under it). A drumless kit has no kick: its loudest stem is the reference."""
     kit = kit_by_id(kid)
     stems = groove_stems(kid)
-    k = np.max(np.abs(stems[0]))
+    kicks = [i for i, p in enumerate(kit["pads"]) if p["voice"] == "kick" and i in stems]
+    k = np.max(np.abs(stems[kicks[0]])) if kicks else max(np.max(np.abs(s)) for s in stems.values())
     out = {}
     for idx, s in stems.items():
         out[kit["pads"][idx]["name"]] = 20 * math.log10(max(np.max(np.abs(s)), 1e-9) / k)
@@ -206,7 +207,12 @@ def hf_share(x, above_hz, ms_=120):
 def pad_checks(kid, idx, render, window_ms=120):
     """window_ms: how much of each hit the brightness reads (a roll is read whole; its first strokes are soft in
     every zone)."""
-    split = float(np.median([centroid_head(render(kid, idx, ZONES[-1], t), window_ms) for t in range(TAKES)]))
+    # twice the hard hit's centroid: at the centroid itself the split sat on ASH's rim's fundamental (629 Hz against
+    # 610), so each take's hair of retuning moved the reading; an octave up it reads the overtones a strike brightens
+    split = 2 * float(np.median([centroid_head(render(kid, idx, ZONES[-1], t), window_ms) for t in range(TAKES)]))
+    # a hat already near the top of the band has nothing an octave up: read it above its centroid instead
+    if np.median([hf_share(render(kid, idx, ZONES[-1], t), split, window_ms) for t in range(TAKES)]) < 1e-4:
+        split /= 2
     zones = {}
     for v in ZONES:
         takes = [render(kid, idx, v, t) for t in range(TAKES)]

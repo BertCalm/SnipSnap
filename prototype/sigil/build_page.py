@@ -31,6 +31,10 @@ def read(path):
         sw = w.getsampwidth()
     if sw == 2:
         return np.frombuffer(raw, dtype="<i2").astype(np.float32) / 32768
+    if sw == 3:  # the Kotlin audition's 24-bit WAVs
+        bb = np.frombuffer(raw, np.uint8).reshape(-1, 3)
+        v = bb[:, 0].astype(np.int32) | (bb[:, 1].astype(np.int32) << 8) | (bb[:, 2].astype(np.int32) << 16)
+        return (np.where(v >= 1 << 23, v - (1 << 24), v) / float(1 << 23)).astype(np.float32)
     if sw == 4:
         return np.frombuffer(raw, dtype="<f4").astype(np.float32)
     raise ValueError(sw)
@@ -60,7 +64,7 @@ def fmt(v, unit="", nd=0):
     return f"{v:,.{nd}f}{unit}"
 
 
-KIDS = [k["id"] for k in KITS]
+KIDS = [k["id"] for k in KITS if not k.get("parent")]  # the measured table: the kits with drums
 
 # What each voice is, in a line, shown when its pad is tapped (the owner asked what the rods were).
 VOICE_NOTES = {
@@ -156,36 +160,58 @@ def main(out):
     report = json.load(open(os.path.join(out, "report.json")))
     refs = json.load(open(os.path.join(HERE, "references.json")))
     manifest = []
+    by_id = {k["id"]: k for k in KITS}
+    built = {}  # kit id -> {pad name: (file, slot)}, so a drumless kit can share its parent's identical pads
     for kit in KITS:
         kid = kit["id"]
         pads = []
         names = [p["name"] for p in kit["pads"]] + [kit["roll"]["name"]]
+        parent = by_id.get(kit.get("parent"))
+        mine = built.setdefault(kid, {})
         for i, name in enumerate(names):
             folder = os.path.join(out, kid, f"{i + 1:02d}_{name.replace(' ', '_')}")
             fn = f"audio/{kid}_{i + 1:02d}.mp3"
-            slot = sprite(folder, os.path.join(site, fn))
+            shared = None
+            if parent is not None:
+                if i < len(kit["pads"]):
+                    twin = next((p for p in parent["pads"] if p["name"] == name and p["voice"] == kit["pads"][i]["voice"]
+                                 and p["params"] == kit["pads"][i]["params"]), None)
+                else:
+                    r, pr = kit["roll"], parent["roll"]
+                    same = r["name"] == pr["name"] and kit["pads"][r["pad"]]["name"] == parent["pads"][pr["pad"]]["name"]
+                    twin = {"name": name} if same else None
+                if twin is not None:
+                    shared = built[parent["id"]][twin["name"]]
+            if shared:
+                fn, slot = shared
+            else:
+                slot = sprite(folder, os.path.join(site, fn))
+            mine[name] = (fn, slot)
             rep = report["kits"][kid]["pads"][i]
             voice = rep["voice"]
             pads.append({"n": i + 1, "name": name, "file": fn, "slot": slot, "voice": voice,
-                         "note": VOICE_NOTES.get(voice, ""),
+                         "note": VOICE_NOTES.get(voice, "") + (f" (the same pad as {parent['title']}'s)" if shared else ""),
                          "bright": round(rep["soft_over_hard_hf_db"], 1),
                          "takes": round(rep["worst_closest_takes_db"], 1)})
         gfn = f"audio/{kid}_groove.mp3"
         mp3(read(os.path.join(out, kid, "groove.wav")), os.path.join(site, gfn))
         pads.append({"n": 16, "name": "Groove", "file": gfn, "slot": None, "voice": "groove"})
-        manifest.append({"id": kid, "title": kit["title"], "bpm": kit["bpm"], "swing": kit["swing"],
+        manifest.append({"id": kid, "parent": kit.get("parent"), "title": kit["title"], "bpm": kit["bpm"], "swing": kit["swing"],
                          "print": kit["print"], "pads": pads, "groove": gfn,
                          "groove_s": round(report["kits"][kid]["groove_seconds"], 2)})
         print(kid, "audio done", flush=True)
     if os.environ.get("SIGIL_EMBED"):
         # one self-contained page: every MP3 inlined as base64 (the page decodes it itself; no fetch needed)
         import base64
+        done = set()
         for kit in manifest:
             for p in kit["pads"]:
+                if p["file"] in done:
+                    continue  # a shared pad's audio is inlined once, under its parent
                 p["data"] = base64.b64encode(open(os.path.join(site, p["file"]), "rb").read()).decode()
-            kit["groove_data"] = next(p["data"] for p in kit["pads"] if p["file"] == kit["groove"])
+                done.add(p["file"])
     rows = ref_rows(refs, report)
-    head = "".join(f'<th class="{k["id"]}">{k["title"]}</th>' for k in KITS)
+    head = "".join(f'<th class="{k["id"]}">{k["title"]}</th>' for k in KITS if not k.get("parent"))
     page = TEMPLATE.replace("/*MANIFEST*/", json.dumps(manifest)).replace("<!--KITHEADS-->", head).replace("<!--ROWS-->", "\n".join(
         "<tr>" + "".join(f"<td>{html.escape(str(c))}</td>" for c in r) + "</tr>" for r in rows))
     open(os.path.join(site, "index.html"), "w").write(page)

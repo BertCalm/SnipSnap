@@ -14,7 +14,7 @@ Grooves are written as step strings, one character per sixteenth, a bar per sixt
 """
 from __future__ import annotations
 
-from sigil_proto import A2, C3, E3, G3, A3, A4, C5, E5
+from sigil_proto import A2, C3, D3, E3, G3, A3, A4, C5, E5
 
 ZONES = (0.40, 0.70, 1.00)
 TAKES = 4
@@ -226,3 +226,150 @@ KILN = {
 }
 
 KITS = [IRON, NEON, ASH, KILN]
+
+
+# ------------------------------------------------------------------ the drumless kits (round 1, the owner's pick)
+# Each drumless kit keeps its parent's percussion pads exactly (same voice, same constants, same print), drops the kicks,
+# snares and claps, and fills the freed pads with more A-minor notes on the same hybrid voices, so the kit plays as tuned
+# percussion. Its groove is percussion only, written by pad name: a hand drum, conga or low log takes the kick's place in
+# the rhythm and a rim, snap or wood takes the backbeat's, much quieter than the drums they stand in for.
+
+def drumless(parent, drop, add, steps, mix, roll=None):
+    keep = [p for i, p in enumerate(parent["pads"]) if i not in drop]
+    pads = keep + add
+    assert len(pads) == 14, (parent["id"], len(pads))
+    names = [p["name"] for p in pads]
+    assert len(set(names)) == 14, names
+    index = {n: i for i, n in enumerate(names)}
+    if roll is None:
+        old = parent["roll"]
+        roll = dict(old, pad=index[parent["pads"][old["pad"]]["name"]])
+        if "alt_pad" in old:
+            roll["alt_pad"] = index[parent["pads"][old["alt_pad"]]["name"]]
+    else:
+        roll = dict(roll, pad=index[roll["pad"]], **({"alt_pad": index[roll["alt_pad"]]} if "alt_pad" in roll else {}))
+    return {
+        "id": parent["id"] + "-drumless", "title": parent["title"] + " DRUMLESS", "parent": parent["id"],
+        "bpm": parent["bpm"], "swing": parent["swing"], "print": parent["print"],
+        "print_amount": parent["print_amount"], "pads": pads, "roll": roll,
+        "groove": {"bars": 2, "mix": {index[n]: v for n, v in mix.items()}, "steps": {index[n]: s for n, s in steps.items()}},
+    }
+
+
+IRON_DRUMLESS = drumless(
+    IRON, drop={0, 1, 2},
+    add=[
+        pad("Log Mid", "log_drum", 0.78, note=C3, bend=6, decay=0.14, wood=0.5, drive=0.35, len=0.75),
+        pad("Log Top", "log_drum", 0.72, note=G3, bend=5, decay=0.11, wood=0.55, drive=0.3, len=0.6),
+        pad("Glass Bell High", "glass_bell", 0.5, note=E5, decay=0.3, glass=0.5, len=1.4),
+    ],
+    steps={
+        "Hand Drum": "X......x..x..... X..x......x.....",
+        "Rim Knock": "....x.......x... ....x.......x..o",
+        "Closed Hat": "o.o.o.o.o.o.o.o. o.o.o.o.o.o.o.o.",
+        "Grain Shaker": ".......o.......o .......o.......o",
+        "Clock Tick": "..o...o...o...o. ..o...o...o...o.",
+        "Log Low": "x..........x.... ...x............",
+        "Log Mid": "......x......... ..........x.....",
+        "Log High": "................ ...........o....",
+        "Log Top": "................ .....o..........",
+        "Glass Bell": "................ .......o........",
+        "Glass Bell High": "...........o.... ................",
+        "Breath": "...............o ................",
+        "Water Drop": "................ .............o..",
+        "Iron Rod": "X............... ................",
+    },
+    mix={"Hand Drum": 1.0, "Rim Knock": 0.7, "Closed Hat": 0.4, "Grain Shaker": 0.35, "Clock Tick": 0.4, "Log Low": 0.8,
+         "Log Mid": 0.7, "Log High": 0.65, "Log Top": 0.6, "Glass Bell": 0.45, "Glass Bell High": 0.4, "Breath": 0.5,
+         "Water Drop": 0.5, "Iron Rod": 0.35},
+    # the snare drag has no snare to drag: the logs roll instead, low and high in turn
+    roll={"name": "Log Roll", "pad": "Log High", "alt_pad": "Log Low", "seconds": 2.2, "from_div": 2, "to_div": 8,
+          "beats": 4.0, "vel_from": 0.35, "vel_to": 1.0},
+)
+
+NEON_DRUMLESS = drumless(
+    NEON, drop={0, 1, 2, 3},
+    add=[
+        pad("Log Low", "log_drum", 0.8, note=A2, bend=12, decay=0.14, wood=0.3, drive=0.45, len=0.8),
+        pad("Log High", "log_drum", 0.72, note=E3, bend=7, decay=0.1, wood=0.35, drive=0.4, len=0.6),
+        pad("Bell Ping High", "glass_bell", 0.5, note=E5, decay=0.22, glass=0.35, len=1.1),
+        pad("Voice Chop O", "breath", 0.6, pitch=150, voiced=0.7, vowel="o", ring=0.45, decay=0.07, len=0.3),
+    ],
+    steps={
+        "Log Low": "X.....x...x..x.. X.........x.x...",
+        "Wood Chirp": "........x....... ........x.......",
+        "Voice Chop": "...........o.... ................",
+        "Voice Chop O": "................ ........x.......",
+        "Closed Hat": "x.x.x.x.x.x.x.x. x.x.x.x.x.xrx.tt",
+        "Open Hat": "..............o. ................",
+        "Grain Shaker": "o.oo.oo.o.oo.oo. o.oo.oo.o.oo.oo.",
+        "Clock Tick": ".o...o...o...o.. .o...o...o...o..",
+        "Bell Ping": "...o............ ................",
+        "Bell Ping High": "................ ...o............",
+        "Log Mid": "................ ......x.........",
+        "Log High": "......o......... ................",
+        "Metal Tick": "...o.......o.... ...o.......o....",
+        "Zap": "................ ...............o",
+    },
+    mix={"Log Low": 1.0, "Wood Chirp": 0.8, "Voice Chop": 0.55, "Voice Chop O": 0.6, "Closed Hat": 0.4, "Open Hat": 0.35,
+         "Grain Shaker": 0.3, "Clock Tick": 0.4, "Bell Ping": 0.4, "Bell Ping High": 0.35, "Log Mid": 0.7,
+         "Log High": 0.65, "Metal Tick": 0.4, "Zap": 0.5},
+)
+
+ASH_DRUMLESS = drumless(
+    ASH, drop={0, 1},
+    add=[
+        pad("Log Top", "log_drum", 0.72, note=G3, bend=5, decay=0.09, wood=0.5, drive=0.35, len=0.55),
+        pad("Thumb Tine High", "tine", 0.58, note=C5, decay=0.5, buzz=0.5, shadow=0.25, len=1.2),
+    ],
+    steps={
+        "Hand Drum": "x...x...x...x... x...x...x...x...",
+        "Rim": "...x..x....x..x. ...x..x...x.x...",
+        "Tambourine": "....x.......x... ....x.......x...",
+        "Shaker Push": "x.x.x.x.x.x.x.x. x.x.x.x.x.x.x.x.",
+        "Shaker Pull": ".o.o.o.o.o.o.o.o .o.o.o.o.o.o.o.o",
+        "Log Low": "x.......x.....x. x.....x.........",
+        "Log Mid": "......x......... ...x......x.....",
+        "Log High": "...x.......x.... .............x..",
+        "Log Top": "................ ........o.......",
+        "Thumb Tine": "................ ..........o.....",
+        "Thumb Tine High": "..........o..... ................",
+        "Glass Bell": "..............o. ................",
+        "Breath": "................ .......o........",
+        "Wind Rod": "o............... ................",
+    },
+    mix={"Hand Drum": 0.9, "Rim": 0.6, "Tambourine": 0.55, "Shaker Push": 0.45, "Shaker Pull": 0.4, "Log Low": 0.8,
+         "Log Mid": 0.7, "Log High": 0.7, "Log Top": 0.6, "Thumb Tine": 0.45, "Thumb Tine High": 0.4,
+         "Glass Bell": 0.35, "Breath": 0.4, "Wind Rod": 0.3},
+)
+
+KILN_DRUMLESS = drumless(
+    KILN, drop={0, 1, 2},
+    add=[
+        pad("Low Tine A", "tine", 0.75, note=A2, decay=0.45, buzz=0.6, shadow=0.3, len=1.0),
+        pad("Low Tine D", "tine", 0.72, note=D3, decay=0.42, buzz=0.6, shadow=0.3, len=0.95),
+        pad("Bell E", "glass_bell", 0.5, note=E5, decay=0.28, glass=0.55, len=1.2),
+    ],
+    steps={
+        "Conga Low": "X.....x...X..... X.....x.x.......",
+        "Snap": "....X.......X... ....X.......X...",
+        "Closed Hat": "xoxoxoxoxoxoxoxo xoxoxoxoxoxoxoxo",
+        "Tambourine": "..x...x...x...x. ..x...x...x...x.",
+        "Bongo High": ".x.x...x.x.x...x .x.x...x.x.x.x.x",
+        "Bongo Low": "...x......x..... ...x.......x....",
+        "Low Tine A": "x............... ................",
+        "Low Tine C": "..........x..... ................",
+        "Low Tine D": "................ x...............",
+        "Low Tine E": "......x......... ......x.........",
+        "Bell A": "...............o ................",
+        "Bell E": "................ ..........o.....",
+        "Breath": "................ .......o........",
+        "Scrape": "..............x. ..............x.",
+    },
+    mix={"Conga Low": 1.0, "Snap": 0.7, "Closed Hat": 0.35, "Tambourine": 0.35, "Bongo High": 0.55, "Bongo Low": 0.55,
+         "Low Tine A": 0.6, "Low Tine C": 0.55, "Low Tine D": 0.55, "Low Tine E": 0.5, "Bell A": 0.35, "Bell E": 0.35,
+         "Breath": 0.4, "Scrape": 0.45},
+)
+
+DRUMLESS = [IRON_DRUMLESS, NEON_DRUMLESS, ASH_DRUMLESS, KILN_DRUMLESS]
+KITS = KITS + DRUMLESS
