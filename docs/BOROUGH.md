@@ -625,6 +625,13 @@ Listening page (private until shared): https://claude.ai/artifact/6y32yHPUszWK58
   - round 2, all six kits: "I think they are all ready" (2026-11-20). Accepted for the app. The owner chose to
     generate them in the app (Kotlin, on EMBER) rather than ship samples, six kits with a perc-stack picker,
     and the live glue compressor switched on when a BOROUGH kit loads.
+  - round 3 A/B (the app's MPC 3 export against the accepted Python kits): "Stoop hard is extremely overblown on
+    the individual pad walkthrough" (2026-11-21). The page's fault, not the kit's: `listen_app.py` read the
+    app's 32-bit WAVs as 16-bit, so every pad run came in about 96 dB over full scale and was hard-clipped (all
+    six kits). Measured against Python, the app's STOOP pads hold the same peaks (kick 0.89) and the same band
+    balance (kick within 0.1 dB below 120 Hz). Fixed by reading each file at its own sample width, with a check that no pad
+    peaks past the 0.89 level law. The page now carries the Python pad runs beside the app's. The grooves were
+    unaffected (the glue sets its level from each groove's own peak). Awaiting the owner's re-listen.
   Heard as better is not accepted for the shelf: no kit has been approved yet.
 
 ## Why it is built this way
