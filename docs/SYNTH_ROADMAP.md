@@ -3950,5 +3950,6 @@ owner's depth 3, a take a fresh cut), with one level per setting. It is a protot
 (`PatchTypes.PROTOTYPES`, `KerfPresets`, 27 presets) and on SYNTH's picker after SOOT, under DRUMS:
 100 picker engines. Four genre kits sit on FRESH TAPE: KERF DUST, SOUL, FUNK and STOMP. Each
 has fourteen hits, a roll and a riser, every pad 3 zones × 4 takes, proved through save,
-playback and MPC 3 export (`KerfKitTest`). None of it has been heard yet.
+playback and MPC 3 export (`KerfKitTest`). The owner heard the kits and presets and played the
+kits on phone and MPC (2026-11-21): KERF is complete.
 
