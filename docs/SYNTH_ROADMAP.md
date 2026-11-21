@@ -3939,3 +3939,17 @@ presets: four pads two kits share at the same settings are filed once, and the 2
 stay CALABASH's. Every one of the 19 RIDDIM voices has a preset. RIDDIM leaves `PatchTypes.ROSTERLESS` and sits on
 SYNTH's picker after KINDRED, before CAIRN, under DRUMS; 99 picker engines. An on-device test loads CLAVE WOOD F#3 and
 keeps an edit with its hardest mallet, take and model; CI compiles and runs it. See [RIDDIM](RIDDIM.md).
+
+### KERF, round 4 (2026-11-20)
+
+KERF, the synthetic chops (docs/superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md),
+becomes a drum engine. It has six voices (KICK, SNARE, GHOST, HAT, HAT_OPEN, PERC), each a
+pool of the bank's fitted hits, 63 in all. HIT, TUNE, DECAY, FLOOR, BLEED and SLOP pick and
+shape a hit. Every render is the SYNTH TWIN sound path (`KerfRecipe.take`: velocity at the
+owner's depth 3, a take a fresh cut), with one level per setting. It is a prototype
+(`PatchTypes.PROTOTYPES`, `KerfPresets`, 27 presets) and on SYNTH's picker after SOOT, under DRUMS:
+100 picker engines. Four genre kits sit on FRESH TAPE: KERF DUST, SOUL, FUNK and STOMP. Each
+has fourteen hits, a roll and a riser, every pad 3 zones × 4 takes, proved through save,
+playback and MPC 3 export (`KerfKitTest`). The owner heard the kits and presets and played the
+kits on phone and MPC (2026-11-21): KERF is complete.
+

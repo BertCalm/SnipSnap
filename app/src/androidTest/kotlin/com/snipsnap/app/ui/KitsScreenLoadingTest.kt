@@ -53,6 +53,7 @@ class KitsScreenLoadingTest : ComposeScreenTest() {
         isLoading: Boolean,
         settleMillis: Long = 300,
         projects: List<ShelfModel.ProjectRow> = emptyList(),
+        unreadableKits: List<String> = emptyList(),
     ) {
         loading = isLoading
         setPhoneContent(settleMillis) {
@@ -60,6 +61,7 @@ class KitsScreenLoadingTest : ComposeScreenTest() {
                 KitsScreen(
                     kits = emptyList(),
                     projects = projects,
+                    unreadableKits = unreadableKits,
                     onOpenProject = {},
                     onNewProject = {},
                     onCatchFirst = {},
@@ -184,5 +186,20 @@ class KitsScreenLoadingTest : ComposeScreenTest() {
         button("NEW PROJECT").assertExists()
         compose.onNodeWithText(Copy.EMPTY_SHELF).assertDoesNotExist()
         button(Places.CATCH_FIRST).assertDoesNotExist()
+    }
+
+    /**
+     * UAT 2026-11 user states, S-15: a kit whose kit.json will not load used to
+     * vanish with no row and no line, and on a shelf with nothing else that
+     * read as "Nothing recorded yet.". It is named instead, and the first-run
+     * way in stays offered in the footer.
+     */
+    @Test
+    fun a_kit_that_will_not_load_is_named_not_hidden() {
+        show(isLoading = false, unreadableKits = listOf("TORN"))
+
+        compose.onNodeWithText(Copy.kitsWontOpen(listOf("TORN"))).assertExists()
+        compose.onNodeWithText(Copy.EMPTY_SHELF).assertDoesNotExist()
+        button(Places.CATCH_FIRST).assertExists()
     }
 }

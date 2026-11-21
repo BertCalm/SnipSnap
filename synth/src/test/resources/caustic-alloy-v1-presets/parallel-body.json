@@ -6,8 +6,8 @@
   "macros": {
     "SOURCE": 0,
     "FOCUS": 0.11999999731779099,
-    "BODY": 1,
-    "LENGTH": 0.75,
+    "BODY": 0,
+    "LENGTH": 0.4000000059604645,
     "HOLD": 0
   },
   "model": 1,

@@ -1199,6 +1199,17 @@ Four drum kits after the owner's beat-tape reference loops, in the CYPHER shape:
 | Velocity and round robin: rendering | Pass in software | Soft zones are different strikes and never brighter; four different strikes per zone |
 | Velocity and round robin: saving, playback, export | Pass | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 64 pads; MPC 2 not written (format limit). Owner-reported pass on the phone and the MPC, 2026-11-18 |
 
+### LOOSE CRATE expansion: BLUE, SPEED, RAGA (complete, 2026-11-20: sound approved, phone and MPC gates passed)
+
+Three more kits on the same shelf, built to the pad lists the owner approved ("Build as proposed", 2026-11-20). Round 0's grooves and key hits were approved by ear: BLUE's break and longer ride, SPEED's 1.35 speed-up, RAGA with the tabla leading. The round 1 listening page then played every new pad and every pad's soft-to-hard strip (four takes in each of three zones, at the player's loudness, read back from the MPC 3 export). The owner's verdict on that page and on playing the kits on the phone and the MPC, verbatim: "All good" (2026-11-20, confirmed as covering the page, the phone and the MPC). See [LOOSE CRATE](LOOSE_CRATE.md#expansion-round-1-the-three-kits-as-built-and-approved). Preserve `LooseCrateKits` as of PR #1249 as the baseline the listen covered.
+
+| Gate | Status | Evidence |
+|---|---|---|
+| Drums: multiple distinct genre kits on the shelf | Pass | BLUE and RAGA are new genres, each differing from every other kit in at least six pads and in its first two pads dry. SPEED is HUMMIN's speed variant, as the owner chose it, and is not counted as a distinct genre kit; `LooseCrateKitsTest` holds it to that definition instead |
+| Percussion: roll/riser | Pass | Tap Roll, Sped Roll and Tabla Roll on A15; approved with the kits |
+| Velocity and round robin: rendering | Pass | Soft zones are different, never brighter strikes, four different strikes per zone, and every hit gets louder as it is played harder (RAGA's dayan strokes levelled by loudness to do so) |
+| Velocity and round robin: saving, playback, export | Pass | Save, reload, pad resolver, MPC 3, SFZ and DecentSampler for all 48 pads (`:shell:generateLooseCrateKits`, `LooseCrateKitTest`); MPC 2 not written (format limit). Owner-reported pass on the phone and the MPC, 2026-11-20 |
+| Sound character | Pass | Round 0 and round 1 approved by ear ("All good", 2026-11-20) |
 
 ### Soul Rock Roadhouse crash revision (2026-11-19)
 
@@ -1271,6 +1282,23 @@ Source: the commit that adds this entry. Details: [CONSORT](CONSORT.md).
 | App picker | No entry. | Open |
 
 Nothing here is a completion claim. A passing `ConsortTest` and an audition page do not close a gate.
+
+
+## KERF synthetic chops (rounds 1 to 4, sound approved, hardware confirmed: complete)
+
+Source: the commit that adds this entry. Details: [the KERF spec](superpowers/specs/2026-11-19-kerf-synthetic-chops-design.md). KERF is a capture-side tool (SYNTH TWIN on the pad sheet, SYNTH TWIN ALL on the kit screen, `snipsnap kerf`) and, since round 4, a registered drum engine on the SYNTH picker (`Kerf`, six voices over the bank's 63 fitted hits) with four genre kits on FRESH TAPE (`KerfKits`).
+
+| Gate | Current evidence | Status |
+|---|---|---|
+| Velocity (render) | A twin struck softer from its own numbers (`KerfVelocity`, `KerfRecipe.renderAt`): the hit falls, the floor follows half, the previous hit's bleed stays, the top tilts down, the crack softens, the tick falls further, a kick's pitch drop shrinks. Fitted at depth 1 to the owner's ghost notes against their snares (nine loops): over the bank's 63 pads at 0.45, centroid 0.868× (ghosts 0.86×), floor against hit +5.7 dB (ghosts +5.3), tick against hit −3.5 dB (ghosts −2.2). The owner heard depth 1 as "a bit indistinguishable" and picked depth 3, the strongest of three (2026-11-20): centroid 0.730×, floor +10.6 dB, tick −10.4 dB, bleed +12.5 dB; no soft layer is a copy at another level, the nearest −16.7 dB (`KerfVelocityTest`). | Pass: measured, and heard by the owner at depth 3 ("Audition is good", 2026-11-20) |
+| Velocity (save, playback, export) | SOFT HITS on a twin writes the twin re-struck at 0.3 and 0.6, not the main take filtered (`KerfGateTest`). A twin's 3-zone × 4-take grid (`Robin.apply`) saves and reloads, `PadHit.resolve` picks the zone for all 127 velocities, MPC 2 and MPC 3 exports read back clean, and SFZ export and import keep the chain and the bytes. The owner reported phone and MPC good (2026-11-20). | Pass |
+| Round robin | Each take is the chop made again: the pad's own knife nudged by about a millisecond and a fresh noise draw, chosen among four for the band profile nearest the pad's (`KerfRecipe.take`). Takes are distinct and repeatable; after peak matching their energy spreads 0.8 dB median, 2.6 dB worst, over 48 takes. The kit's round robin keeps a twin a twin, re-cuts it under BLEED and SLOP, and its undo gives the capture back as take one (`KerfGateTest`). Heard by the owner, and played on phone and MPC: "Audition is good, phone/mpc is good" (2026-11-20). | Pass |
+| Drum genre kits | Four on the shelf under SKINS: KERF DUST (88 BPM), SOUL (94), FUNK (104) and STOMP (84). Each draws most of its hits from a different loop's bank and sets its own tuning, decay, wash, bleed and knife. Every pair shares at most three of fourteen hits and has a different lead kick, lead snare and tempo (`KerfKitsTest`). Each pad is 3 zones × 4 takes through saving, reloading, `PadHit.resolve` and MPC 3 export (`KerfKitTest`; `:shell:generateKerfKits` verifies all 64 pads). The owner heard the four kits (each kit's sixteen pads and a two-bar groove from them) and played them on phone and MPC: "Sounds good" on the round-4 page, confirmed as a listen ("1 yes I listen"), and "2 is complete" for phone and MPC playback (2026-11-21). | Pass: heard and played on phone and MPC |
+| Percussion roll/riser | Every kit: A15 a roll (sixteen strikes accelerating over one bar, each a fresh take), A16 a riser (twenty-four strikes tightening over one bar, rising seven semitones). Saved, played and exported with their grids (`KerfKitTest`). On the page the owner heard and on the kits they played (2026-11-21). | Pass: heard and played on phone and MPC |
+| Melodic, keygroups, chords, HOLD, STRUM | Not applicable: one-shot drum hits. | Not applicable |
+
+- **Presets and picker:** the 27 presets (one pool hit each, soft to hard) were on the same page the owner heard (2026-11-21). The SYNTH picker test (`NewEngineSynthScreenTest`) passed on CI's emulator.
+- **Overall: complete (2026-11-21).** The twins, the velocity layers and takes, the engine's presets, the four genre kits and their rolls and risers have all been heard by the owner, and played on phone and MPC: the twins on 2026-11-20, the kits on 2026-11-21. In software the kits are proved through MPC 3 export; MPC 2 export was proved for the twins (`KerfGateTest`) and not run on the kits. Preserve `Kerf.MODEL_VERSION` 1, `KerfKits.VERSION` 1, `KerfRender.MODEL_VERSION` 1 and `KerfVelocity.DEPTH` 3 as the accepted baseline.
 
 ## FACSIMILE kits (Kotlin built and heard, 2026-11-20)
 

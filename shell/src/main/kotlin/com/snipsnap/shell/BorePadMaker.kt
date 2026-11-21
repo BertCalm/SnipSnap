@@ -6,6 +6,7 @@ import com.snipsnap.audio.WavWriter
 import com.snipsnap.kit.InstrumentStore
 import com.snipsnap.kit.Names
 import com.snipsnap.kit.OneNote
+import com.snipsnap.synth.Bore
 import com.snipsnap.synth.BoreKeys
 import com.snipsnap.synth.BorePatch
 import com.snipsnap.synth.BoreVoice
@@ -35,7 +36,11 @@ object BorePadMaker {
     /** Soft first, [BoreKeys.VELOCITY_WINDOWS]: the export's windows and the preview's. */
     val VELOCITY_WINDOWS: List<IntRange> = BoreKeys.VELOCITY_WINDOWS
 
-    /** The voices whose zones were measured. A voice added to BORE is not offered until its own are. */
+    /**
+     * The voices offered on held keys: FLUTE and SAX. HOLLOW, SHAWM, SHAKU, PANPIPE and VESSEL joined [Bore.KEPT_VOICES] on 2026-11-20 as
+     * one-shots and LOOPs, which is what the owner heard (bore-voices-1, touch-bore-1); their held keys are cut by the same [BoreKeys] path
+     * but are not offered until they are heard, as LIBRATION's new voices stay finite only.
+     */
     val VOICES: Set<BoreVoice> = setOf(BoreVoice.FLUTE, BoreVoice.SAX)
 
     /**

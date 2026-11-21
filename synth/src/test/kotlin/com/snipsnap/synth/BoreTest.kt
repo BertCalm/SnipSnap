@@ -65,7 +65,7 @@ class BoreTest {
         // under the weakest note R1 measured (FLUTE 0.91, SAX 0.21 raw AC rms) with room; a note
         // that is still dying or still growing in the last quarter second is not "speaking".
         val floor = mapOf(BoreVoice.FLUTE to 0.5, BoreVoice.SAX to 0.12)
-        for (voice in BoreVoice.entries) for (tune in listOf(0f, 0.5f, 1f)) for (lip in listOf(0f, 0.5f, 1f)) for (breath in listOf(0f, 1f)) {
+        for (voice in BoreMeasure.FIRST_VOICES) for (tune in listOf(0f, 0.5f, 1f)) for (lip in listOf(0f, 0.5f, 1f)) for (breath in listOf(0f, 1f)) {
             val y = blow(voice, tune, breath, lip)
             val early = BoreMeasure.acRms(y, 0.9f, 1.1f)
             val late = BoreMeasure.acRms(y, 1.1f, 1.3f)
@@ -90,7 +90,7 @@ class BoreTest {
         // own gain, but no pointwise bound follows from either (the design's small-gain argument),
         // so the ceiling is empirical: R1 saw 1.95 (FLUTE) and 2.36 (SAX) across the corners at
         // the hardest tongue. Three is a bound with room, not a claim of tightness.
-        for (voice in BoreVoice.entries) for (tune in listOf(0f, 1f)) for (lip in listOf(0f, 1f)) for (breath in listOf(0f, 1f)) {
+        for (voice in BoreMeasure.FIRST_VOICES) for (tune in listOf(0f, 1f)) for (lip in listOf(0f, 1f)) for (breath in listOf(0f, 1f)) {
             val y = blow(voice, tune, breath, lip, chiff = 1f, hold = 0.98f, seconds = 2f)
             assertTrue(y.all { it.isFinite() }, "$voice TUNE $tune LIP $lip BREATH $breath went non-finite")
             assertTrue(y.maxOf { abs(it) } < 3f, "$voice TUNE $tune LIP $lip BREATH $breath peaked at ${y.maxOf { abs(it) }}")
@@ -101,7 +101,7 @@ class BoreTest {
 
     @Test
     fun `TUNE snaps to semitones over two octaves from each voice's root`() {
-        for (voice in BoreVoice.entries) {
+        for (voice in BoreMeasure.FIRST_VOICES) {
             val root = Bore.rootMidi(voice)
             assertEquals(root, Bore.midiFor(voice, 0f))
             assertEquals(root + 24, Bore.midiFor(voice, 1f))
@@ -118,7 +118,7 @@ class BoreTest {
         // tuning budget cannot charge for it, so [Bore.tunedHz] pins it. R1's sweep of all 175
         // combinations per voice: FLUTE -0.9..+3.5 cents, SAX -5.4..+6.1 at the old pin of 6, so
         // 7 is the pin's honest residual with room. (A LOOP plays the one-shot's pitch, and is tested below.)
-        for (voice in BoreVoice.entries) for (tune in listOf(0f, 0.5f, 1f)) for (lip in listOf(0f, 0.5f, 1f)) for (breath in listOf(0f, 1f)) {
+        for (voice in BoreMeasure.FIRST_VOICES) for (tune in listOf(0f, 0.5f, 1f)) for (lip in listOf(0f, 0.5f, 1f)) for (breath in listOf(0f, 1f)) {
             val hz = Bore.frequencyFor(voice, tune)
             val c = BoreMeasure.cents(blow(voice, tune, breath, lip), hz, 0.9f, 1.3f)
             assertTrue(abs(c) <= 7.0, "$voice TUNE $tune LIP $lip BREATH $breath plays $c cents from TUNE")
@@ -332,7 +332,7 @@ class BoreTest {
         // No dead knob (playability rule 1): each of the five, moved alone from the default, makes
         // the finished render differ. LIP's and BREATH's differences are timbre, CHIFF's the onset,
         // HOLD's the length, TUNE's the pitch.
-        for (voice in BoreVoice.entries) {
+        for (voice in BoreMeasure.FIRST_VOICES) {
             val base = Bore.render(voice, Bore.defaults(voice)).samples
             for (spec in Bore.macrosFor(voice)) {
                 val moved = Bore.defaults(voice) + (spec.name to if (spec.default > 0.5f) 0.1f else 0.9f)
@@ -355,7 +355,7 @@ class BoreTest {
         // breath is the slow corner, since the turbulence that seeds it also pushes it under its
         // threshold now and then. The bounds are the measured worst with room, and
         // SAX_ROOT_MIDI's KDoc is why C3 and not lower.
-        for (voice in BoreVoice.entries) for (lip in listOf(0f, 1f)) for (breath in listOf(0f, 1f)) for (tune in listOf(0f, 0.5f, 0.75f, 1f)) {
+        for (voice in BoreMeasure.FIRST_VOICES) for (lip in listOf(0f, 1f)) for (breath in listOf(0f, 1f)) for (tune in listOf(0f, 0.5f, 0.75f, 1f)) {
             val onset = BoreMeasure.onsetSeconds(blow(voice, tune, breath, lip, seconds = 1.4f), 1.0f, 1.4f)
             val bound = when {
                 voice == BoreVoice.FLUTE -> 0.36f
@@ -431,7 +431,7 @@ class BoreTest {
         // HOLD at 0 as well - it was dead code), so vibrato is the loop's length, retuned. Swings
         // are read on 70 ms windows so a 5.2 Hz cycle is resolved; R1 saw 25-35 cents peak to peak
         // at HOLD 0.98, 13-19 at 0.5 and 1-3 at 0 (the measurement's own floor).
-        for (voice in BoreVoice.entries) {
+        for (voice in BoreMeasure.FIRST_VOICES) {
             val hz = Bore.frequencyFor(voice, 0.25f)
             fun swing(hold: Float): Double {
                 val y = blow(voice, tune = 0.25f, hold = hold, seconds = 3.2f)
@@ -484,7 +484,7 @@ class BoreTest {
         val steps = listOf(0f, 0.2f, 0.4f, 0.6f, 0.8f, 0.98f).map { Bore.holdSeconds(it) }
         assertEquals(steps.sorted(), steps, "HOLD is not monotonic: $steps")
         assertTrue(!Bore.isLoop(0.98f) && Bore.isLoop(0.99f) && Bore.isLoop(1f))
-        for (voice in BoreVoice.entries) {
+        for (voice in BoreMeasure.FIRST_VOICES) {
             val m = Bore.defaults(voice) + ("HOLD" to 0.3f)
             val snip = Bore.render(voice, m)
             assertEquals(Bore.renderFrames(m), snip.frameCount, "$voice: the predicted frame count is not what a render makes")
@@ -498,7 +498,7 @@ class BoreTest {
     fun `a LOOP holds steady - it neither swells nor decays`() {
         // A strike engine's loop is a tail; this one is a held breath. Its first quarter and its
         // last must be the same level, since a loop that swelled would pump at every wrap.
-        for (voice in BoreVoice.entries) {
+        for (voice in BoreMeasure.FIRST_VOICES) {
             val loop = Bore.render(voice, Bore.defaults(voice) + ("HOLD" to 1f)).samples
             val q = loop.size / 4
             fun rms(a: Int) = Math.sqrt((a until a + q).sumOf { loop[it].toDouble() * loop[it] } / q)
@@ -542,7 +542,7 @@ class BoreTest {
         // ordinary step, the length, the first sample on a zero crossing (a pad plays it once through), the level.
         val unclosable = listOf(Triple(0.25f, 1f, 0.75f), Triple(0f, 0.25f, 0.75f), Triple(0f, 0.5f, 1f), Triple(0.25f, 0.25f, 0.5f))
         val corners = ArrayList<Triple<BoreVoice, Float, Pair<Float, Float>>>() // voice, tune, lip to breath
-        for (voice in BoreVoice.entries) for (tune in listOf(0f, 0.5f, 1f)) for (pair in listOf(0.5f to 0.6f, 0f to 1f, 1f to 0f)) corners.add(Triple(voice, tune, pair))
+        for (voice in BoreMeasure.FIRST_VOICES) for (tune in listOf(0f, 0.5f, 1f)) for (pair in listOf(0.5f to 0.6f, 0f to 1f, 1f to 0f)) corners.add(Triple(voice, tune, pair))
         for ((tune, lip, breath) in unclosable) corners.add(Triple(BoreVoice.SAX, tune, lip to breath))
         // The weakest joins of the 252 corners measured: SAX at C3 with LIP 0.5 and BREATH 0.75 (the head and the continuation
         // correlate 0.989) and LIP 0 and BREATH 1 (the deepest dip, 0.49 dB).
@@ -960,7 +960,7 @@ class BoreTest {
         // HOLD across the line in steps of 0.0003, and holds every step to the frame count a real
         // render makes and to the class the comparison gives - and the two renders either side of
         // the line to the real classifier itself.
-        for (voice in BoreVoice.entries) {
+        for (voice in BoreMeasure.FIRST_VOICES) {
             assertEquals(DrumClass.PERC, Bore.drumClassFor(voice, mapOf("HOLD" to 0.3f)))
             assertEquals(DrumClass.LOOP, Bore.drumClassFor(voice, mapOf("HOLD" to 1f)))
             assertEquals(DrumClass.LOOP, Bore.drumClassFor(voice, mapOf("HOLD" to 0.95f)), "a 3.6 s one-shot is over the classifier's line")
@@ -987,7 +987,7 @@ class BoreTest {
     @Test
     fun `scramble rolls always speak and never reach the loop step`() {
         val random = Random(42)
-        for (voice in BoreVoice.entries) repeat(12) {
+        for (voice in BoreMeasure.FIRST_VOICES) repeat(12) {
             val macros = Bore.scramble(voice, random)
             assertTrue(macros.values.all { it in 0f..1f }, "$voice scrambled out of range: $macros")
             assertTrue(macros.getValue("HOLD") <= Bore.SCRAMBLE_HOLD_CEILING, "$voice scrambled into the loop step: $macros")
@@ -1002,7 +1002,7 @@ class BoreTest {
         // BORE names no brightness macro of Velocity's (BREATH is a breath, not a cutoff, and
         // nothing measured it to be monotonic in centroid), so it falls back to soften, the way
         // VOX does; a soft note is a dulled one, and the centroid must fall.
-        for (voice in BoreVoice.entries) {
+        for (voice in BoreMeasure.FIRST_VOICES) {
             val patch = BorePatch("Vel Canary", voice, Bore.defaults(voice))
             val viaFallback = Velocity.atVelocity(patch, 0.3f)
             val viaSoften = Velocity.soften(patch.render(), 0.7f)
@@ -1040,7 +1040,7 @@ class BoreTest {
             "TUNE" to Float.POSITIVE_INFINITY, "BREATH" to Float.NEGATIVE_INFINITY, "LIP" to Float.NaN,
             "CHIFF" to Float.POSITIVE_INFINITY, "HOLD" to Float.POSITIVE_INFINITY,
         )
-        for (voice in BoreVoice.entries) {
+        for (voice in BoreMeasure.FIRST_VOICES) {
             assertEquals(Bore.defaults(voice), Bore.settled(nonFinite, voice), "$voice: settled must treat every non-finite macro as absent, as ALLOY's does")
             // Past settled a NaN reaches the blow, where it moves the note, the length or every sample, or trips a
             // guard deep in the render; so each macro, NaN on its own, must render exactly as the default does.

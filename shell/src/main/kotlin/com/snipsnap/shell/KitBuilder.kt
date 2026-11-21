@@ -433,6 +433,7 @@ class KitBuilderModel private constructor(
         val padRecipe = Breed.recipeOf(pad)
         if (padRecipe == null) Breed.warnIfCorruptRecipe(pad, slot, "ghost layers")
         val patch = com.snipsnap.synth.Velocity.patchForLayers(padRecipe)
+        val kerf = com.snipsnap.synth.Velocity.kerfForLayers(padRecipe)
         val patchFx = padRecipe?.fx
         val brightnessSpec = if (patch != null) {
             com.snipsnap.synth.Velocity.brightnessSpec(patch)
@@ -454,7 +455,9 @@ class KitBuilderModel private constructor(
                 // amount is a softening depth (0 untouched, 1 softest);
                 // layerAt (like atVelocity) speaks velocity (1 untouched,
                 // 0 softest).
-                val darker = com.snipsnap.synth.Velocity.layerAt(
+                // A KERF twin is struck again from its own numbers (KerfVelocity), not filtered.
+                val darker = if (kerf != null) com.snipsnap.synth.Velocity.kerfLayerAt(main, kerf, patchFx, 1f - amount)
+                else com.snipsnap.synth.Velocity.layerAt(
                     main, patch, patchFx, 1f - amount, brightnessSpec, useAtVelocity,
                 )
                 WavWriter.write(File(kitDir, names[v]), darker)
@@ -705,7 +708,10 @@ class KitBuilderModel private constructor(
         return update(slot) {
             it.copy(
                 recipe = recipe ?: it.recipe?.takeUnless(PrintedPads::has),
-                source = it.source - "rawSha256" - "desampled" - KERF_STAMP - KERF_WAS,
+                // KERF's stamp says "this pad's recipe is a twin": it stays when the new recipe still carries one
+                // (a round robin dealt from the twin keeps the pad's own recipe) and goes with any other rewrite.
+                source = it.source - "rawSha256" - "desampled" -
+                    (if (recipe != null && Breed.recipeOf(recipe)?.kerf != null) emptySet() else setOf(KERF_STAMP, KERF_WAS)),
             )
         }
     }
@@ -931,7 +937,7 @@ class KitBuilderModel private constructor(
     private fun kerfRefusal(pad: KitPad): String? = when {
         PrintedPads.has(pad.recipe) -> "printed"
         pad.velocityLayers.isNotEmpty() -> "velocity-layered"
-        pad.chain != null -> "a chain"
+        pad.chain != null && !pad.isRobinChain -> "a chain"
         else -> kerfAudio(pad).let { if (it.size < KERF_MIN_FRAMES) "too short to measure" else null }
     }
 
@@ -950,6 +956,8 @@ class KitBuilderModel private constructor(
      * a print over it, a re-cut would write under them or over them.
      */
     fun recutKerfPad(slot: Int, bleed: Double, slop: Double): KitPad {
+        // Under a round robin the WAV is the chain: lift it, re-cut the twin, deal the takes again from the new cut.
+        if (kit.pad(slot)?.isRobinChain == true) return viaRobin(slot) { recutKerfPad(slot, bleed, slop) }
         val pad = requireRewritable(slot)
         require(PadSheet.isKerfTwin(pad)) { Copy.KERF_RIDDEN }
         val old = requireNotNull(Breed.recipeOf(pad)?.kerf)
@@ -961,7 +969,9 @@ class KitBuilderModel private constructor(
 
     /** A pad's audio as the fitter takes it: mono, at the kit's rate, no longer than a one-shot. */
     private fun kerfAudio(pad: KitPad): FloatArray {
-        val snip = com.snipsnap.audio.Cleanup.toMono(com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile)))
+        // A round-robin pad's WAV is every take end to end; its first take is the original, which is what is measured.
+        val whole = if (pad.isRobinChain) Robin.original(this, pad.slot) else com.snipsnap.audio.WavReader.read(File(kitDir, pad.sampleFile))
+        val snip = com.snipsnap.audio.Cleanup.toMono(whole)
         require(snip.sampleRate == com.snipsnap.synth.KerfRender.RATE) { "pad ${pad.slot} is ${snip.sampleRate} Hz; KERF fits at ${com.snipsnap.synth.KerfRender.RATE} Hz" }
         val limit = (com.snipsnap.synth.KerfFit.MAX_SECONDS * snip.sampleRate).toInt() - 1
         return if (snip.frameCount > limit) snip.samples.copyOf(limit) else snip.samples
@@ -975,7 +985,7 @@ class KitBuilderModel private constructor(
         }
         // Every pad with plain audio is a possible neighbour, whether or not it is being replaced. Fitted before
         // anything is written, so a neighbour is measured from its capture and never from its own twin.
-        val ordered = kit.pads.sortedBy { it.slot }.filter { it.velocityLayers.isEmpty() && it.chain == null }
+        val ordered = kit.pads.sortedBy { it.slot }.filter { it.velocityLayers.isEmpty() && (it.chain == null || it.isRobinChain) }
         val audio = HashMap<Int, FloatArray>(); val fits = HashMap<Int, com.snipsnap.synth.KerfPatchData>()
         fun fitOf(pad: KitPad): com.snipsnap.synth.KerfPatchData? = fits[pad.slot] ?: run {
             // A pad that is a twin already was measured from its capture when it was made: those numbers stand in

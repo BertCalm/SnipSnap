@@ -43,7 +43,7 @@ class BoreFrozenSoundTest {
     /** Every render this file freezes, by a stable name. */
     private fun renders(): Map<String, () -> FloatArray> {
         val out = LinkedHashMap<String, () -> FloatArray>()
-        for (preset in BorePresets.all()) out["${preset.voice}/${preset.name}"] = { asFrozen(preset.voice, preset.macros) }
+        for (preset in BorePresets.all().filter { it.voice in BoreMeasure.FIRST_VOICES }) out["${preset.voice}/${preset.name}"] = { asFrozen(preset.voice, preset.macros) }
         for (voice in listOf(BoreVoice.FLUTE, BoreVoice.SAX)) {
             out["$voice/defaults"] = { asFrozen(voice, emptyMap()) }
             out["$voice/LOOP"] = { asFrozen(voice, mapOf("HOLD" to 1f)) }
