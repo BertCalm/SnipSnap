@@ -1012,7 +1012,8 @@ Proceed"). It gives the engine's HIT control more hits.
     All 108 of their renders (the picker's and three touch zones each) are byte for byte the pack
     printed before the change (checksums, `:synth:generateKerfEngineAudition`).
   - The genre kits are pinned to the engine model they were printed on (`KerfKits.ENGINE_MODEL`,
-    1), so a new engine model never moves an approved kit.
+    1), so a new engine model never moves an approved kit. All 16 kits rebuilt on this code: their
+    256 pads are byte for byte the round-6 pack (checksums, `:shell:generateKerfKits`).
 - **Tests.** `KerfTest` checks the pools: model 1's in place, the genre hits after them, 231 in
   all, the presets on model-1 hits, and a model-1 save round-trips to its hit. Its bounds test now
   renders every model-2 hit. Its offset bound widened from 0.02 to 0.03: model 2's worst is an
