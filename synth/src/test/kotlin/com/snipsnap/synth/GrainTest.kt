@@ -8,7 +8,7 @@ import kotlin.test.assertContentEquals
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** GRAIN ([Grain]): the granular scatter's own claims. */
+/** GRANULAR ([Grain]): the granular scatter's own claims. */
 class GrainTest {
     private val ka = Terra.render(TerraVoice.KA)
 
@@ -55,12 +55,12 @@ class GrainTest {
         for (i in 0 until out.frameCount) assertEquals(out.samples[2 * i] * .5f, out.samples[2 * i + 1], 1e-5f)
     }
 
-    @Test fun `a chain with GRAIN saves and reloads, after REWIND and before SPRING`() {
-        val chain = FxChain(grain = mapOf("MIX" to .6f, "SIZE" to .3f, "DENSITY" to .7f, "SCATTER" to .5f))
+    @Test fun `a chain with GRANULAR saves and reloads, after REWIND and before SPRING`() {
+        val chain = FxChain(granular = mapOf("MIX" to .6f, "SIZE" to .3f, "DENSITY" to .7f, "SCATTER" to .5f))
         assertEquals(chain, FxChain.fromJsonText(chain.toJsonText()))
         val names = FxChain.SECTIONS.map { it.name }
-        assertEquals(names.indexOf("rewind") + 1, names.indexOf("grain"))
-        assertTrue(names.indexOf("grain") < names.indexOf("spring"))
+        assertEquals(names.indexOf("rewind") + 1, names.indexOf("granular"))
+        assertTrue(names.indexOf("granular") < names.indexOf("spring"))
         assertTrue(chain.process(ka).samples.all { it.isFinite() })
     }
 }
