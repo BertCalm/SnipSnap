@@ -32,7 +32,7 @@ class TerraSticksTest {
     }
 
     @Test fun `the picker offers all nine and each has four presets`() {
-        assertEquals(9, voices.size)
+        assertEquals(10, voices.size)
         assertTrue(TerraPicker.voices.containsAll(voices))
         for (voice in voices) assertEquals(4, TerraPresets.forVoice(voice).size, "$voice")
     }
@@ -122,7 +122,7 @@ class TerraSticksTest {
     }
 
     @Test fun `the blends reach both strokes and their middle is neither`() {
-        for ((voice, macro) in listOf(TerraVoice.ODAIKO to "DRUM", TerraVoice.SHIME to "STROKE", TerraVoice.KANE to "EDGE")) {
+        for ((voice, macro) in listOf(TerraVoice.ODAIKO to "DRUM", TerraVoice.SHIME to "STROKE", TerraVoice.KANE to "EDGE", TerraVoice.FAN to "SWEEP")) {
             val a = Terra.render(voice, mapOf(macro to 0f)).samples
             val b = Terra.render(voice, mapOf(macro to 1f)).samples
             val mid = Terra.render(voice, mapOf(macro to 0.5f)).samples
@@ -167,5 +167,40 @@ class TerraSticksTest {
             assertTrue(seen > 0, "$voice gave HIT no modes")
             assertContentEquals(plain, struck, "$voice under a flat HIT curve")
         }
+    }
+
+    /** Magnitude centroid of the first 30 ms from the first sample over a tenth of the peak, as the velocity tests read it. */
+    private fun attackCentroid(x: FloatArray): Double {
+        val peak = x.maxOf { abs(it) }
+        val start = x.indexOfFirst { abs(it) > 0.1f * peak }.coerceAtLeast(0)
+        val n = 1323
+        var num = 0.0; var den = 0.0
+        for (k in 1 until n / 2) {
+            var re = 0.0; var im = 0.0
+            for (i in 0 until n) {
+                val s = if (start + i < x.size) x[start + i].toDouble() else 0.0
+                val w = 0.5 - 0.5 * kotlin.math.cos(2 * Math.PI * i / (n - 1))
+                re += s * w * kotlin.math.cos(2 * Math.PI * k * i / n); im -= s * w * kotlin.math.sin(2 * Math.PI * k * i / n)
+            }
+            val mag = sqrt(re * re + im * im); num += mag * k * RATE / n; den += mag
+        }
+        return num / den
+    }
+
+    /**
+     * The gong's edge stroke: its notes sit in one narrow band, so a soft strike reaches toward the centre stroke's low
+     * notes instead ([TerraSticks]' kaneEdge). Measured when written: the onset centroid rises 40 % from a third of full
+     * velocity to full, where the edge stroke alone rose 4 %. Full velocity is the edge stroke alone: no centre stroke in
+     * its HIT modes, and its render is the soft one's opposite end, not a blend.
+     */
+    @Test fun `a soft edge stroke on the gong is darker, and a full one is the edge alone`() {
+        val edge = mapOf("EDGE" to 1f)
+        val hard = attackCentroid(Terra.render(TerraVoice.KANE, edge).samples)
+        val soft = attackCentroid(Terra.render(TerraVoice.KANE, edge, 1f / 3).samples)
+        assertTrue(hard > 1.25 * soft, "edge stroke onset centroid $soft Hz soft, $hard Hz hard")
+        assertEquals(TerraSticksTables.KANE_EDGE.hz.size, TerraSticks.bodyModes(TerraVoice.KANE, Terra.defaults(TerraVoice.KANE) + edge).first.size)
+        // under HIT the strokes stay the full-velocity ones, so a soft struck edge pad keeps one level curve per mode
+        val struck = Terra.renderAt(TerraVoice.KANE, edge, 1f / 3) { body -> Terra.BankInputs(level = Array(body.modes.size) { floatArrayOf(1f) }) }
+        assertTrue(struck.samples.all { it.isFinite() })
     }
 }

@@ -929,6 +929,7 @@ class DeterminismTest {
                 TerraVoice.SHIME -> mapOf("STROKE" to 0.5f)
                 TerraVoice.KANE -> mapOf("EDGE" to 0.5f)
                 TerraVoice.BINZASARA -> mapOf("SPREAD" to 1f)
+                TerraVoice.FAN -> mapOf("SWEEP" to 0.5f)
                 TerraVoice.COWBELL -> mapOf("DAMP" to 0.5f)
                 TerraVoice.NAGADO, TerraVoice.KA, TerraVoice.CHAPPA, TerraVoice.WATER_DRUM -> mapOf("ATTACK" to 1f)
             }

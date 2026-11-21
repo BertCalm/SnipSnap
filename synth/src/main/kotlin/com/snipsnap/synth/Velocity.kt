@@ -568,7 +568,8 @@ object Velocity {
         is SootPatch -> patch.render(v)
         // KERF strikes the fitted hit through KerfVelocity at the owner's depth: duller, a softer tick, the bleed kept.
         is KerfPatch -> patch.render(v)
-        is TerraPatch -> Terra.render(patch.voice, patch.macros, patch.striker, velocity = v)
+        // through the patch, so a struck pad keeps its striker and a roll stays a roll
+        is TerraPatch -> patch.render(v)
         // THUMP's and ONSET's kicks take the same contact law (a shallower
         // pitch drop, a quieter and duller click); their other voices keep
         // their brightness macro or soften().
