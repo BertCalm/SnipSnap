@@ -19,8 +19,8 @@ import kotlin.math.pow
  *
  * Drum pads, every kit: KICK, SNARE, HAT (RIDE), OPEN HAT (RIDE BELL), KICK 2, SNARE 2, RIM, PEDAL HAT, GHOST,
  * TOM LO, TOM HI, SNARE ROLL. Stacks: HANDS, TAMBOURINE, BELLS, TOPS, four pads each. A kit fills A01 to A12 and a
- * stack A13 to A16, so a stack swaps without moving a drum ([build] takes any stack; the picker that offers the
- * choice is later work).
+ * stack A13 to A16, so a stack swaps without moving a drum ([build] takes any stack; the KIT screen's PERC STACK
+ * row swaps an open kit's A13 to A16 through `BoroughStackSwap` in `:shell`, round 3.2).
  *
  * Each pad is three velocity zones (0.35, 0.65, 1.0) of three takes (build.grid): a zone is a different strike (the
  * designed drums' punch, click, crack and drive grow faster than the body; EMBER's contact and threshold parts move),
@@ -36,7 +36,8 @@ import kotlin.math.pow
  * stored in its kit.json and played by the app's native bus when the kit loads. The pads themselves are not glued:
  * the WAVs, and therefore every export, are the drums dry of it.
  *
- * Not here yet (docs/BOROUGH.md): the stack picker.
+ * The stack picker (round 3.2) is `BoroughStackSwap` in `:shell`: it re-renders A13 to A16 with [stackPads] for the
+ * kit they sit in and leaves the drums and the glue alone.
  */
 object BoroughKits {
     /** Bump when a pad's audio changes; saved kits carry the version they were printed with. 2: round 3.1's stacks. */
